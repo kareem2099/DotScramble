@@ -1,0 +1,18 @@
+# Advanced Image Privacy Studio Pro - Dependencies
+
+# Core image processing
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# Optional: For text detection (OCR)
+# Requires Tesseract OCR to be installed on system
+# Download from: https://github.com/tesseract-ocr/tesseract
+pytesseract>=0.3.10
+
+# GUI (included with Python, but listed for reference)
+# tkinter - Standard library (no install needed)
+
+# Optional: Advanced image processing
+# scipy>=1.11.0  # For advanced filters
+# scikit-image>=0.21.0  # For additional effects

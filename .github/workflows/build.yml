@@ -1,0 +1,102 @@
+name: Multi-Platform Build with Obfuscation
+
+# Give write permission to create the Release
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            python-version: '3.9'
+            platform: windows
+          - os: ubuntu-latest
+            python-version: '3.9'
+            platform: linux
+          - os: macos-latest
+            python-version: '3.9'
+            platform: macos
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    # --- System Dependencies ---
+    - name: Install system dependencies (Linux)
+      if: matrix.platform == 'linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
+
+    - name: Install system dependencies (macOS)
+      if: matrix.platform == 'macos'
+      run: |
+        brew install tesseract
+
+    - name: Install system dependencies (Windows)
+      if: matrix.platform == 'windows'
+      run: |
+        choco install tesseract --pre
+
+    # --- Python Dependencies ---
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyarmor pyinstaller
+
+    # --- Directories ---
+    - name: Create necessary directories
+      shell: bash
+      run: |
+        mkdir -p logs backups exports presets temp
+
+    # --- Build ---
+    - name: Run obfuscated build
+      run: |
+        python build.py
+
+    # --- RENAME STEP (The Fix) ---
+    # This step changes the file name to distinguish each system and prevent conflicts
+    - name: Rename binary for release
+      shell: bash
+      run: |
+        if [ "${{ matrix.platform }}" == "windows" ]; then
+          mv release/DotScramble.exe release/DotScramble-windows.exe
+        elif [ "${{ matrix.platform }}" == "macos" ]; then
+          mv release/DotScramble release/DotScramble-macos
+        else
+          mv release/DotScramble release/DotScramble-linux
+        fi
+
+    # --- Upload to Artifacts ---
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: DotScramble-${{ matrix.platform }}
+        # Upload files with new names
+        path: release/DotScramble-*
+
+    # --- Release ---
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        # This asterisk will capture only files with new names and ignore old folders and compressed files
+        files: release/DotScramble-*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
