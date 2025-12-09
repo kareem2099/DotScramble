@@ -55,27 +55,227 @@ privacy_studio_pro/
 - 🎨 **Opacity Control** - Blend effects
 - 📊 **Image Info** - Display image details
 
-## 🔧 Installation
+## 🚀 Getting Started - Step by Step Installation
 
-### Requirements
-```bash
-pip install opencv-python
-pip install numpy
-pip install Pillow
-pip install pytesseract  # Optional, for text detection
+### 📋 Prerequisites
+
+**Required:**
+- **Python 3.8 or higher** (Python 3.9+ recommended)
+- **4GB RAM minimum** (8GB recommended for large images)
+- **Operating System:** Windows 10+, macOS 10.14+, Ubuntu 18.04+ or similar Linux
+
+**Optional (for text detection):**
+- Tesseract OCR engine
+
+---
+
+### 🪟 Windows Installation
+
+#### Step 1: Install Python
+1. Download Python from [python.org](https://python.org/downloads/)
+2. Run the installer
+3. **IMPORTANT:** Check "Add Python to PATH" during installation
+4. Verify installation: Open Command Prompt and run `python --version`
+
+#### Step 2: Download the Project
+1. Visit the [GitHub repository](https://github.com/kareem2099/DotScramble)
+2. Click the green **"Code"** button
+3. Select **"Download ZIP"**
+4. Extract the ZIP file to your desired location
+
+#### Step 3: Install Dependencies
+1. Open Command Prompt as Administrator
+2. Navigate to the project folder:
+```cmd
+cd path\to\DotScramble
 ```
-
-### Setup
-1. Clone or download the project
-2. Install dependencies:
-```bash
+3. Install required packages:
+```cmd
 pip install -r requirements.txt
 ```
 
-3. Run the application:
-```bash
+#### Step 4: Optional - Install Tesseract OCR (for text detection)
+1. Download Tesseract from [GitHub releases](https://github.com/UB-Mannheim/tesseract/wiki)
+2. Install the executable
+3. Add Tesseract to your system PATH
+
+#### Step 5: Run the Application
+```cmd
 python main.py
 ```
+
+---
+
+### 🍎 macOS Installation
+
+#### Step 1: Install Python
+1. Install Homebrew (if not already installed):
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+2. Install Python:
+```bash
+brew install python
+```
+3. Verify: `python3 --version`
+
+#### Step 2: Download the Project
+1. Clone the repository:
+```bash
+git clone https://github.com/kareem2099/DotScramble.git
+cd DotScramble
+```
+Or download ZIP from GitHub and extract.
+
+#### Step 3: Install Dependencies
+```bash
+pip3 install -r requirements.txt
+```
+
+#### Step 4: Optional - Install Tesseract OCR
+```bash
+brew install tesseract
+```
+
+#### Step 5: Run the Application
+```bash
+python3 main.py
+```
+
+---
+
+### 🐧 Linux Installation (Ubuntu/Debian)
+
+#### Step 1: Install Python
+```bash
+# Update package list
+sudo apt update
+
+# Install Python and pip
+sudo apt install python3 python3-pip python3-venv
+```
+
+#### Step 2: Download the Project
+```bash
+# Clone repository
+git clone https://github.com/kareem2099/DotScramble.git
+cd DotScramble
+```
+
+#### Step 3: Install Dependencies
+```bash
+pip3 install -r requirements.txt
+```
+
+#### Step 4: Optional - Install Tesseract OCR
+```bash
+sudo apt install tesseract-ocr tesseract-ocr-eng
+```
+
+#### Step 5: Run the Application
+```bash
+python3 main.py
+```
+
+---
+
+### 🔧 Manual Installation (Advanced Users)
+
+If you prefer to install dependencies individually:
+
+#### Core Dependencies
+```bash
+pip install opencv-python>=4.8.0
+pip install numpy>=1.24.0
+pip install Pillow>=10.0.0
+```
+
+#### Optional Dependencies
+```bash
+# For text detection
+pip install pytesseract>=0.3.10
+
+# For advanced image processing (optional)
+pip install scipy>=1.11.0
+pip install scikit-image>=0.21.0
+```
+
+---
+
+### ✅ Verification
+
+After installation, test that everything works:
+
+1. Run the application: `python main.py`
+2. Load an image using the "📁 Load Image" button
+3. Try different detection modes and effects
+4. Save a processed image
+
+---
+
+### 🏗️ Building Standalone Executables (Optional)
+
+For users who want to create executable files without requiring Python installation:
+
+#### Using the Build Script
+```bash
+# Install PyInstaller (if not already installed)
+pip install pyinstaller
+
+# Run the local build (without obfuscation)
+python build_local.py
+
+# Or run the full build (with obfuscation)
+python build.py
+```
+
+The executable will be created in the `release/` folder.
+
+**Note:** Building executables requires additional dependencies like PyArmor for the full build.
+
+---
+
+### 🐛 Troubleshooting Installation
+
+#### "python command not found"
+- **Windows:** Reinstall Python and check "Add to PATH"
+- **macOS/Linux:** Use `python3` instead of `python`
+
+#### Import errors after installation
+```bash
+# Try reinstalling in a virtual environment
+python -m venv venv
+venv\Scripts\activate  # Windows
+source venv/bin/activate  # macOS/Linux
+pip install -r requirements.txt
+```
+
+#### Tesseract not found
+- Ensure Tesseract is installed and in your PATH
+- On Windows, you may need to restart your command prompt
+- Check installation: `tesseract --version`
+
+#### Permission errors
+- Run commands as administrator/sudo when installing system packages
+- Ensure you have write permissions in the project directory
+
+#### Slow installation
+- Use a faster internet connection
+- Consider using `pip install --upgrade pip` first
+- Some packages (like OpenCV) are large and may take time
+
+---
+
+### 🎯 Quick Start After Installation
+
+1. **First Run:** Double-click the executable or run `python main.py`
+2. **Load Image:** Click "📁 Load Image" button
+3. **Choose Detection:** Select "🎭 Face" detection mode
+4. **Pick Effect:** Choose "🌫️ Blur" effect
+5. **Apply:** Click "✨ Apply Effect"
+6. **Save:** Click "💾 Save Result"
+
+**Tip:** Enable "🔴 Real-time Preview" for instant feedback when adjusting settings!
 
 ## 📖 Usage Guide
 
