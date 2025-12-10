@@ -19,6 +19,7 @@ from core.utils import HistoryManager, PresetManager, ImageUtils, ExportManager,
 from core.image_picker import ImagePicker
 from gui.batch_window import BatchWindow
 from core.text_detector import TextDetector
+from core.auto_updater import AutoUpdater
 
 class AdvancedPrivacyStudioPro:
     def __init__(self, root):
@@ -64,7 +65,15 @@ class AdvancedPrivacyStudioPro:
         # Display
         self.display_scale = 1.0
         self.display_offset = (0, 0)
-        
+
+        # Auto-updater
+        self.auto_updater = AutoUpdater(self.root)
+
+        # Trigger automatic silent update check after UI loads
+        if UPDATE_CONFIG['auto_check']:
+            # Wait 3 seconds for UI to load, then check silently in background
+            self.root.after(3000, lambda: self.auto_updater.check_for_updates_silently(self.on_update_ready))
+
         self.create_menu_bar()
         self.create_widgets()
         self.bind_shortcuts()
@@ -80,6 +89,8 @@ class AdvancedPrivacyStudioPro:
         file_menu.add_command(label="Open Image", command=self.load_image, accelerator="Ctrl+O")
         file_menu.add_command(label="Save Result", command=self.save_image, accelerator="Ctrl+S")
         file_menu.add_command(label="Save As Comparison", command=self.save_comparison)
+        file_menu.add_separator()
+        file_menu.add_command(label="Open Exports Folder", command=self.open_exports_folder)
         file_menu.add_separator()
         file_menu.add_command(label="Batch Process", command=self.open_batch_window, accelerator="Ctrl+B")
         file_menu.add_separator()
@@ -104,6 +115,10 @@ class AdvancedPrivacyStudioPro:
         # Help Menu
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="Check for Updates", command=self.check_for_updates)
+        help_menu.add_separator()
+        help_menu.add_command(label="Open App Data Folder", command=self.open_app_data_folder)
+        help_menu.add_separator()
         help_menu.add_command(label="Donate", command=self.show_donate)
         help_menu.add_command(label="About", command=self.show_about)
         help_menu.add_command(label="Shortcuts", command=self.show_shortcuts)
@@ -448,12 +463,24 @@ Add this to the AdvancedPrivacyStudioPro class
         """Create status bar"""
         status_bar = tk.Frame(self.root, bg=COLORS['bg_medium'], height=35)
         status_bar.pack(fill="x", side="bottom")
-        
+
         self.status_label = tk.Label(status_bar, text="Ready to load image...",
                                      font=("Helvetica", 10),
                                      bg=COLORS['bg_medium'], fg=COLORS['text_gray'])
         self.status_label.pack(side="left", padx=20, pady=8)
-        
+
+        # Update ready button (hidden by default)
+        self.update_btn = tk.Button(status_bar,
+                                  text="⬇️ Update Ready (Restart)",
+                                  command=self.apply_update,
+                                  bg=COLORS['accent_green'],
+                                  fg="white",
+                                  font=("Helvetica", 9, "bold"),
+                                  relief="flat",
+                                  cursor="hand2",
+                                  padx=10, pady=4)
+        # Don't pack it yet - will be shown when update is ready
+
         self.info_label = tk.Label(status_bar, text="",
                                    font=("Helvetica", 9),
                                    bg=COLORS['bg_medium'], fg=COLORS['text_gray'])
@@ -1016,7 +1043,7 @@ Add this to the AdvancedPrivacyStudioPro class
     def show_about(self):
         """Show about dialog"""
         messagebox.showinfo("About",
-            "Advanced Image Privacy Studio Pro\nVersion 1.0.0\n\n"
+            f"Advanced Image Privacy Studio Pro\nVersion {APP_VERSION}\n\n"
             "Powerful image privacy protection tool with advanced features\n\n"
             "Support the developer:\n"
             "• PayPal: https://paypal.me/freerave1\n"
@@ -1028,3 +1055,37 @@ Add this to the AdvancedPrivacyStudioPro class
         """Show keyboard shortcuts"""
         shortcuts_text = "\n".join([f"{key}: {value}" for key, value in SHORTCUTS.items()])
         messagebox.showinfo("Keyboard Shortcuts", shortcuts_text)
+
+    def check_for_updates(self):
+        """Check for updates manually"""
+        self.auto_updater.check_for_updates(silent=False)
+
+    def open_exports_folder(self):
+        """Open the exports folder in file explorer"""
+        import webbrowser
+        try:
+            webbrowser.open(str(DIRS['exports']))
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open exports folder: {e}")
+
+    def open_app_data_folder(self):
+        """Open the app data folder in file explorer"""
+        import webbrowser
+        try:
+            from config import SYSTEM_DIR
+            webbrowser.open(str(SYSTEM_DIR))
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open app data folder: {e}")
+
+    def show_update_button(self):
+        """Show the update ready button when download completes"""
+        self.root.after(0, lambda: self.update_btn.pack(side="right", padx=10, pady=2))
+        self.root.after(0, lambda: messagebox.showinfo("Update Ready",
+            "A new update has been downloaded in the background.\n"
+            "You can restart anytime using the button in the status bar."))
+
+    def apply_update(self):
+        """Apply the ready update when user clicks the button"""
+        if messagebox.askyesno("Restart Application",
+                             "Application will close to apply the update. Continue?"):
+            self.auto_updater.apply_pending_update()

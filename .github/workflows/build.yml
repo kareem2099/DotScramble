@@ -59,6 +59,29 @@ jobs:
         pip install -r requirements.txt
         pip install pyarmor pyinstaller
 
+    # --- Version Injection ---
+    - name: Inject version info
+      shell: bash
+      run: |
+        # GitHub Actions gives us the clean tag name directly
+        TAG_NAME="${{ github.ref_name }}"
+
+        # Remove 'v' prefix if present (e.g. v2.0.0 -> 2.0.0)
+        VERSION="${TAG_NAME#v}"
+
+        echo "Building version: $VERSION"
+
+        # Create version_info.py with the actual version
+        # ⚠️ IMPORTANT: Do NOT put quotes around EOF, or variable expansion won't work!
+        cat > version_info.py << EOF
+        """
+        Version information injected by GitHub Actions during build
+        """
+        VERSION = "${VERSION}"
+        EOF
+
+        echo "Version info injected successfully"
+
     # --- Directories ---
     - name: Create necessary directories
       shell: bash

@@ -66,6 +66,14 @@ def create_spec_file():
     if cv2_data_dir and os.path.exists(cv2_data_dir):
         datas.append((cv2_data_dir, 'cv2/data'))
 
+    # Add PIL data files for Tkinter integration
+    try:
+        import PIL
+        pil_path = os.path.dirname(PIL.__file__)
+        datas.append((pil_path, 'PIL'))
+    except ImportError:
+        pass
+
     spec_content = f'''# -*- mode: python ; coding: utf-8 -*-
 
 import os
@@ -89,11 +97,19 @@ a = Analysis(
         'PIL.ImageFont',
         'PIL.ImageEnhance',
         'PIL.ImageColor',
+        'PIL.ImageFile',
+        'PIL.ImageOps',
+        'PIL.ImagePalette',
+        'PIL.PngImagePlugin',
+        'PIL.JpegImagePlugin',
+        'PIL.BmpImagePlugin',
+        'PIL._tkinter_finder',  # Critical for PIL-Tkinter integration
         'tkinter',
         'tkinter.ttk',
         'tkinter.filedialog',
         'tkinter.messagebox',
         'tkinter.simpledialog',
+        '_tkinter',  # Core Tkinter module
         'os',
         'sys',
         'pathlib',
@@ -107,6 +123,8 @@ a = Analysis(
         'webbrowser',
         'pytesseract',
         'opencv-python',
+        'requests',  # For auto-updater
+        'threading',  # For background operations
     ],
     hookspath=[],
     hooksconfig={{}},
@@ -163,7 +181,8 @@ def build_executable():
         shutil.rmtree("build")
 
     # Build with PyInstaller using the spec file
-    cmd = "pyinstaller --clean DotScramble.spec"
+    # Add additional flags for PIL/Tkinter integration
+    cmd = "pyinstaller --clean --hidden-import=PIL._tkinter_finder --hidden-import=_tkinter DotScramble.spec"
     if not run_command(cmd):
         print("PyInstaller build failed")
         return False

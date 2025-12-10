@@ -3,14 +3,50 @@ Configuration settings for Advanced Privacy Studio Pro
 Enhanced version with validation and environment support
 """
 import os
+import sys
 from pathlib import Path
 
 # ============================================================================
-# APPLICATION INFO
+# APPLICATION INFO & VERSION INJECTION
 # ============================================================================
-APP_NAME = "Advanced Image Privacy Studio Pro"
-APP_VERSION = "2.0.0"
+APP_NAME = "DotScramble"  # Keep the name matching the repository name
 APP_AUTHOR = "Privacy Studio Team"
+
+# The magical attempt to read version from GitHub Action
+try:
+    from version_info import VERSION as APP_VERSION
+except ImportError:
+    APP_VERSION = "1.1.0-dev"  # Developer version
+
+# ============================================================================
+# DIRECTORIES (Enterprise Standard - AppData)
+# ============================================================================
+def get_app_data_path():
+    """
+    Determine data storage path based on OS standards
+    Windows: %APPDATA%/DotScramble
+    Linux/Mac: ~/.local/share/DotScramble
+    """
+    home = Path.home()
+
+    if sys.platform == "win32":
+        # C:\Users\User\AppData\Roaming\DotScramble
+        base_path = Path(os.getenv('APPDATA')) / APP_NAME
+    elif sys.platform == "darwin":
+        # /Users/User/Library/Application Support/DotScramble
+        base_path = home / "Library" / "Application Support" / APP_NAME
+    else:
+        # /home/user/.local/share/DotScramble
+        base_path = home / ".local" / "share" / APP_NAME
+
+    return base_path
+
+# 1. System files (hidden from regular user view)
+SYSTEM_DIR = get_app_data_path()
+
+# 2. Export files (user images) - should be visible
+# Put them in Documents for easy access
+DOCUMENTS_DIR = Path.home() / "Documents" / f"{APP_NAME}_Exports"
 
 # ============================================================================
 # UI COLORS - Modern Dark Theme
@@ -218,22 +254,22 @@ PREVIEW_DELAY = 100  # Milliseconds delay for real-time preview
 AUTO_SAVE_INTERVAL = 300  # Seconds (5 minutes)
 
 # ============================================================================
-# DIRECTORIES
+# DIRECTORY MAPPING
 # ============================================================================
-BASE_DIR = Path(__file__).parent
-
-# Create directories if they don't exist
 DIRS = {
-    'backups': BASE_DIR / 'backups',
-    'exports': BASE_DIR / 'exports',
-    'logs': BASE_DIR / 'logs',
-    'presets': BASE_DIR / 'presets',
-    'temp': BASE_DIR / 'temp'
+    # System files go to the hidden location
+    'backups': SYSTEM_DIR / 'backups',
+    'logs': SYSTEM_DIR / 'logs',
+    'presets': SYSTEM_DIR / 'presets',
+    'temp': SYSTEM_DIR / 'temp',
+
+    # Images go to Documents (user-visible)
+    'exports': DOCUMENTS_DIR
 }
 
 # Create all directories
 for directory in DIRS.values():
-    directory.mkdir(exist_ok=True)
+    directory.mkdir(parents=True, exist_ok=True)
 
 # ============================================================================
 # BATCH PROCESSING
@@ -364,6 +400,16 @@ RADIO_STYLE = {
 }
 
 # ============================================================================
+# UPDATE CONFIGURATION
+# ============================================================================
+UPDATE_CONFIG = {
+    'repo_owner': 'kareem2099',
+    'repo_name': 'DotScramble',
+    'auto_check': True,  # Enable automatic update checks
+    'check_interval_days': 7  # How often to check for updates
+}
+
+# ============================================================================
 # ADVANCED SETTINGS
 # ============================================================================
 ADVANCED = {
@@ -451,7 +497,7 @@ __all__ = [
     'EFFECTS', 'DETECTION_MODES', 'SUPPORTED_FORMATS', 'SAVE_FORMATS',
     'MAX_HISTORY', 'BATCH_OUTPUT_FOLDER', 'EFFECT_PRESETS', 'SHORTCUTS',
     'WINDOW_SETTINGS', 'FONTS', 'ADVANCED', 'LOGGING', 'DIRS',
-    'RADIO_BASE', 'RADIO_STYLE',
+    'RADIO_BASE', 'RADIO_STYLE', 'UPDATE_CONFIG',
     'validate_config', 'get_cascade_path'
 ]
 

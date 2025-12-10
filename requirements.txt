@@ -10,6 +10,9 @@ Pillow>=10.0.0
 # Download from: https://github.com/tesseract-ocr/tesseract
 pytesseract>=0.3.10
 
+# HTTP requests for update checking
+requests>=2.28.0
+
 # GUI (included with Python, but listed for reference)
 # tkinter - Standard library (no install needed)
 
