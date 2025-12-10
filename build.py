@@ -181,8 +181,7 @@ def build_executable():
         shutil.rmtree("build")
 
     # Build with PyInstaller using the spec file
-    # Add additional flags for PIL/Tkinter integration
-    cmd = "pyinstaller --clean --hidden-import=PIL._tkinter_finder --hidden-import=_tkinter DotScramble.spec"
+    cmd = "pyinstaller --clean DotScramble.spec"
     if not run_command(cmd):
         print("PyInstaller build failed")
         return False
