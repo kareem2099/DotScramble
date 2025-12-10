@@ -46,12 +46,20 @@
 
 ### 🐧 Linux
 
-1. Download `DotScramble-linux`
-2. Make executable:
+1. **Install System Dependencies** (for text detection features):
+   ```bash
+   sudo apt install tesseract-ocr tesseract-ocr-eng
+   ```
+
+2. Download `DotScramble-linux`
+3. Make executable:
    ```bash
    chmod +x DotScramble-linux
    ```
-3. Run: `./DotScramble-linux`
+4. Run: `./DotScramble-linux`
+
+**Note:** Text detection features require Tesseract OCR. Without it, you'll see a warning but all other features work normally.
+
 
 </td>
 <td width="33%" align="center">
@@ -71,7 +79,7 @@
 
 <div align="center">
 
-**[📥 Download Latest Release](https://github.com/kareem2099/DotScramble/releases/latest)**
+**[�� Download Latest Release](https://github.com/kareem2099/DotScramble/releases/latest)**
 
 </div>
 
@@ -124,7 +132,7 @@
 | ⌨️ **Keyboard Shortcuts** | Lightning-fast workflow with hotkeys |
 | 🎚️ **Opacity Control** | Blend effects with original image |
 | 📊 **Image Information** | Display detailed image metadata |
-
+| 🔄 **Smart Auto-Update** | Updates silently in the background without interrupting your work |
 </div>
 
 ---
@@ -465,21 +473,28 @@ MIT License - Free for personal and commercial use
 <details>
 <summary><b>Common Issues</b></summary>
 
+**Q: I see a Tesseract warning on Linux?**  
+A: Text detection features require Tesseract OCR. Install it with:
+```bash
+sudo apt install tesseract-ocr tesseract-ocr-eng
+```
+After installation, restart the application to enable text detection features.
+
 **Q:  detection not working?**  
 A: Ensure good lighting and front-facing angles. Try adjusting detection sensitivity in settings.
 
 **Q: Application won't start?**  
 A: Check that all dependencies are installed. Try running from source with `python main.py`.
 
-**Q: Batch processing is slow?** ?**  
-A: Processing time depends on image size and effect complexity. Consider using pixelation for faster processing.
+**Q: Batch processing is slow?**  
+A: PA: Processing time depends on image size and effect complexity. Consider using pixelation for faster processing.
 
-**Q: Can't save preset 
-A  
-A: Ensure you have write permissions in the:application directory.
+**Q: Can't save preset?**  
+A: Ensure you have write permissions in the application directory.
 
 </details>
-P
+
+
 <div align="center">
 
 ### ⭐ Star this repository if you find it helpful!
