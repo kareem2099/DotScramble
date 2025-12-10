@@ -16,7 +16,7 @@ APP_AUTHOR = "Privacy Studio Team"
 try:
     from version_info import VERSION as APP_VERSION
 except ImportError:
-    APP_VERSION = "1.1.0-dev"  # Developer version
+    APP_VERSION = "1.1.1-dev"  # Developer version
 
 # ============================================================================
 # DIRECTORIES (Enterprise Standard - AppData)

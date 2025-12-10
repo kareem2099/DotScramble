@@ -72,6 +72,7 @@ class AdvancedPrivacyStudioPro:
         # Trigger automatic silent update check after UI loads
         if UPDATE_CONFIG['auto_check']:
             # Wait 3 seconds for UI to load, then check silently in background
+            # ✅ تم التصحيح: الدالة دي لازم تكون موجودة تحت بنفس الاسم
             self.root.after(3000, lambda: self.auto_updater.check_for_updates_silently(self.on_update_ready))
 
         self.create_menu_bar()
@@ -145,7 +146,6 @@ class AdvancedPrivacyStudioPro:
             fg=COLORS['text_white'],
 
             selectcolor=COLORS['bg_light'],
-            # 🔥 REMOVE WHITE BORDER (focus / highlight)
             highlightthickness=0,
             highlightbackground=COLORS['bg_medium'],
             highlightcolor=COLORS['bg_medium'],
@@ -178,8 +178,8 @@ class AdvancedPrivacyStudioPro:
             variable=variable,
             value=value,
             command=command,
-            **RADIO_BASE,     # from config (font/bg/fg)
-            **RADIO_STYLE     # remove highlight + active colors
+            **RADIO_BASE,
+            **RADIO_STYLE
         )
 
     def create_left_panel(self, parent):
@@ -209,7 +209,6 @@ class AdvancedPrivacyStudioPro:
             canvas_scroll.yview_scroll(int(-1*(event.delta/120)), "units")
 
         canvas_scroll.bind_all("<MouseWheel>", _on_mousewheel)
-
         canvas_scroll.bind_all("<Button-4>", lambda e: canvas_scroll.yview_scroll(-1, "units"))
         canvas_scroll.bind_all("<Button-5>", lambda e: canvas_scroll.yview_scroll(1, "units"))
 
@@ -285,7 +284,6 @@ class AdvancedPrivacyStudioPro:
 
         from config import DETECTION_LIST
 
-        # Make sure "target_text" is in your config, or add it manually here:
         rb = self.create_radio(
             mode_frame,
             "✍️ Targeted Text",
@@ -327,26 +325,22 @@ class AdvancedPrivacyStudioPro:
         self.params_frame = tk.Frame(parent, bg=COLORS['bg_medium'])
         self.params_frame.pack(pady=10, padx=20, fill="x")
         
-        # Blur strength
         self.blur_param = self.create_slider(self.params_frame, "Blur Strength", 
                                              self.blur_strength, 
                                              BLUR_RANGE['min'], BLUR_RANGE['max'], 
                                              COLORS['accent_cyan'])
         
-        # Pixel size
         self.pixel_param = self.create_slider(self.params_frame, "Pixel Block Size", 
                                               self.pixel_size, 
                                               PIXEL_RANGE['min'], PIXEL_RANGE['max'], 
                                               COLORS['accent_pink'])
         
-        # Opacity
         self.opacity_param = self.create_slider(self.params_frame, "Effect Opacity (%)", 
                                                 self.opacity, 
                                                 OPACITY_RANGE['min'], OPACITY_RANGE['max'], 
                                                 COLORS['accent_green'])
         self.opacity_param.pack(fill="x", pady=5)
         
-        # Show appropriate parameters
         self.update_parameter_visibility()
     
     def create_slider(self, parent, label_text, variable, min_val, max_val, color):
@@ -377,14 +371,12 @@ class AdvancedPrivacyStudioPro:
     
     def create_action_buttons(self, parent):
         """Create action buttons"""
-        # Process button
         self.process_btn = self.create_button(parent, "✨ Apply Effect", 
                                               self.process_image, 
                                               COLORS['accent_red'],
                                               state="disabled")
         self.process_btn.pack(pady=15, padx=20, fill="x")
         
-        # Undo/Redo frame
         undo_frame = tk.Frame(parent, bg=COLORS['bg_medium'])
         undo_frame.pack(pady=5, padx=20, fill="x")
         
@@ -400,7 +392,6 @@ class AdvancedPrivacyStudioPro:
                                            state="disabled")
         self.redo_btn.pack(side="right", fill="x", expand=True, padx=(5, 0))
         
-        # Other buttons
         self.clear_btn = self.create_button(parent, "🗑️ Clear Selections", 
                                             self.clear_regions, 
                                             COLORS['accent_purple'])
@@ -412,17 +403,11 @@ class AdvancedPrivacyStudioPro:
                                            state="disabled")
         self.save_btn.pack(pady=5, padx=20, fill="x")
         
-        # Batch process button
         batch_btn = self.create_button(parent, "📦 Batch Process", 
                                        self.open_batch_window, 
                                        COLORS['bg_light'])
         batch_btn.pack(pady=5, padx=20, fill="x")
     
-    """
-Main GUI Window - Part 2 (Implementation Methods)
-Add this to the AdvancedPrivacyStudioPro class
-"""
-
     def create_right_panel(self, parent):
         """Create right image display panel"""
         right_panel = tk.Frame(parent, bg=COLORS['bg_medium'])
@@ -488,7 +473,6 @@ Add this to the AdvancedPrivacyStudioPro class
     
     # Helper methods
     def create_button(self, parent, text, command, bg_color, state="normal"):
-        """Create styled button"""
         return tk.Button(parent, text=text,
                         command=command,
                         font=("Helvetica", 11, "bold"),
@@ -500,7 +484,6 @@ Add this to the AdvancedPrivacyStudioPro class
                         state=state)
     
     def create_small_button(self, parent, text, command):
-        """Create small button"""
         return tk.Button(parent, text=text,
                         command=command,
                         font=("Helvetica", 9),
@@ -511,11 +494,9 @@ Add this to the AdvancedPrivacyStudioPro class
                         padx=10, pady=5)
     
     def add_separator(self, parent):
-        """Add separator line"""
         ttk.Separator(parent, orient="horizontal").pack(fill="x", pady=12, padx=20)
     
     def bind_shortcuts(self):
-        """Bind keyboard shortcuts"""
         self.root.bind(SHORTCUTS['load'], lambda e: self.load_image())
         self.root.bind(SHORTCUTS['save'], lambda e: self.save_image())
         self.root.bind(SHORTCUTS['undo'], lambda e: self.undo())
@@ -526,47 +507,35 @@ Add this to the AdvancedPrivacyStudioPro class
     
     # Core functionality
     def load_image(self):
-        """Load image from file"""
-        # file_path = filedialog.askopenfilename(
-        #     title="Select Image",
-        #     filetypes=SUPPORTED_FORMATS
-        # )
         from core.image_picker import ImagePicker
-
         picker = ImagePicker(self.root)
         file_path = picker.open()
 
-        if not file_path:
+        if not file_path: return
+        
+        self.image_path = file_path
+        self.original_image = cv2.imread(file_path)
+        
+        if self.original_image is None:
+            messagebox.showerror("Error", "Could not load image!")
             return
         
-        if file_path:
-            self.image_path = file_path
-            self.original_image = cv2.imread(file_path)
-            
-            if self.original_image is None:
-                messagebox.showerror("Error", "Could not load image!")
-                return
-            
-            self.processed_image = self.original_image.copy()
-            self.drawing_regions = []
-            self.history_manager.clear()
-            
-            self.display_image(self.original_image)
-            self.process_btn.config(state="normal")
-            
-            # Update info
-            info = self.image_utils.get_image_info(self.original_image)
-            self.status_label.config(text=f"Loaded: {os.path.basename(file_path)}")
-            self.info_label.config(text=f"{info['width']}x{info['height']} | {info['size_kb']} KB")
-            self.update_buttons()
+        self.processed_image = self.original_image.copy()
+        self.drawing_regions = []
+        self.history_manager.clear()
+        
+        self.display_image(self.original_image)
+        self.process_btn.config(state="normal")
+        
+        info = self.image_utils.get_image_info(self.original_image)
+        self.status_label.config(text=f"Loaded: {os.path.basename(file_path)}")
+        self.info_label.config(text=f"{info['width']}x{info['height']} | {info['size_kb']} KB")
+        self.update_buttons()
     
     def display_image(self, cv_image):
-        """Display image on canvas"""
-        if cv_image is None:
-            return
+        if cv_image is None: return
         
         rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-        
         canvas_width = self.canvas.winfo_width()
         canvas_height = self.canvas.winfo_height()
         
@@ -574,9 +543,7 @@ Add this to the AdvancedPrivacyStudioPro class
             canvas_width = 900
             canvas_height = 700
         
-        resized, scale = self.image_utils.resize_for_display(
-            rgb_image, canvas_width, canvas_height
-        )
+        resized, scale = self.image_utils.resize_for_display(rgb_image, canvas_width, canvas_height)
         
         pil_image = Image.fromarray(resized)
         self.photo = ImageTk.PhotoImage(pil_image)
@@ -591,21 +558,16 @@ Add this to the AdvancedPrivacyStudioPro class
         self.display_offset = (x, y)
     
     def process_image(self):
-        """Process image with current settings"""
-        if self.original_image is None:
-            return
+        if self.original_image is None: return
         
-        # Save to history
         if self.processed_image is not None:
             self.history_manager.save_state(self.processed_image)
         
         mode = self.detection_mode.get()
         effect = self.effect_type.get()
-        
         self.processed_image = self.processed_image.copy()
         
         try:
-            # Detect regions
             if mode == "face":
                 regions = self.detection_engine.detect_faces(self.processed_image)
             elif mode == "eye":
@@ -621,9 +583,7 @@ Add this to the AdvancedPrivacyStudioPro class
                 if not word:
                     messagebox.showwarning("Wait!", "Please type the word you want to blur.")
                     return
-
                 regions = self.text_detector.detect_specific_word(self.processed_image, word)
-
                 if not regions:
                     messagebox.showinfo("Info", f"Could not find the word '{word}' in this image.")
                     return
@@ -635,10 +595,8 @@ Add this to the AdvancedPrivacyStudioPro class
             elif mode == "full":
                 h, w = self.processed_image.shape[:2]
                 regions = [(0, 0, w, h)]
-            else:
-                return
+            else: return
             
-            # Apply effect to each region
             for (x, y, w, h) in regions:
                 self.apply_effect_to_region(x, y, w, h, effect)
             
@@ -651,7 +609,6 @@ Add this to the AdvancedPrivacyStudioPro class
             messagebox.showerror("Error", f"Processing failed: {str(e)}")
     
     def apply_effect_to_region(self, x, y, w, h, effect):
-        """Apply selected effect to region"""
         original_region = self.original_image[y:y+h, x:x+w]
         
         if effect == "blur":
@@ -670,10 +627,8 @@ Add this to the AdvancedPrivacyStudioPro class
             result = self.image_processor.frosted_glass(self.processed_image, x, y, w, h)
         elif effect == "oil_paint":
             result = self.image_processor.oil_paint(self.processed_image, x, y, w, h)
-        else:
-            return
+        else: return
         
-        # Apply opacity
         opacity = self.opacity.get()
         if opacity < 100:
             result = self.image_processor.apply_opacity(original_region, result, opacity)
@@ -681,58 +636,34 @@ Add this to the AdvancedPrivacyStudioPro class
         self.processed_image[y:y+h, x:x+w] = result
     
     def save_image(self):
-        """Save processed image"""
-        if self.processed_image is None:
-            return
-        
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".jpg",
-            filetypes=SAVE_FORMATS
-        )
-        
+        if self.processed_image is None: return
+        file_path = filedialog.asksaveasfilename(defaultextension=".jpg", filetypes=SAVE_FORMATS)
         if file_path:
             cv2.imwrite(file_path, self.processed_image)
             messagebox.showinfo("Success", f"Image saved successfully!")
             self.status_label.config(text=f"Saved: {os.path.basename(file_path)}")
     
     def save_comparison(self):
-        """Save side-by-side comparison"""
-        if self.original_image is None or self.processed_image is None:
-            return
-        
-        file_path = filedialog.asksaveasfilename(
-            defaultextension=".jpg",
-            filetypes=SAVE_FORMATS
-        )
-        
+        if self.original_image is None or self.processed_image is None: return
+        file_path = filedialog.asksaveasfilename(defaultextension=".jpg", filetypes=SAVE_FORMATS)
         if file_path:
             ExportManager.export_comparison(self.original_image, self.processed_image, file_path)
             messagebox.showinfo("Success", "Comparison saved!")
     
-    # Event handlers
     def on_effect_change(self):
-        """Handle effect type change"""
         self.update_parameter_visibility()
-        if self.real_time_preview.get():
-            self.process_image()
+        if self.real_time_preview.get(): self.process_image()
 
     def on_detection_change(self):
-        """Handle detection mode change"""
         self.update_parameter_visibility()
-        if self.real_time_preview.get():
-            self.process_image()
+        if self.real_time_preview.get(): self.process_image()
 
     def on_parameter_change(self):
-        """Handle parameter change"""
-        if self.real_time_preview.get() and self.original_image is not None:
-            self.process_image()
+        if self.real_time_preview.get() and self.original_image is not None: self.process_image()
     
     def update_parameter_visibility(self):
-        """Show/hide parameters based on effect"""
         self.blur_param.pack_forget()
         self.pixel_param.pack_forget()
-
-        # Toggle Text Input
         self.text_input_frame.pack_forget()
 
         if self.detection_mode.get() == "target_text":
@@ -745,22 +676,18 @@ Add this to the AdvancedPrivacyStudioPro class
             self.pixel_param.pack(fill="x", pady=5)
     
     def toggle_preview(self):
-        """Toggle real-time preview"""
         if self.real_time_preview.get():
             self.status_label.config(text="Real-time preview enabled")
         else:
             self.status_label.config(text="Real-time preview disabled")
     
-    # Mouse events for manual selection
     def on_mouse_down(self, event):
-        """Handle mouse down"""
         if self.detection_mode.get() == "manual" and self.original_image is not None:
             self.drawing = True
             self.start_x = event.x
             self.start_y = event.y
     
     def on_mouse_drag(self, event):
-        """Handle mouse drag"""
         if self.drawing:
             self.canvas.delete("current_rect")
             self.current_rect = self.canvas.create_rectangle(
@@ -769,7 +696,6 @@ Add this to the AdvancedPrivacyStudioPro class
             )
     
     def on_mouse_up(self, event):
-        """Handle mouse up"""
         if self.drawing:
             self.drawing = False
             x1 = int((self.start_x - self.display_offset[0]) / self.display_scale)
@@ -785,37 +711,19 @@ Add this to the AdvancedPrivacyStudioPro class
                 self.status_label.config(text=f"Added region ({len(self.drawing_regions)} total)")
     
     def on_zoom(self, event):
-        """Handle zoom with mouse wheel"""
-        """Handle zoom with mouse wheel"""
-        if self.original_image is None:
-            return
-        
-        # Determine direction
+        if self.original_image is None: return
         scale_multiplier = 1.0
-
-        # Windows/Linux uses event.delta, MacOS uses event.num
-        if event.num == 4 or event.delta > 0:
-            scale_multiplier = 1.1  # Zoom in
-        elif event.num == 5 or event.delta < 0:
-            scale_multiplier = 0.9  # Zoom out
-
-        # Apply limit to zoom
+        if event.num == 4 or event.delta > 0: scale_multiplier = 1.1
+        elif event.num == 5 or event.delta < 0: scale_multiplier = 0.9
+        
         new_scale = self.display_scale * scale_multiplier
         if 0.1 < new_scale < 5.0:
             self.display_scale = new_scale
-
-            # Refresh Display
-            if self.processed_image is not None:
-                self.display_image(self.processed_image)
-            else:
-                self.display_image(self.original_image)
-
-            # Show zoom level in status bar
+            if self.processed_image is not None: self.display_image(self.processed_image)
+            else: self.display_image(self.original_image)
             self.status_label.config(text=f"Zoom: {int(self.display_scale * 100)}%")
 
-    # Additional methods
     def undo(self):
-        """Undo last operation"""
         prev_image = self.history_manager.undo()
         if prev_image is not None:
             self.history_manager.add_to_redo(self.processed_image)
@@ -825,7 +733,6 @@ Add this to the AdvancedPrivacyStudioPro class
             self.update_buttons()
     
     def redo(self):
-        """Redo last undone operation"""
         next_image = self.history_manager.redo()
         if next_image is not None:
             self.history_manager.save_state(self.processed_image)
@@ -835,15 +742,12 @@ Add this to the AdvancedPrivacyStudioPro class
             self.update_buttons()
     
     def clear_regions(self):
-        """Clear all manual selections"""
         self.drawing_regions = []
         self.canvas.delete("current_rect")
-        if self.original_image is not None:
-            self.display_image(self.processed_image)
+        if self.original_image is not None: self.display_image(self.processed_image)
         self.status_label.config(text="Cleared all selections")
     
     def reset_image(self):
-        """Reset to original image"""
         if self.original_image is not None:
             self.processed_image = self.original_image.copy()
             self.display_image(self.processed_image)
@@ -853,51 +757,31 @@ Add this to the AdvancedPrivacyStudioPro class
             self.update_buttons()
     
     def switch_view(self, view_type):
-        """Switch between different views"""
         if view_type == 'original' and self.original_image is not None:
             self.display_image(self.original_image)
             self.status_label.config(text="Viewing Original Image")
-        
         elif view_type == 'processed' and self.processed_image is not None:
             self.display_image(self.processed_image)
             self.status_label.config(text="Viewing Processed Image")
         elif view_type == 'compare':
-            if self.original_image is None and self.processed_image is None:
-                return
-            # Ensure images are the same size for concatenation
+            if self.original_image is None and self.processed_image is None: return
             h1, w1 = self.original_image.shape[:2]
             h2, w2 = self.processed_image.shape[:2]
-
-            # Resize processed to match original if needed (though they should be same)
             proc_img_resized = self.processed_image
             if (h1, w1) != (h2, w2):
                 proc_img_resized = cv2.resize(self.processed_image, (w1, h1))
-
-                # Add a divider line
-            divider = np.ones((h1, 10, 3), dtype=np.uint8) * 255  # white line
-            divider[:] = [255, 255, 255]  # white line
-
-            # Stack horizontally
+            divider = np.ones((h1, 10, 3), dtype=np.uint8) * 255
             comparison_image = np.hstack((self.original_image, divider, proc_img_resized))
             self.display_image(comparison_image)
             self.status_label.config(text="Viewing Comparison Image")
-            pass
-    
+            
     def update_buttons(self):
-        """Update button states"""
-        if self.history_manager.can_undo():
-            self.undo_btn.config(state="normal")
-        else:
-            self.undo_btn.config(state="disabled")
-        
-        if self.history_manager.can_redo():
-            self.redo_btn.config(state="normal")
-        else:
-            self.redo_btn.config(state="disabled")
+        if self.history_manager.can_undo(): self.undo_btn.config(state="normal")
+        else: self.undo_btn.config(state="disabled")
+        if self.history_manager.can_redo(): self.redo_btn.config(state="normal")
+        else: self.redo_btn.config(state="disabled")
     
-    # Preset methods
     def save_preset(self):
-        """Save current settings as preset"""
         name = simpledialog.askstring("Save Preset", "Enter preset name:")
         if name:
             settings = {
@@ -911,31 +795,20 @@ Add this to the AdvancedPrivacyStudioPro class
             messagebox.showinfo("Success", f"Preset '{name}' saved!")
     
     def load_preset(self):
-        """Load preset"""
         presets = self.preset_manager.get_all_presets()
         if not presets:
             messagebox.showinfo("Info", "No presets available")
             return
-        
-        # Create simple selection dialog
-        # Implementation needed
-        pass
+        # Implementation for preset loading dialog would go here
     
     def manage_presets(self):
-        """Open preset management window"""
-        # Implementation needed
         pass
     
     def open_batch_window(self):
-        """Open batch processing window"""
-        # Create batch window (separate implementation needed)
         BatchWindow(self.root, self.batch_processor)
     
     def show_donate(self):
-        """Show donation dialog with clickable buttons"""
         import webbrowser
-
-        # Create custom donation dialog
         donate_window = tk.Toplevel(self.root)
         donate_window.title("Support the Developer")
         donate_window.geometry("400x300")
@@ -943,105 +816,37 @@ Add this to the AdvancedPrivacyStudioPro class
         donate_window.resizable(False, False)
         donate_window.transient(self.root)
         donate_window.grab_set()
+        
+        x = self.root.winfo_x() + (self.root.winfo_width() // 2) - 200
+        y = self.root.winfo_y() + (self.root.winfo_height() // 2) - 150
+        donate_window.geometry(f"+{x}+{y}")
 
-        # Center the window
-        donate_window.geometry("+{}+{}".format(
-            self.root.winfo_x() + (self.root.winfo_width() // 2) - 200,
-            self.root.winfo_y() + (self.root.winfo_height() // 2) - 150
-        ))
+        tk.Label(donate_window, text="Support the Developer",
+                font=("Helvetica", 16, "bold"), bg=COLORS['bg_medium'], fg=COLORS['accent_cyan']).pack(pady=15)
+        tk.Label(donate_window, text="Thank you for considering supporting this project!\nChoose your preferred donation platform:",
+                font=("Helvetica", 10), bg=COLORS['bg_medium'], fg=COLORS['text_white'], justify="center").pack(pady=10)
 
-        # Title
-        title_label = tk.Label(donate_window,
-                             text="Support the Developer",
-                             font=("Helvetica", 16, "bold"),
-                             bg=COLORS['bg_medium'],
-                             fg=COLORS['accent_cyan'])
-        title_label.pack(pady=15)
-
-        # Message
-        msg_label = tk.Label(donate_window,
-                           text="Thank you for considering supporting this project!\n"
-                                "Choose your preferred donation platform:",
-                           font=("Helvetica", 10),
-                           bg=COLORS['bg_medium'],
-                           fg=COLORS['text_white'],
-                           justify="center")
-        msg_label.pack(pady=10)
-
-        # Button frame
         button_frame = tk.Frame(donate_window, bg=COLORS['bg_medium'])
         button_frame.pack(pady=10, padx=20, fill="x")
 
-        # PayPal button
-        paypal_btn = tk.Button(button_frame,
-                             text="💳 PayPal",
-                             command=lambda: self.open_url("https://paypal.me/freerave1"),
-                             font=("Helvetica", 11, "bold"),
-                             bg="#0070ba", fg="white",
-                             activebackground="#005ea6",
-                             cursor="hand2",
-                             relief="flat",
-                             padx=15, pady=8)
-        paypal_btn.pack(fill="x", pady=3)
-
-        # Buy Me a Coffee button
-        bmc_btn = tk.Button(button_frame,
-                          text="☕ Buy Me a Coffee",
-                          command=lambda: self.open_url("https://buymeacoffee.com/freerave"),
-                          font=("Helvetica", 11, "bold"),
-                          bg="#ffdd00", fg="black",
-                          activebackground="#ffcc00",
-                          cursor="hand2",
-                          relief="flat",
-                          padx=15, pady=8)
-        bmc_btn.pack(fill="x", pady=3)
-
-        # Ko-fi button
-        kofi_btn = tk.Button(button_frame,
-                           text="🎨 Ko-fi",
-                           command=lambda: self.open_url("https://ko-fi.com/freerave"),
-                           font=("Helvetica", 11, "bold"),
-                           bg="#ff5e5b", fg="white",
-                           activebackground="#ff4742",
-                           cursor="hand2",
-                           relief="flat",
-                           padx=15, pady=8)
-        kofi_btn.pack(fill="x", pady=3)
-
-        # GitHub Sponsors button
-        github_btn = tk.Button(button_frame,
-                             text="⭐ GitHub Sponsors",
-                             command=lambda: self.open_url("https://github.com/sponsors/kareem2099"),
-                             font=("Helvetica", 11, "bold"),
-                             bg="#24292e", fg="white",
-                             activebackground="#1b1f23",
-                             cursor="hand2",
-                             relief="flat",
-                             padx=15, pady=8)
-        github_btn.pack(fill="x", pady=3)
-
-        # Close button
-        close_btn = tk.Button(donate_window,
-                            text="Close",
-                            command=donate_window.destroy,
-                            font=("Helvetica", 10),
-                            bg=COLORS['bg_light'], fg=COLORS['text_white'],
-                            activebackground=COLORS['bg_dark'],
-                            cursor="hand2",
-                            relief="flat",
-                            padx=20, pady=5)
-        close_btn.pack(pady=15)
+        tk.Button(button_frame, text="💳 PayPal", command=lambda: self.open_url("https://paypal.me/freerave1"),
+                  font=("Helvetica", 11, "bold"), bg="#0070ba", fg="white").pack(fill="x", pady=3)
+        tk.Button(button_frame, text="☕ Buy Me a Coffee", command=lambda: self.open_url("https://buymeacoffee.com/freerave"),
+                  font=("Helvetica", 11, "bold"), bg="#ffdd00", fg="black").pack(fill="x", pady=3)
+        tk.Button(button_frame, text="🎨 Ko-fi", command=lambda: self.open_url("https://ko-fi.com/freerave"),
+                  font=("Helvetica", 11, "bold"), bg="#ff5e5b", fg="white").pack(fill="x", pady=3)
+        tk.Button(button_frame, text="⭐ GitHub Sponsors", command=lambda: self.open_url("https://github.com/sponsors/kareem2099"),
+                  font=("Helvetica", 11, "bold"), bg="#24292e", fg="white").pack(fill="x", pady=3)
+        
+        tk.Button(donate_window, text="Close", command=donate_window.destroy,
+                  font=("Helvetica", 10), bg=COLORS['bg_light'], fg=COLORS['text_white']).pack(pady=15)
 
     def open_url(self, url):
-        """Open URL in default browser"""
         import webbrowser
-        try:
-            webbrowser.open(url)
-        except:
-            messagebox.showerror("Error", "Could not open browser. Please visit:\n" + url)
+        try: webbrowser.open(url)
+        except: messagebox.showerror("Error", "Could not open browser. Please visit:\n" + url)
 
     def show_about(self):
-        """Show about dialog"""
         messagebox.showinfo("About",
             f"Advanced Image Privacy Studio Pro\nVersion {APP_VERSION}\n\n"
             "Powerful image privacy protection tool with advanced features\n\n"
@@ -1052,32 +857,26 @@ Add this to the AdvancedPrivacyStudioPro class
             "Made with ❤️ by FreeRave")
 
     def show_shortcuts(self):
-        """Show keyboard shortcuts"""
         shortcuts_text = "\n".join([f"{key}: {value}" for key, value in SHORTCUTS.items()])
         messagebox.showinfo("Keyboard Shortcuts", shortcuts_text)
 
     def check_for_updates(self):
-        """Check for updates manually"""
         self.auto_updater.check_for_updates(silent=False)
 
     def open_exports_folder(self):
-        """Open the exports folder in file explorer"""
         import webbrowser
-        try:
-            webbrowser.open(str(DIRS['exports']))
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not open exports folder: {e}")
+        try: webbrowser.open(str(DIRS['exports']))
+        except Exception as e: messagebox.showerror("Error", f"Could not open exports folder: {e}")
 
     def open_app_data_folder(self):
-        """Open the app data folder in file explorer"""
         import webbrowser
         try:
             from config import SYSTEM_DIR
             webbrowser.open(str(SYSTEM_DIR))
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not open app data folder: {e}")
+        except Exception as e: messagebox.showerror("Error", f"Could not open app data folder: {e}")
 
-    def show_update_button(self):
+    # ✅ تم التصحيح: تغيير الاسم من show_update_button إلى on_update_ready
+    def on_update_ready(self):
         """Show the update ready button when download completes"""
         self.root.after(0, lambda: self.update_btn.pack(side="right", padx=10, pady=2))
         self.root.after(0, lambda: messagebox.showinfo("Update Ready",
@@ -1087,5 +886,5 @@ Add this to the AdvancedPrivacyStudioPro class
     def apply_update(self):
         """Apply the ready update when user clicks the button"""
         if messagebox.askyesno("Restart Application",
-                             "Application will close to apply the update. Continue?"):
+                            "Application will close to apply the update. Continue?"):
             self.auto_updater.apply_pending_update()

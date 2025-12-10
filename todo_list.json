@@ -1,6 +1,6 @@
 {
   "project": "DotScramble Professional Auto-Update System",
-  "version": "1.1.0-dev",
+  "version": "1.1.1-dev",
   "status": "COMPLETED - Ready for Production",
   "completion_percentage": 92,
 
@@ -42,8 +42,8 @@
 
   "REMAINING_TASKS": [
     "✅ Fix PIL/Tkinter PyInstaller hooks error",
-    "✅ Change version to 1.1.0",
-    "✅ Update version_info.py to 1.1.0-dev",
+    "✅ Change version to 1.1.1",
+    "✅ Update version_info.py to 1.1.1-dev",
     "✅ Implement passive update system (silent download)",
     "✅ Add status bar update notification",
     "✅ Implement unified download location (AppData temp)",
@@ -52,10 +52,10 @@
     "✅ Add Tesseract OCR documentation for Linux users",
     "✅ Add Smart Auto-Update to README features",
     "✅ Update CHANGELOG.md with v1.1.0 features",
-    "🏷️ Create GitHub test release (v1.1.0-test)",
+    "🏷️ Create GitHub test release (v1.1.1-test)",
     "🔍 Verify GitHub Actions build process",
     "🧪 Test full update flow (detection → download → install)",
-    "📦 Create official v1.1.0 release"
+    "📦 Create official v1.1.1 release"
   ],
 
   "PRODUCTION_READINESS": [
@@ -79,8 +79,8 @@
 
   "DEPLOYMENT_COMMANDS": [
     "git push origin main",
-    "git tag v1.1.0-test && git push origin v1.1.0-test",
+    "git tag v1.1.1-test && git push origin v1.1.1-test",
     "Verify GitHub Actions builds",
-    "git tag v1.1.0 && git push origin v1.1.0"
+    "git tag v1.1.1 && git push origin v1.1.1"
   ]
 }
