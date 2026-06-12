@@ -1,0 +1,12 @@
+{
+    "en": {
+        "name": "English",
+        "native": "English",
+        "rtl": false
+    },
+    "ar": {
+        "name": "Arabic",
+        "native": "العربية",
+        "rtl": true
+    }
+}

@@ -1,0 +1,229 @@
+{
+    "app": {
+        "title": "DotScramble", 
+        "version": "الإصدار {version}",
+        "author": "صنع بـ ❤️ بواسطة FreeRave"
+    },
+    "menu": {
+        "file": "ملف",
+        "edit": "تحرير",
+        "presets": "الإعدادات المسبقة",
+        "view": "عرض",
+        "help": "مساعدة",
+        "file_items": {
+            "open_image": "فتح صورة",
+            "open_recent": "فتح الملفات الأخيرة",
+            "no_recent": "لا توجد ملفات حديثة",
+            "clear_history": "مسح السجل",
+            "save_result": "حفظ النتيجة",
+            "save_comparison": "حفظ كمقارنة",
+            "open_exports": "فتح مجلد المخرجات",
+            "batch_process": "معالجة دفعة",
+            "exit": "خروج"
+        },
+        "edit_items": {
+            "undo": "تراجع",
+            "redo": "إعادة",
+            "clear_selections": "مسح التحديدات",
+            "reset_image": "إعادة تعيين الصورة"
+        },
+        "presets_items": {
+            "save_settings": "حفظ الإعدادات الحالية",
+            "load_preset": "تحميل إعداد مسبق",
+            "manage_presets": "إدارة الإعدادات المسبقة"
+        },
+        "view_items": {
+            "themes": "🎨 السمات",
+            "language": "🌐 اللغة"
+        },
+        "help_items": {
+            "check_updates": "التحقق من التحديثات",
+            "open_app_data": "فتح مجلد بيانات التطبيق",
+            "donate": "تبرع",
+            "about": "عن البرنامج",
+            "shortcuts": "اختصارات"
+        }
+    },
+    "ui": {
+        "header": {
+            "title": "🚀 DotScramble",
+            "preview": "🔴 Real-time Preview"
+        },
+        "buttons": {
+            "load": "📁 تحميل صورة",
+            "apply": "✨ تطبيق التأثير",
+            "reset": "🗑️ مسح التحديدات"
+        },
+        "controls": {
+            "title": "⚙️ التحكم",
+            "load_image": "📁 تحميل صورة",
+            "effect_type": "🎨 نوع التأثير:",
+            "detection_mode": "🎯 وضع الكشف:",
+            "parameters": "🔧 معلمات التأثير:",
+            "blur_strength": "قوة التمويه",
+            "pixel_size": "حجم كتلة البكسل",
+            "opacity": "شفافية التأثير (%)",
+            "target_text": "اكتب الكلمة المراد تمويهها:",
+            "apply_effect": "✨ تطبيق التأثير",
+            "undo": "↶ تراجع",
+            "redo": "↷ إعادة",
+            "clear_selections": "🗑️ مسح التحديدات",
+            "save_result": "💾 حفظ النتيجة",
+            "batch_process": "📦 معالجة دفعة",
+            "tip": "💡 نصيحة: فعّل المعاينة المباشرة\nللحصول على نتائج فورية!"
+        },
+        "canvas": {
+            "title": "🖼️ لوحة الصورة",
+            "views": {
+                "original": "أصلي",
+                "processed": "مُعالَج",
+                "compare": "مقارنة"
+            }
+        },
+        "status": {
+            "ready": "جاهز لتحميل صورة...",
+            "loaded": "تم التحميل: {filename}",
+            "processed": "تمت معالجة {count} منطقة(مناطق)",
+            "saved": "تم الحفظ: {filename}",
+            "preview_enabled": "تم تفعيل المعاينة المباشرة",
+            "preview_disabled": "تم إيقاف المعاينة المباشرة",
+            "region_added": "تمت إضافة المنطقة ({count} إجمالاً)",
+            "cleared": "تم مسح جميع التحديدات",
+            "reset": "تم إعادة تعيين الصورة إلى الأصلية",
+            "failed_load": "فشل تحميل الصورة"
+        },
+        "info": {
+            "image_info": "{width}x{height} | {size_kb} ك.ب"
+        }
+    },
+    "effects": {
+        "blur": "🌫️ تمويه",
+        "pixelation": "🔲 تقطيع",
+        "black_bar": "⬛ شريط أسود",
+        "gradient": "🎭 تدرج",
+        "mosaic": "🔳 فسيفساء",
+        "glass": "❄️ زجاج مجمد",
+        "oil_paint": "🎨 طلاء زيتي"
+    },
+    "detection": {
+        "face": "🎭 وجه",
+        "eye": "👁️ عيون",
+        "body": "🧍 جسم كامل",
+        "license_plate": "🚗 لوحة مركبة",
+        "text": "📝 نص",
+        "target_text": "✍️ نص محدد",
+        "manual": "✏️ يدوي",
+        "full": "🌍 صورة كاملة"
+    },
+    "dialogs": {
+        "error": {
+            "loading": "خطأ",
+            "loading_image": "فشل تحميل الصورة:\n{error}",
+            "processing": "فشل المعالجة: {error}",
+            "saving": "لا يمكن حفظ الصورة: {error}",
+            "no_image": "لا توجد صورة محملة",
+            "no_selections": "ارسم مناطق على الصورة أولاً!",
+            "no_word": "الرجاء كتابة الكلمة التي تريد تمويهها.",
+            "word_not_found": "لا يمكن العثور على الكلمة '{word}' في هذه الصورة.",
+            "image_empty": "الصورة المحملة فارغة!",
+            "image_corrupted": "لا يمكن تحميل الصورة!\n\nالملف: {filename}\n\nالأسباب المحتملة:\n• الملف تالف\n• التنسيق غير مدعوم\n• مسار الملف يحتوي على أحرف خاصة",
+            "dependencies": "الحزم المطلوبة مفقودة:\n\n{deps}\n\nالرجاء تثبيتها باستخدام:\npip install {deps}",
+            "import": "خطأ في الاستيراد: {error}\n\nالرجاء التأكد من وجود جميع الوحدات في الموقع الصحيح:\n- gui/main_window.py\n- gui/batch_window.py\n- core/image_processor.py\n- core/batch_processor.py\n- core/utils.py\n- config.py",
+            "fatal": "فشل بدء تشغيل التطبيق:\n\n{error}\n\nالرجاء التحقق من ملف السجل للحصول على التفاصيل."
+        },
+        "info": {
+            "saved": "تم حفظ الصورة بنجاح!",
+            "comparison_saved": "تم حفظ المقارنة!",
+            "preset_saved": "تم حفظ الإعداد المسبق '{name}'!",
+            "update_ready": "تم تنزيل تحديث جديد في الخلفية.\nيمكنك إعادة التشغيل في أي وقت باستخدام الزر في شريط الحالة.",
+            "donate": "دعم المطور",
+            "donate_text": "شكراً لتأملك دعم هذا المشروع!\nاختر منصتك المفضلة للتبرع:",
+            "about": "استوديو الخصوصية المتقدم للصور\nالإصدار {version}\n\nأداة قوية لحماية خصوصية الصور مع ميزات متقدمة\n\nدعم المطور:\n• PayPal: https://paypal.me/freerave1\n• Buy Me a Coffee: https://buymeacoffee.com/freerave\n• Ko-fi: https://ko-fi.com/freerave\n\nصنع بـ ❤️ بواسطة FreeRave",
+            "shortcuts": "اختصارات لوحة المفاتيح",
+            "update_check": "جارٍ التحقق من التحديثات...",
+            "update_available": "تحديث متاح: {version}\nتنزيل وتثبيت؟",
+            "no_updates": "أنت تستخدم أحدث إصدار",
+            "update_failed": "فشل التحقق من التحديث: {error}",
+            "update_downloading": "جارٍ تنزيل التحديث في الخلفية...",
+            "update_complete": "تم تنزيل التحديث بنجاح!",
+            "restart_required": "سيتم إغلاق التطبيق لتطبيق التحديث. المتابعة؟"
+        },
+        "warning": {
+            "clear_history": "هل أنت متأكد من رغبتك في مسح سجل الملفات الأخيرة؟",
+            "unsaved_changes": "لديك تغييرات غير محفوظة. المتابعة؟",
+            "large_image": "الصورة كبيرة جداً ({width}x{height}). قد تكون المعالجة بطيئة.",
+            "unsupported_format": "تنسيق الملف قد لا يكون مدعوماً بالكامل. بعض الميزات قد لا تعمل بشكل صحيح."
+        },
+        "confirm": {
+            "exit": "حفظ التغييرات قبل الخروج؟",
+            "restart": "سيتم إغلاق التطبيق لتطبيق التحديث. المتابعة؟"
+        }
+    },
+    "presets": {
+        "save": "حفظ إعداد مسبق",
+        "save_prompt": "أدخل اسم الإعداد المسبق:",
+        "load": "تحميل إعداد مسبق",
+        "manage": "إدارة الإعدادات المسبقة",
+        "no_presets": "لا توجد إعدادات مسبقة متاحة",
+        "light_privacy": "خصوصية خفيفة",
+        "medium_privacy": "خصوصية متوسطة",
+        "maximum_privacy": "خصوصية قصوى",
+        "artistic_blur": "تمويه فني",
+        "license_plate_blur": "تمويه لوحة المركبة",
+        "text_redaction": "إخفاء النص"
+    },
+    "batch": {
+        "title": "المعالجة الدفعة",
+        "select_folder": "تحديد مجلد الإدخال",
+        "select_output": "تحديد مجلد الإخراج",
+        "start": "بدء المعالجة",
+        "stop": "إيقاف المعالجة",
+        "progress": "تمت معالجة {current}/{total} ملف",
+        "complete": "اكتملت المعالجة الدفعة!",
+        "error": "فشل المعالجة الدفعة: {error}",
+        "no_files": "لا توجد ملفات صور في المجلد المحدد",
+        "settings_saved": "تم حفظ إعدادات الدفعة!"
+    },
+    "themes": {
+        "midnight": "🌑 الظلام الدامس",
+        "ocean": "🌊 المحيط الأزرق",
+        "cyberpunk": "🤖 سايبربانك",
+        "dracula": "🧛 دراكولا",
+        "forest": "🌲 الغابة",
+        "light": "☀️ الوضع الفاتح",
+        "nord": "❄️ نورد",
+        "monokai": "🔥 مونوكاي",
+        "solarized_dark": "🌗 سولاريزييد داكن",
+        "solarized_light": "☀️ سولاريزييد فاتح",
+        "tokyo_night": "🗼 ليلة طوكيو",
+        "gruvbox_dark": "🍂 جروكسبوكس داكن",
+        "one_dark": "⚫ وان داكن",
+        "material": "🎨 مادييرال",
+        "catppuccin_mocha": "☕ كاتبتشين موكا",
+        "rosepine": "🌹 روزبين"
+    },
+    "donate": {
+        "paypal": "💳 PayPal",
+        "buy_coffee": "☕ اشترِ لي قهوة",
+        "kofi": "🎨 Ko-fi",
+        "github": "⭐ GitHub Sponsors",
+        "url_error": "لا يمكن فتح المتصفح. الرجاء زيارة:\n{url}"
+    },
+    "shortcuts": {
+        "load": "Ctrl+O: تحميل صورة",
+        "save": "Ctrl+S: حفظ النتيجة",
+        "save_as": "Ctrl+Shift+S: حفظ باسم",
+        "undo": "Ctrl+Z: تراجع",
+        "redo": "Ctrl+Y: إعادة",
+        "process": "Ctrl+P: تطبيق التأثير",
+        "clear": "Ctrl+D: مسح التحديدات",
+        "batch": "Ctrl+B: معالجة دفعة",
+        "quit": "Ctrl+Q: خروج",
+        "export": "Ctrl+E: تصدير",
+        "preferences": "Ctrl+, : التفضيلات"
+    },
+    "languages": {
+        "english": "الإنجليزية (English)",
+        "arabic": "العربية (Arabic)"
+    }
+}

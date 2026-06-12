@@ -1,0 +1,229 @@
+{
+    "app": {
+        "title": "DotScramble",
+        "version": "Version {version}",
+        "author": "Made with ❤️ by FreeRave"
+    },
+    "menu": {
+        "file": "File",
+        "edit": "Edit",
+        "presets": "Presets",
+        "view": "View",
+        "help": "Help",
+        "file_items": {
+            "open_image": "Open Image",
+            "open_recent": "Open Recent",
+            "no_recent": "No recent files",
+            "clear_history": "Clear History",
+            "save_result": "Save Result",
+            "save_comparison": "Save As Comparison",
+            "open_exports": "Open Exports Folder",
+            "batch_process": "Batch Process",
+            "exit": "Exit"
+        },
+        "edit_items": {
+            "undo": "Undo",
+            "redo": "Redo",
+            "clear_selections": "Clear Selections",
+            "reset_image": "Reset Image"
+        },
+        "presets_items": {
+            "save_settings": "Save Current Settings",
+            "load_preset": "Load Preset",
+            "manage_presets": "Manage Presets"
+        },
+        "view_items": {
+            "themes": "🎨 Themes",
+            "language": "🌐 Language"
+        },
+        "help_items": {
+            "check_updates": "Check for Updates",
+            "open_app_data": "Open App Data Folder",
+            "donate": "Donate",
+            "about": "About",
+            "shortcuts": "Shortcuts"
+        }
+    },
+    "ui": {
+        "header": {
+            "title": "DotScramble",
+            "preview": "🔴 Real-time Preview"
+        },
+        "buttons": {
+            "load": "📁 Load Image",
+            "apply": "✨ Apply Effect",
+            "reset": "🗑️ Clear Selections"
+        },
+        "controls": {
+            "title": "⚙️ Controls",
+            "load_image": "📁 Load Image",
+            "effect_type": "🎨 Effect Type:",
+            "detection_mode": "🎯 Detection Mode:",
+            "parameters": "🔧 Effect Parameters:",
+            "blur_strength": "Blur Strength",
+            "pixel_size": "Pixel Block Size",
+            "opacity": "Effect Opacity (%)",
+            "target_text": "Type Word to blur:",
+            "apply_effect": "✨ Apply Effect",
+            "undo": "↶ Undo",
+            "redo": "↷ Redo",
+            "clear_selections": "🗑️ Clear Selections",
+            "save_result": "💾 Save Result",
+            "batch_process": "📦 Batch Process",
+            "tip": "💡 Tip: Enable real-time preview\nfor instant results!"
+        },
+        "canvas": {
+            "title": "🖼️ Image Canvas",
+            "views": {
+                "original": "Original",
+                "processed": "Processed",
+                "compare": "Compare"
+            }
+        },
+        "status": {
+            "ready": "Ready to load image...",
+            "loaded": "Loaded: {filename}",
+            "processed": "Processed {count} region(s)",
+            "saved": "Saved: {filename}",
+            "preview_enabled": "Real-time preview enabled",
+            "preview_disabled": "Real-time preview disabled",
+            "region_added": "Added region ({count} total)",
+            "cleared": "Cleared all selections",
+            "reset": "Image reset to original",
+            "failed_load": "Failed to load image"
+        },
+        "info": {
+            "image_info": "{width}x{height} | {size_kb} KB"
+        }
+    },
+    "effects": {
+        "blur": "🌫️ Blur",
+        "pixelation": "🔲 Pixelation",
+        "black_bar": "⬛ Black Bar",
+        "gradient": "🎭 Gradient",
+        "mosaic": "🔳 Mosaic",
+        "glass": "❄️ Frosted Glass",
+        "oil_paint": "🎨 Oil Paint"
+    },
+    "detection": {
+        "face": "🎭 Face",
+        "eye": "👁️ Eyes",
+        "body": "🧍 Full Body",
+        "license_plate": "🚗 License Plate",
+        "text": "📝 Text",
+        "target_text": "✍️ Targeted Text",
+        "manual": "✏️ Manual",
+        "full": "🌍 Full Image"
+    },
+    "dialogs": {
+        "error": {
+            "loading": "Error",
+            "loading_image": "Failed to load image:\n{error}",
+            "processing": "Processing failed: {error}",
+            "saving": "Could not save image: {error}",
+            "no_image": "No image loaded",
+            "no_selections": "Draw regions on the image first!",
+            "no_word": "Please type the word you want to blur.",
+            "word_not_found": "Could not find the word '{word}' in this image.",
+            "image_empty": "Loaded image is empty!",
+            "image_corrupted": "Could not load image!\n\nFile: {filename}\n\nPossible reasons:\n• File is corrupted\n• Unsupported format\n• File path contains special characters",
+            "dependencies": "Missing required dependencies:\n\n{deps}\n\nPlease install them using:\npip install {deps}",
+            "import": "Import error: {error}\n\nPlease ensure all modules are in the correct location:\n- gui/main_window.py\n- gui/batch_window.py\n- core/image_processor.py\n- core/batch_processor.py\n- core/utils.py\n- config.py",
+            "fatal": "Failed to start application:\n\n{error}\n\nPlease check the log file for details."
+        },
+        "info": {
+            "saved": "Image saved successfully!",
+            "comparison_saved": "Comparison saved!",
+            "preset_saved": "Preset '{name}' saved!",
+            "update_ready": "A new update has been downloaded in the background.\nYou can restart anytime using the button in the status bar.",
+            "donate": "Support the Developer",
+            "donate_text": "Thank you for considering supporting this project!\nChoose your preferred donation platform:",
+            "about": "DotScramble\nVersion {version}\n\nPrivacy Protection for the Digital Age\n\nSupport the developer:\n• PayPal: https://paypal.me/freerave1\n• Buy Me a Coffee: https://buymeacoffee.com/freerave\n• Ko-fi: https://ko-fi.com/freerave\n\nMade with ❤️ by FreeRave",
+            "shortcuts": "Keyboard Shortcuts",
+            "update_check": "Checking for updates...",
+            "update_available": "Update available: {version}\nDownload and install?",
+            "no_updates": "You are using the latest version",
+            "update_failed": "Update check failed: {error}",
+            "update_downloading": "Downloading update in background...",
+            "update_complete": "Update downloaded successfully!",
+            "restart_required": "Application will close to apply the update. Continue?"
+        },
+        "warning": {
+            "clear_history": "Are you sure you want to clear recent files history?",
+            "unsaved_changes": "You have unsaved changes. Continue?",
+            "large_image": "Image is very large ({width}x{height}). Processing may be slow.",
+            "unsupported_format": "File format may not be fully supported. Some features may not work properly."
+        },
+        "confirm": {
+            "exit": "Save changes before exiting?",
+            "restart": "Application will close to apply the update. Continue?"
+        }
+    },
+    "presets": {
+        "save": "Save Preset",
+        "save_prompt": "Enter preset name:",
+        "load": "Load Preset",
+        "manage": "Manage Presets",
+        "no_presets": "No presets available",
+        "light_privacy": "Light Privacy",
+        "medium_privacy": "Medium Privacy",
+        "maximum_privacy": "Maximum Privacy",
+        "artistic_blur": "Artistic Blur",
+        "license_plate_blur": "License Plate Blur",
+        "text_redaction": "Text Redaction"
+    },
+    "batch": {
+        "title": "Batch Processing",
+        "select_folder": "Select Input Folder",
+        "select_output": "Select Output Folder",
+        "start": "Start Processing",
+        "stop": "Stop Processing",
+        "progress": "Processed {current}/{total} files",
+        "complete": "Batch processing complete!",
+        "error": "Batch processing failed: {error}",
+        "no_files": "No image files found in selected folder",
+        "settings_saved": "Batch settings saved!"
+    },
+    "themes": {
+        "midnight": "🌑 Midnight Dark",
+        "ocean": "🌊 Ocean Blue",
+        "cyberpunk": "🤖 Cyberpunk",
+        "dracula": "🧛 Dracula",
+        "forest": "🌲 Forest",
+        "light": "☀️ Light Mode",
+        "nord": "❄️ Nord",
+        "monokai": "🔥 Monokai",
+        "solarized_dark": "🌗 Solarized Dark",
+        "solarized_light": "☀️ Solarized Light",
+        "tokyo_night": "🗼 Tokyo Night",
+        "gruvbox_dark": "🍂 Gruvbox Dark",
+        "one_dark": "⚫ One Dark",
+        "material": "🎨 Material",
+        "catppuccin_mocha": "☕ Catppuccin Mocha",
+        "rosepine": "🌹 Rosé Pine"
+    },
+    "donate": {
+        "paypal": "💳 PayPal",
+        "buy_coffee": "☕ Buy Me a Coffee",
+        "kofi": "🎨 Ko-fi",
+        "github": "⭐ GitHub Sponsors",
+        "url_error": "Could not open browser. Please visit:\n{url}"
+    },
+    "shortcuts": {
+        "load": "Ctrl+O: Load Image",
+        "save": "Ctrl+S: Save Result",
+        "save_as": "Ctrl+Shift+S: Save As",
+        "undo": "Ctrl+Z: Undo",
+        "redo": "Ctrl+Y: Redo",
+        "process": "Ctrl+P: Apply Effect",
+        "clear": "Ctrl+D: Clear Selections",
+        "batch": "Ctrl+B: Batch Process",
+        "quit": "Ctrl+Q: Quit",
+        "export": "Ctrl+E: Export",
+        "preferences": "Ctrl+, : Preferences"
+    },
+    "languages": {
+        "english": "English (الإنجليزية)",
+        "arabic": "Arabic (العربية)"
+    }
+}
