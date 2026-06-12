@@ -34,8 +34,10 @@ def prepare_staging():
 
     STAGING_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Copy src, assets, presets.json to staging
+    # Copy src, assets, presets.json, core, and gui to staging
     shutil.copytree("src", STAGING_DIR / "src")
+    shutil.copytree("core", STAGING_DIR / "core")
+    shutil.copytree("gui", STAGING_DIR / "gui")
     shutil.copytree("assets", STAGING_DIR / "assets")
     shutil.copy2("presets.json", STAGING_DIR / "presets.json")
 
@@ -102,6 +104,14 @@ def create_spec_file():
     except ImportError:
         pass
 
+    # Add MediaPipe data files and modules for PyInstaller
+    try:
+        import mediapipe
+        mediapipe_path = os.path.dirname(mediapipe.__file__)
+        datas.append((mediapipe_path, 'mediapipe'))
+    except ImportError:
+        pass
+
     spec_content = f'''# -*- mode: python ; coding: utf-8 -*-
 
 import os
@@ -111,7 +121,7 @@ from pathlib import Path
 # Analysis configuration
 a = Analysis(
     ["{main_script}"],
-    pathex=[],
+    pathex=["{STAGING_DIR}"],
     binaries=[],
     datas={repr(datas)},
     hiddenimports=[
@@ -126,6 +136,8 @@ a = Analysis(
         'src.views',
         'src.managers',
         'src.managers.license_manager',
+        'mediapipe',
+        'mediapipe.python._framework_bindings',
     ],
     hookspath=[],
     hooksconfig={{}},
