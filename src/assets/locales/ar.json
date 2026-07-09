@@ -1,6 +1,6 @@
 {
     "app": {
-        "title": "DotScramble", 
+        "title": "DotScramble",
         "version": "الإصدار {version}",
         "author": "صنع بـ ❤️ بواسطة FreeRave"
     },
@@ -47,7 +47,16 @@
     "ui": {
         "header": {
             "title": "🚀 DotScramble",
-            "preview": "🔴 Real-time Preview"
+            "preview": "🔴 معاينة فورية"
+        },
+        "tier": {
+            "pro_badge": "⭐ برو",
+            "free_badge": "🔓 مجاني",
+            "pro_desc": "كشف نشط مدعوم بالذكاء الاصطناعي",
+            "free_desc": "Haar Cascade · قم بالترقية للذكاء الاصطناعي",
+            "upgrade_btn": "⭐ الترقية إلى برو",
+            "upgrade_menu": "⭐️ الترقية إلى برو",
+            "pro_activated_menu": "⭐️ تم تفعيل برو"
         },
         "buttons": {
             "load": "📁 تحميل صورة",
@@ -78,7 +87,9 @@
                 "original": "أصلي",
                 "processed": "مُعالَج",
                 "compare": "مقارنة"
-            }
+            },
+            "placeholder_title": "اسحب وأسقط الصورة هنا",
+            "placeholder_subtitle": "أو اضغط على 'تحميل صورة' للبدء"
         },
         "status": {
             "ready": "جاهز لتحميل صورة...",
@@ -103,7 +114,8 @@
         "gradient": "🎭 تدرج",
         "mosaic": "🔳 فسيفساء",
         "glass": "❄️ زجاج مجمد",
-        "oil_paint": "🎨 طلاء زيتي"
+        "oil_paint": "🎨 طلاء زيتي",
+        "ai_evasion": "🛡️ تمويه الذكاء الاصطناعي (PRO)"
     },
     "detection": {
         "face": "🎭 وجه",
@@ -225,5 +237,23 @@
     "languages": {
         "english": "الإنجليزية (English)",
         "arabic": "العربية (Arabic)"
+    },
+    "image_picker": {
+        "title": "تحديد صورة",
+        "search_placeholder": "🔍  تصفية الملفات…",
+        "quick_access": "وصول سريع",
+        "cancel": "إلغاء",
+        "open": "فتح",
+        "empty_folder": "لم يتم العثور على صور في هذا المجلد",
+        "bookmarks": {
+            "home": "الرئيسية",
+            "pictures": "الصور",
+            "downloads": "التنزيلات",
+            "desktop": "سطح المكتب",
+            "documents": "المستندات",
+            "music": "الموسيقى",
+            "volumes": "وحدات التخزين",
+            "root": "الجذر"
+        }
     }
 }

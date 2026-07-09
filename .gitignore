@@ -216,7 +216,7 @@ build/
 # Raw license source, compilation, and security testing scripts (untracked locally)
 src/managers/license_manager.py
 setup_license.py
-test_security_hotfixes.py
+tests/
 
 # Secure Build Staging and Release packages
 build_staging/
@@ -226,5 +226,6 @@ appimagetool-*.AppImage
 release/
 
 # Project planning, roadmap and to-do lists
-project_roadmap.json
-todo_list*.json
+project_roadmap*
+todo_list*
+articles/

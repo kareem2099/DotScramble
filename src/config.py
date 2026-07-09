@@ -1,5 +1,5 @@
 """
-Configuration settings for Advanced Privacy Studio Pro
+Configuration settings for DotScramble
 Enhanced version with validation and environment support
 """
 import os
@@ -10,13 +10,13 @@ from pathlib import Path
 # APPLICATION INFO & VERSION INJECTION
 # ============================================================================
 APP_NAME = "DotScramble"  # Keep the name matching the repository name
-APP_AUTHOR = "Privacy Studio Team"
+APP_AUTHOR = "FreeRave"
 
 # The magical attempt to read version from GitHub Action
 try:
     from version_info import VERSION as APP_VERSION
 except ImportError:
-    APP_VERSION = "1.3.0"  # Developer version
+    APP_VERSION = "1.4.0"  # Will be replaced by GitHub Actions
 
 # ============================================================================
 # DIRECTORIES (Enterprise Standard - AppData)
@@ -429,7 +429,7 @@ ADVANCED = {
 LOGGING = {
     'level': 'INFO',  # DEBUG, INFO, WARNING, ERROR, CRITICAL
     'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    'file': DIRS['logs'] / 'privacy_studio.log',
+    'file': DIRS['logs'] / 'dot_scramble.log',
     'max_size_mb': 10,  # Max log file size before rotation
     'backup_count': 3  # Number of backup log files to keep
 }
@@ -482,10 +482,10 @@ def get_cascade_path(mode):
 # ENVIRONMENT-SPECIFIC SETTINGS
 # ============================================================================
 # Override settings based on environment variables
-if os.getenv('PRIVACY_STUDIO_DEBUG'):
+if os.getenv('DOTSUITE_DEBUG'):
     LOGGING['level'] = 'DEBUG'
 
-if os.getenv('PRIVACY_STUDIO_GPU'):
+if os.getenv('DOTSUITE_GPU'):
     ADVANCED['enable_gpu'] = True
 
 # Used for OAuth-like desktop authentication. 
@@ -502,6 +502,7 @@ __all__ = [
     'MAX_HISTORY', 'BATCH_OUTPUT_FOLDER', 'EFFECT_PRESETS', 'SHORTCUTS',
     'WINDOW_SETTINGS', 'FONTS', 'ADVANCED', 'LOGGING', 'DIRS',
     'RADIO_BASE', 'RADIO_STYLE', 'UPDATE_CONFIG', 'AUTH_BASE_URL',
+    'SYSTEM_DIR',
     'validate_config', 'get_cascade_path'
 ]
 

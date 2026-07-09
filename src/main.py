@@ -1,21 +1,10 @@
 """
-DotScramble - Main Entry Point
+DotScramble - Main Entry Point (PySide6 version)
 """
-import tkinter as tk
-from tkinter import messagebox
 import sys
 import os
 import logging
 from pathlib import Path
-
-# Import Drag & Drop support
-try:
-    from tkinterdnd2 import TkinterDnD
-    DRAG_DROP_AVAILABLE = True
-    print("✅ Drag & Drop support available")
-except ImportError:
-    DRAG_DROP_AVAILABLE = False
-    print("⚠️ Drag & Drop support not available (tkinterdnd2 not installed)")
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -29,7 +18,7 @@ def setup_logging():
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(log_dir / 'privacy_studio.log'),
+            logging.FileHandler(log_dir / 'dot_scramble.log'),
             logging.StreamHandler()
         ]
     )
@@ -64,7 +53,18 @@ def check_dependencies():
         error_msg = f"Missing required dependencies:\n\n{', '.join(missing_deps)}\n\n"
         error_msg += "Please install them using:\n"
         error_msg += f"pip install {' '.join(missing_deps)}"
-        messagebox.showerror("Missing Dependencies", error_msg)
+        
+        # Log to console first — GUI may not be ready yet
+        logging.error(error_msg)
+        
+        try:
+            from PySide6.QtWidgets import QApplication, QMessageBox
+            # QApplication MUST exist before any QWidget (including QMessageBox)
+            app = QApplication.instance() or QApplication(sys.argv)
+            QMessageBox.critical(None, "Missing Dependencies", error_msg)
+        except Exception:
+            pass  # If Qt is unavailable, console log above is enough
+        
         return False
     
     return True
@@ -111,7 +111,15 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     
     error_msg = f"An unexpected error occurred:\n\n{exc_value}\n\n"
     error_msg += "Please check the log file for details."
-    messagebox.showerror("Error", error_msg)
+    
+    try:
+        from PySide6.QtWidgets import QApplication, QMessageBox
+        app = QApplication.instance()
+        if not app:
+            app = QApplication(sys.argv)
+        QMessageBox.critical(None, "Error", error_msg)
+    except Exception:
+        print(error_msg, file=sys.stderr)
 
 
 def setup_tesseract_configuration():
@@ -119,21 +127,24 @@ def setup_tesseract_configuration():
     try:
         import pytesseract
         
+        # Platform-aware binary name: .exe on Windows, plain name elsewhere
+        tesseract_bin = "tesseract.exe" if sys.platform == "win32" else "tesseract"
+        
         # Determine the base path based on how the app is running
         if getattr(sys, 'frozen', False):
-            # If running as a compiled EXE (or MSIX installed app)
+            # If running as a compiled executable
             base_path = os.path.dirname(sys.executable)
         else:
             # If running from source script
             base_path = os.path.dirname(os.path.abspath(__file__))
             
         # Look for the bundled Tesseract folder
-        tesseract_path = os.path.join(base_path, "Tesseract-OCR", "tesseract.exe")
+        tesseract_path = os.path.join(base_path, "Tesseract-OCR", tesseract_bin)
         
         # If running from source, sometimes Tesseract is one level up or in current dir
         if not os.path.exists(tesseract_path) and not getattr(sys, 'frozen', False):
              # Fallback check for dev environment
-             tesseract_path = os.path.join(base_path, "..", "Tesseract-OCR", "tesseract.exe")
+             tesseract_path = os.path.join(base_path, "..", "Tesseract-OCR", tesseract_bin)
 
         if os.path.exists(tesseract_path):
             pytesseract.pytesseract.tesseract_cmd = tesseract_path
@@ -216,20 +227,13 @@ StartupWMClass=DotScramble
 
 def main():
     """Main application entry point"""
-    # 1. FIX: DPI Awareness (Fixes Zoom issue on Windows)
-    try:
-        from ctypes import windll
-        windll.shcore.SetProcessDpiAwareness(1)
-    except Exception:
-        pass
-    
     # Setup logging
     setup_logging()
     logger.info("=" * 50)
     logger.info("DotScramble - Starting")
     logger.info("=" * 50)
     
-    # 2. FIX: Configure Bundled Tesseract (Fixes Apply button issue)
+    # Configure Bundled Tesseract
     setup_tesseract_configuration()
     
     # Set global exception handler
@@ -251,51 +255,42 @@ def main():
         # Automatically setup desktop entry on Linux
         setup_linux_desktop_entry()
         
-        # Import GUI (after dependency check)
+        from PySide6.QtWidgets import QApplication
+        from PySide6.QtGui import QIcon
         from src.views.main_window import AdvancedPrivacyStudioPro
         
-        # Create and run application
+        # Create QApplication
+        app = QApplication(sys.argv)
         logger.info("Initializing GUI...")
         
-        # Use Drag & Drop enabled root if available
-        if DRAG_DROP_AVAILABLE:
-            root = TkinterDnD.Tk(className="dotscramble")
-            logger.info("✅ Drag & Drop enabled")
-        else:
-            root = tk.Tk(className="dotscramble")
-            logger.warning("⚠️ Drag & Drop not available")
-            
-        # Force Linux desktop managers to associate window with dotscramble.desktop
-        try:
-            root.wm_class("DotScramble", "DotScramble")
-        except Exception:
-            pass
+        # Instantiate main window view
+        main_window = AdvancedPrivacyStudioPro()
         
         # Set application icon
         try:
             base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            # Prefer the optimized smaller logo for fast start, fallback to full icon.png
             png_path = os.path.join(base_dir, 'assets', 'icons', 'Square150x150Logo.png')
             if not os.path.exists(png_path):
                 png_path = os.path.join(base_dir, 'assets', 'icons', 'icon.png')
             
             if os.path.exists(png_path):
-                icon_img = tk.PhotoImage(file=png_path)
-                root.iconphoto(True, icon_img)
+                app_icon = QIcon(png_path)
+                app.setWindowIcon(app_icon)
+                main_window.setWindowIcon(app_icon)
         except Exception as e:
             logger.debug(f"Failed to set application icon: {e}")
-        
-        app = AdvancedPrivacyStudioPro(root)
+            
+        main_window.show()
         logger.info("Application initialized successfully")
         
         # Start main loop
         logger.info("Starting main loop")
-        root.mainloop()
+        sys.exit(app.exec())
         
     except ImportError as e:
         error_msg = f"Import error: {str(e)}\n\n"
         error_msg += "Please ensure all modules are in the correct location:\n"
-        error_msg += "- gui/main_window.py\n"
+        error_msg += "- src/views/main_window.py\n"
         error_msg += "- gui/batch_window.py\n"
         error_msg += "- core/image_processor.py\n"
         error_msg += "- core/batch_processor.py\n"
@@ -303,14 +298,22 @@ def main():
         error_msg += "- config.py"
         
         logger.error(error_msg)
-        messagebox.showerror("Import Error", error_msg)
+        try:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.critical(None, "Import Error", error_msg)
+        except Exception:
+            print(error_msg, file=sys.stderr)
         sys.exit(1)
         
     except Exception as e:
         logger.error(f"Fatal error during initialization: {str(e)}", exc_info=True)
-        messagebox.showerror("Fatal Error", 
-                           f"Failed to start application:\n\n{str(e)}\n\n"
-                           "Please check the log file for details.")
+        try:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.critical(None, "Fatal Error", 
+                                 f"Failed to start application:\n\n{str(e)}\n\n"
+                                 "Please check the log file for details.")
+        except Exception:
+            print(f"Fatal Error: {e}", file=sys.stderr)
         sys.exit(1)
     
     finally:

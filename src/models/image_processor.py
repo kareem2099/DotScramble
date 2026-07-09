@@ -1,5 +1,8 @@
 import cv2
 import numpy as np
+import logging
+_logger = logging.getLogger(__name__)
+
 from PIL import Image, ImageFilter, ImageEnhance
 
 class ImageProcessor:
@@ -277,3 +280,147 @@ class ImageProcessor:
         except Exception as e:
             print(f"Rotated Effect Error ({effect_type}): {e}")
             return image
+    # ── PRO Adversarial AI-Evasion ─────────────────────────────────────────────
+
+    @staticmethod
+    def apply_adversarial_to_polygon(
+        image,
+        points,
+        *,
+        max_eps=110,
+        iters=40,
+        block_size=32,
+        progress_callback=None,
+        should_cancel=None,
+    ):
+        """
+        PRO — Standalone Adversarial Effect.
+        Applies adversarial perturbation inside the face oval so that
+        MediaPipe FaceLandmarker can no longer detect the face.
+
+        NOTE: At required epsilon (~90-110) the perturbation is visually
+        noticeable on a clean image (~22 dB PSNR). Prefer apply_adversarial_hybrid()
+        when a visual effect (blur/pixelation) is also desired.
+
+        Returns (modified_image, final_eot_score).  final_eot_score=0.0 means
+        fully evades detection.
+        """
+        if image is None or len(points) < 3:
+            return image, 1.0
+        try:
+            try:
+                from src.models.adversarial_engine import adversarial_perturb, compose_hybrid_effect
+            except ImportError:
+                from models.adversarial_engine import adversarial_perturb, compose_hybrid_effect
+
+            pts    = np.array(points, dtype=np.int32)
+            x, y, w, h = cv2.boundingRect(pts)
+            img_h, img_w = image.shape[:2]
+            pad = int(0.2 * max(w, h))
+            x0 = max(0, x - pad);  y0 = max(0, y - pad)
+            x1 = min(img_w, x + w + pad);  y1 = min(img_h, y + h + pad)
+
+            region    = image[y0:y1, x0:x1].copy()
+            local_pts = [(px - x0, py - y0) for (px, py) in points]
+
+            delta, score = adversarial_perturb(
+                region,
+                face_oval_points_local=local_pts,
+                max_eps=max_eps,
+                iters=iters,
+                block_size=block_size,
+                progress_callback=progress_callback,
+                should_cancel=should_cancel,
+            )
+
+            final = image.copy()
+            final[y0:y1, x0:x1] = compose_hybrid_effect(region, delta)
+            return final, score
+
+        except Exception as e:
+            _logger.error("[AdversarialEngine] apply_adversarial_to_polygon error: %s", e)
+            return image, 1.0
+
+    @staticmethod
+    def apply_adversarial_hybrid(
+        image,
+        points,
+        effect_type="blur",
+        *,
+        max_eps=110,
+        iters=40,
+        block_size=32,
+        progress_callback=None,
+        should_cancel=None,
+        **effect_kwargs,
+    ):
+        """
+        PRO — Recommended Hybrid Adversarial Effect (Fail-Closed).
+        Applies a primary visual effect (blur/pixelation/mosaic) THEN composites
+        adversarial perturbation on top. The adversarial noise is hidden inside
+        the existing effect artifacts, making it imperceptible to humans while
+        still causing AI face detectors to fail.
+
+        FAIL-CLOSED GUARANTEE: The base visual effect (blur/pixelation) is
+        applied unconditionally before any adversarial step. If the adversarial
+        step raises any exception, the returned image still has the base effect
+        applied — the face is never returned unprotected.
+
+        Returns (modified_image, final_eot_score).
+          score=0.0  → fully evades AI detection
+          0<score<1  → partial evasion (base effect still applied)
+          score=1.0  → adversarial step crashed; base effect still applied,
+                       but AI evasion is NOT verified
+        """
+        if image is None or len(points) < 3:
+            return image, 1.0
+
+        pts    = np.array(points, dtype=np.int32)
+        x, y, w, h = cv2.boundingRect(pts)
+        img_h, img_w = image.shape[:2]
+        pad = int(0.2 * max(w, h))
+        x0 = max(0, x - pad);  y0 = max(0, y - pad)
+        x1 = min(img_w, x + w + pad);  y1 = min(img_h, y + h + pad)
+
+        region    = image[y0:y1, x0:x1].copy()
+        local_pts = [(px - x0, py - y0) for (px, py) in points]
+
+        # ── Step 1: Base visual effect — applied unconditionally (fail-closed floor) ──
+        effected_region = ImageProcessor._make_effect_layer(region, effect_type, **effect_kwargs)
+        final = image.copy()
+        final[y0:y1, x0:x1] = effected_region  # guaranteed fallback — face is always blurred
+
+        try:
+            try:
+                from src.models.adversarial_engine import adversarial_perturb, compose_hybrid_effect
+            except ImportError:
+                from models.adversarial_engine import adversarial_perturb, compose_hybrid_effect
+
+            # ── Step 2: Adversarial delta against the effected (blurred) region ──
+            delta, score = adversarial_perturb(
+                effected_region,
+                face_oval_points_local=local_pts,
+                max_eps=max_eps,
+                iters=iters,
+                block_size=block_size,
+                progress_callback=progress_callback,
+                should_cancel=should_cancel,
+            )
+
+            # ── Step 3: Composite adversarial delta inside face oval only ──
+            # Outside oval: effected_region (blur only)
+            # Inside oval:  blurred + adversarial delta
+            combined  = compose_hybrid_effect(effected_region, delta)
+            mask_2d   = np.zeros(region.shape[:2], dtype=np.uint8)
+            cv2.fillPoly(mask_2d, [np.array(local_pts, dtype=np.int32)], 255)
+            mask_norm = mask_2d.astype(np.float32)[:, :, np.newaxis] / 255.0
+            blended   = (combined.astype(np.float32) * mask_norm
+                         + effected_region.astype(np.float32) * (1.0 - mask_norm)).astype(np.uint8)
+            final[y0:y1, x0:x1] = blended
+            return final, score
+
+        except Exception as e:
+            # Base effect already applied above — face is blurred but AI evasion failed.
+            # Return score=1.0 so the caller can distinguish crash from partial evasion.
+            _logger.error("[AdversarialEngine] adversarial step failed (base effect preserved): %s", e)
+            return final, 1.0

@@ -96,7 +96,7 @@ def create_spec_file():
     if cv2_data_dir and os.path.exists(cv2_data_dir):
         datas.append((cv2_data_dir, 'cv2/data'))
 
-    # Add PIL data files for Tkinter integration
+    # Add PIL data files (exclude ImageTk which pulls in tkinter — not needed for PySide6 apps)
     try:
         import PIL
         pil_path = os.path.dirname(PIL.__file__)
@@ -106,7 +106,8 @@ def create_spec_file():
 
     # Add MediaPipe data files and modules for PyInstaller
     try:
-        import mediapipe
+        import importlib
+        mediapipe = importlib.import_module("mediapipe")
         mediapipe_path = os.path.dirname(mediapipe.__file__)
         datas.append((mediapipe_path, 'mediapipe'))
     except ImportError:
@@ -128,8 +129,13 @@ a = Analysis(
         'cv2',
         'numpy',
         'PIL',
-        'PIL._tkinter_finder',
-        'tkinter',
+        'PIL.Image',
+        'PIL.ImageFilter',
+        'PIL.ImageEnhance',
+        'PySide6',
+        'PySide6.QtCore',
+        'PySide6.QtGui',
+        'PySide6.QtWidgets',
         'src',
         'src.controllers',
         'src.models',
@@ -142,7 +148,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={{}},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['PIL.ImageTk', 'tkinter', '_tkinter'],  # App uses PySide6, not tkinter
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=None,
@@ -249,7 +255,7 @@ exec /usr/share/dotscramble/DotScramble "$@"
         desktop_content = """[Desktop Entry]
 Type=Application
 Name=DotScramble
-Comment=Advanced Privacy Studio Pro
+Comment=DotScramble - Privacy, Simplified
 Exec=dotscramble
 Icon=dotscramble
 Terminal=false
@@ -270,7 +276,9 @@ Version: {APP_VERSION}
 Section: utils
 Priority: optional
 Architecture: amd64
-Maintainer: Description: Advanced image privacy studio designed to redact faces, text, and EXIF metadata from images.
+Maintainer: FreeRave <kareem2099@users.noreply.github.com>
+Description: Advanced image privacy studio designed to redact faces, text,
+ and EXIF metadata from images.
 """
         control_file.write_text(control_content)
         

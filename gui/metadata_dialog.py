@@ -1,24 +1,23 @@
 """
-DotScramble — Metadata Customizer Dialog
+DotScramble — Metadata Customizer Dialog (PySide6 version)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Per-field EXIF control: Keep / Strip / Spoof / Custom value.
-Used as the "Custom" profile inside create_exif_section().
 """
 from __future__ import annotations
 
-import tkinter as tk
-from tkinter import ttk
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from PySide6.QtWidgets import (
+    QDialog, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
+    QComboBox, QScrollArea, QFrame, QRadioButton, QButtonGroup, 
+    QLineEdit, QMessageBox, QInputDialog
+)
+from PySide6.QtCore import Qt
 
 from src.config import COLORS
 from gui import metadata_presets as presets
-from tkinter import messagebox, simpledialog
 
 # ── Field definitions ─────────────────────────────────────────────────────────
-# Each entry: (field_key, display_label, field_type, default_action)
-#   field_type: "text" | "gps" | "datetime" | "exposure" (no custom input)
 EXIF_FIELDS = [
     ("gps",       "📍 GPS Location",  "gps",      "spoof"),
     ("make",      "📷 Camera Make",   "text",     "spoof"),
@@ -30,12 +29,6 @@ EXIF_FIELDS = [
 ]
 
 ACTIONS = ["keep", "strip", "spoof", "custom"]
-ACTION_COLORS = {
-    "keep":   "#4CAF50",
-    "strip":  "#F44336",
-    "spoof":  "#2196F3",
-    "custom": "#FF9800",
-}
 ACTION_LABELS = {
     "keep":   "✅ Keep",
     "strip":  "🗑 Strip",
@@ -44,310 +37,239 @@ ACTION_LABELS = {
 }
 
 
-class MetadataCustomizerDialog:
+class MetadataCustomizerDialog(QDialog):
     """
     Modal dialog that lets the user set a per-field action for each EXIF tag.
-
-    Usage:
-        dlg = MetadataCustomizerDialog(parent_window, current_exif_dict)
-        result = dlg.result   # None if cancelled, else dict of field_actions
     """
 
-    def __init__(self, parent: tk.Tk | tk.Toplevel, current_exif: dict | None = None):
+    def __init__(self, parent=None, current_exif: dict | None = None):
+        super().__init__(parent)
         self.result: dict | None = None
         self._current = current_exif or {}
 
-        self.win = tk.Toplevel(parent)
-        self.win.title("DotScramble — Custom Metadata Control")
-        self.win.configure(bg=COLORS['bg_dark'])
-        self.win.resizable(False, True)
-        self.win.transient(parent)
-        self.win.grab_set()
+        # Get active colors from parent or default
+        if parent and hasattr(parent, 'colors'):
+            self.colors = parent.colors
+        else:
+            self.colors = COLORS
 
-        # Center on parent
-        self.win.update_idletasks()
-        pw, ph = parent.winfo_width(), parent.winfo_height()
-        px, py = parent.winfo_x(), parent.winfo_y()
-        w, h = 600, 600
-        self.win.geometry(f"{w}x{h}+{px + (pw - w)//2}+{py + (ph - h)//2}")
-
-        self._action_vars: dict[str, tk.StringVar] = {}
-        self._custom_vars: dict[str, tk.StringVar] = {}
-        self._custom_frames: dict[str, tk.Frame] = {}
-        self._lat_var = tk.StringVar()
-        self._lon_var = tk.StringVar()
+        self.action_colors = {
+            "keep":   self.colors.get('accent_green', '#4CAF50'),
+            "strip":  self.colors.get('accent_red', '#F44336'),
+            "spoof":  self.colors.get('accent_cyan', '#2196F3'),
+            "custom": self.colors.get('accent_orange', '#FF9800'),
+        }
+        
+        self.setWindowTitle("DotScramble — Custom Metadata Control")
+        self.setMinimumSize(620, 650)
+        self.resize(620, 650)
+        
+        # Track widget variables
+        self._action_groups: dict[str, QButtonGroup] = {}
+        self._custom_fields: dict[str, QWidget] = {}
+        self._text_inputs: dict[str, QLineEdit] = {}
+        self._lat_input = QLineEdit()
+        self._lon_input = QLineEdit()
 
         self._build_ui()
-        self.win.wait_window()
-
-    # ── UI construction ───────────────────────────────────────────────────────
+        self._load_current_values()
 
     def _build_ui(self):
+        from PySide6.QtGui import QFont
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
         # ── Header ─────────────────────────────────────────────────────────
-        hdr = tk.Frame(self.win, bg=COLORS['bg_medium'], height=60)
-        hdr.pack(fill="x")
-        hdr.pack_propagate(False)
+        hdr = QFrame()
+        hdr.setObjectName("DialogHeader")
+        hdr_layout = QHBoxLayout(hdr)
+        hdr_layout.setContentsMargins(20, 10, 20, 10)
 
-        tk.Label(
-            hdr,
-            text="🛡️  Custom Metadata Control",
-            font=("Helvetica", 14, "bold"),
-            bg=COLORS['bg_medium'],
-            fg=COLORS['accent_cyan'],
-        ).pack(side="left", padx=20, pady=15)
+        title_lbl = QLabel("🛡️  Custom Metadata Control")
+        title_lbl.setObjectName("DialogTitle")
+        title_lbl.setFont(QFont("Helvetica", 14, QFont.Weight.Bold))
+        hdr_layout.addWidget(title_lbl)
 
-        tk.Label(
-            hdr,
-            text="Max Plan",
-            font=("Helvetica", 9, "italic"),
-            bg=COLORS['bg_medium'],
-            fg=COLORS['accent_orange'],
-        ).pack(side="right", padx=20)
+        plan_lbl = QLabel("Max Plan")
+        plan_lbl.setObjectName("plan_lbl")
+        hdr_layout.addWidget(plan_lbl, alignment=Qt.AlignmentFlag.AlignRight)
+
+        main_layout.addWidget(hdr)
 
         # ── Presets Toolbar ────────────────────────────────────────────────
-        preset_frame = tk.Frame(self.win, bg=COLORS['bg_dark'])
-        preset_frame.pack(fill="x", padx=20, pady=(10, 0))
+        preset_frame = QFrame()
+        preset_layout = QHBoxLayout(preset_frame)
+        preset_layout.setContentsMargins(20, 10, 20, 5)
+        
+        preset_lbl = QLabel("Preset:")
+        preset_lbl.setObjectName("preset_lbl")
+        preset_layout.addWidget(preset_lbl)
 
-        tk.Label(
-            preset_frame, text="Preset:",
-            font=("Helvetica", 9), bg=COLORS['bg_dark'], fg=COLORS['text_gray']
-        ).pack(side="left", padx=(0, 8))
+        self.preset_combo = QComboBox()
+        self.preset_combo.addItems(presets.all_preset_names())
+        self.preset_combo.setPlaceholderText("Select a preset...")
+        self.preset_combo.currentIndexChanged.connect(self._on_preset_selected)
+        preset_layout.addWidget(self.preset_combo, 1)
 
-        self.preset_combo = ttk.Combobox(
-            preset_frame, state="readonly", width=30,
-            values=presets.all_preset_names()
-        )
-        self.preset_combo.pack(side="left", padx=(0, 10))
-        self.preset_combo.bind("<<ComboboxSelected>>", self._on_preset_selected)
+        save_btn = QPushButton("💾 Save As...")
+        save_btn.clicked.connect(self._save_current_as_preset)
+        preset_layout.addWidget(save_btn)
 
-        tk.Button(
-            preset_frame, text="💾 Save Current As...",
-            font=("Helvetica", 8), bg=COLORS['bg_medium'], fg=COLORS['text_white'],
-            relief="flat", cursor="hand2", padx=8, pady=2,
-            command=self._save_current_as_preset
-        ).pack(side="left", padx=4)
+        self.del_preset_btn = QPushButton("🗑 Delete")
+        self.del_preset_btn.setObjectName("del_preset_btn")
+        self.del_preset_btn.clicked.connect(self._delete_selected_preset)
+        preset_layout.addWidget(self.del_preset_btn)
 
-        self.del_preset_btn = tk.Button(
-            preset_frame, text="🗑 Delete",
-            font=("Helvetica", 8), bg=COLORS['bg_medium'], fg="#F44336",
-            relief="flat", cursor="hand2", padx=8, pady=2,
-            command=self._delete_selected_preset
-        )
-        self.del_preset_btn.pack(side="left", padx=4)
+        main_layout.addWidget(preset_frame)
 
         # ── Legend ─────────────────────────────────────────────────────────
-        legend = tk.Frame(self.win, bg=COLORS['bg_dark'])
-        legend.pack(fill="x", padx=20, pady=(10, 4))
+        legend_frame = QFrame()
+        legend_layout = QHBoxLayout(legend_frame)
+        legend_layout.setContentsMargins(20, 5, 20, 5)
+        legend_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-        for action, color in ACTION_COLORS.items():
-            tk.Label(
-                legend,
-                text=ACTION_LABELS[action],
-                font=("Helvetica", 8, "bold"),
-                bg=color,
-                fg="white",
-                padx=6, pady=2,
-            ).pack(side="left", padx=4)
+        for action in ACTIONS:
+            lbl = QLabel(ACTION_LABELS[action])
+            lbl.setObjectName(f"legend_{action}")
+            legend_layout.addWidget(lbl)
+
+        main_layout.addWidget(legend_frame)
 
         # ── Scrollable field list ───────────────────────────────────────────
-        container = tk.Frame(self.win, bg=COLORS['bg_dark'])
-        container.pack(fill="both", expand=True, padx=20, pady=8)
-
-        canvas = tk.Canvas(container, bg=COLORS['bg_dark'], highlightthickness=0)
-        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
-        self._scroll_frame = tk.Frame(canvas, bg=COLORS['bg_dark'])
-
-        self._scroll_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-
-        win_id = canvas.create_window((0, 0), window=self._scroll_frame, anchor="nw")
-        canvas.bind("<Configure>", lambda e: canvas.itemconfig(win_id, width=e.width))
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-
-        # Avoid bind_all to prevent global conflicts and TclError after destroy
-        def _scroll_handler(e):
-            if canvas.winfo_exists():
-                canvas.yview_scroll(-1 if getattr(e, 'num', 0) == 4 or getattr(e, 'delta', 0) > 0 else 1, "units")
-
-        self.win.bind("<Button-4>", _scroll_handler)
-        self.win.bind("<Button-5>", _scroll_handler)
-        self.win.bind("<MouseWheel>", _scroll_handler)
-
-        def _bind_to_children(widget):
-            for child in widget.winfo_children():
-                if not isinstance(child, ttk.Combobox):
-                    child.bind("<Button-4>", _scroll_handler)
-                    child.bind("<Button-5>", _scroll_handler)
-                    child.bind("<MouseWheel>", _scroll_handler)
-                _bind_to_children(child)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
         
-        self.win.after(50, lambda: _bind_to_children(self.win))
+        scroll_content = QWidget()
+        scroll_content.setObjectName("scroll_content")
+        scroll_layout = QVBoxLayout(scroll_content)
+        scroll_layout.setContentsMargins(20, 5, 20, 5)
+        scroll_layout.setSpacing(8)
 
         for key, label, ftype, default in EXIF_FIELDS:
-            self._build_field_row(self._scroll_frame, key, label, ftype, default)
+            card = self._build_field_row(key, label, ftype, default)
+            scroll_layout.addWidget(card)
+
+        scroll.setWidget(scroll_content)
+        main_layout.addWidget(scroll, 1)
 
         # ── Bottom buttons ──────────────────────────────────────────────────
-        btn_frame = tk.Frame(self.win, bg=COLORS['bg_medium'], height=55)
-        btn_frame.pack(fill="x", side="bottom")
-        btn_frame.pack_propagate(False)
+        btn_frame = QFrame()
+        btn_frame.setObjectName("btn_frame")
+        btn_layout = QHBoxLayout(btn_frame)
+        btn_layout.setContentsMargins(20, 10, 20, 10)
 
-        tk.Button(
-            btn_frame,
-            text="Cancel",
-            font=("Helvetica", 10),
-            bg=COLORS['bg_light'], fg=COLORS['text_white'],
-            relief="flat", cursor="hand2", padx=20,
-            command=self._cancel,
-        ).pack(side="right", padx=(8, 20), pady=10)
+        spoof_all_btn = QPushButton("🎲 Spoof All")
+        spoof_all_btn.clicked.connect(lambda: self._set_all("spoof"))
+        btn_layout.addWidget(spoof_all_btn)
 
-        tk.Button(
-            btn_frame,
-            text="✅  Apply",
-            font=("Helvetica", 10, "bold"),
-            bg=COLORS['accent_cyan'], fg=COLORS['bg_dark'],
-            relief="flat", cursor="hand2", padx=20,
-            command=self._apply,
-        ).pack(side="right", padx=4, pady=10)
+        strip_all_btn = QPushButton("🗑 Strip All")
+        strip_all_btn.setObjectName("strip_all_btn")
+        strip_all_btn.clicked.connect(lambda: self._set_all("strip"))
+        btn_layout.addWidget(strip_all_btn)
 
-        tk.Button(
-            btn_frame,
-            text="🎲 Spoof All",
-            font=("Helvetica", 9),
-            bg=COLORS['bg_dark'], fg=COLORS['accent_cyan'],
-            relief="flat", cursor="hand2", padx=12,
-            command=lambda: self._set_all("spoof"),
-        ).pack(side="left", padx=(20, 4), pady=10)
+        btn_layout.addStretch(1)
 
-        tk.Button(
-            btn_frame,
-            text="🗑 Strip All",
-            font=("Helvetica", 9),
-            bg=COLORS['bg_dark'], fg="#F44336",
-            relief="flat", cursor="hand2", padx=12,
-            command=lambda: self._set_all("strip"),
-        ).pack(side="left", padx=4, pady=10)
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(self._cancel)
+        btn_layout.addWidget(cancel_btn)
 
-    def _build_field_row(self, parent, key, label, ftype, default):
-        """Build one field row with action radio buttons + optional custom input."""
-        action_var = tk.StringVar(value=default)
-        custom_var = tk.StringVar()
+        apply_btn = QPushButton("✅  Apply")
+        apply_btn.setObjectName("primary_action")
+        apply_btn.clicked.connect(self._apply)
+        btn_layout.addWidget(apply_btn)
 
-        self._action_vars[key] = action_var
-        self._custom_vars[key] = custom_var
+        main_layout.addWidget(btn_frame)
 
-        # Outer card
-        card = tk.Frame(parent, bg=COLORS['bg_medium'], pady=0)
-        card.pack(fill="x", pady=4)
+    def _build_field_row(self, key: str, label: str, ftype: str, default: str) -> QFrame:
+        from PySide6.QtGui import QFont
+        card = QFrame()
+        card.setObjectName("card_frame")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(12, 10, 12, 10)
+        card_layout.setSpacing(6)
 
-        # ── Top row: label + current value ──────────────────────────────────
-        top = tk.Frame(card, bg=COLORS['bg_medium'])
-        top.pack(fill="x", padx=12, pady=(8, 4))
-
-        tk.Label(
-            top,
-            text=label,
-            font=("Helvetica", 10, "bold"),
-            bg=COLORS['bg_medium'], fg=COLORS['text_white'],
-            width=22, anchor="w",
-        ).pack(side="left")
+        # Top row: Label & current value
+        top_row = QHBoxLayout()
+        name_lbl = QLabel(label)
+        name_lbl.setFont(QFont("Helvetica", 10, QFont.Weight.Bold))
+        top_row.addWidget(name_lbl)
 
         current_val = self._get_current_value(key)
-        val_color   = COLORS['accent_cyan'] if current_val else COLORS['text_gray']
-        val_text    = current_val[:30] + "…" if len(current_val) > 30 else current_val
-        tk.Label(
-            top,
-            text=val_text or "—",
-            font=("Helvetica", 8),
-            bg=COLORS['bg_dark'], fg=val_color,
-            padx=6, pady=2,
-        ).pack(side="left", padx=8)
+        val_text = current_val[:35] + "…" if len(current_val) > 35 else current_val
+        val_lbl = QLabel(val_text or "—")
+        val_lbl.setObjectName("card_val_lbl_active" if current_val else "card_val_lbl_inactive")
+        top_row.addWidget(val_lbl, alignment=Qt.AlignmentFlag.AlignRight)
+        
+        card_layout.addLayout(top_row)
 
-        # ── Radio buttons ────────────────────────────────────────────────────
-        radio_frame = tk.Frame(card, bg=COLORS['bg_medium'])
-        radio_frame.pack(fill="x", padx=12, pady=(0, 6))
+        # Radio buttons row
+        radio_row = QHBoxLayout()
+        radio_row.setSpacing(6)
+        
+        group = QButtonGroup(card)
+        self._action_groups[key] = group
 
         valid_actions = ACTIONS if ftype != "exposure" else ["keep", "strip", "spoof"]
         for act in valid_actions:
-            tk.Radiobutton(
-                radio_frame,
-                text=ACTION_LABELS[act],
-                variable=action_var,
-                value=act,
-                command=lambda k=key, a=act: self._on_action_change(k, a),
-                font=("Helvetica", 9),
-                bg=COLORS['bg_medium'], fg=COLORS['text_white'],
-                selectcolor=ACTION_COLORS[act],
-                activebackground=COLORS['bg_medium'],
-                indicatoron=0,
-                padx=8, pady=3,
-                relief="flat",
-                cursor="hand2",
-                bd=0, highlightthickness=0,
-            ).pack(side="left", padx=3)
+            rb = QRadioButton(ACTION_LABELS[act])
+            rb.setStyleSheet(f"QRadioButton::indicator {{ width: 0px; height: 0px; }} QRadioButton {{ padding: 3px 8px; background-color: {self.colors['bg_dark']}; border: 1px solid {self.colors['border_color']}; border-radius: 4px; }} QRadioButton:checked {{ background-color: {self.action_colors[act]}; color: white; border: none; }}")
+            group.addButton(rb, valid_actions.index(act))
+            
+            # Map action value to button text/data
+            rb.setProperty("action_val", act)
+            radio_row.addWidget(rb)
+            
+            if act == default:
+                rb.setChecked(True)
 
-        # ── Custom input area (hidden by default) ────────────────────────────
-        custom_frame = tk.Frame(card, bg=COLORS['bg_medium'])
-        self._custom_frames[key] = custom_frame
+        card_layout.addLayout(radio_row)
+
+        # Custom input frame
+        custom_input_widget = QWidget()
+        custom_layout = QHBoxLayout(custom_input_widget)
+        custom_layout.setContentsMargins(0, 5, 0, 0)
+        self._custom_fields[key] = custom_input_widget
 
         if ftype == "gps":
-            self._build_gps_inputs(custom_frame, key)
+            custom_layout.addWidget(QLabel("Lat:"))
+            self._lat_input.setPlaceholderText("Latitude")
+            self._lat_input.setFixedWidth(100)
+            custom_layout.addWidget(self._lat_input)
+            
+            custom_layout.addWidget(QLabel("Lon:"))
+            self._lon_input.setPlaceholderText("Longitude")
+            self._lon_input.setFixedWidth(100)
+            custom_layout.addWidget(self._lon_input)
+            custom_layout.addStretch(1)
         elif ftype in ("text", "datetime", "copyright"):
-            self._build_text_input(custom_frame, custom_var,
-                                   placeholder=self._get_current_value(key))
+            custom_layout.addWidget(QLabel("Custom value:"))
+            inp = QLineEdit()
+            inp.setPlaceholderText(current_val)
+            custom_layout.addWidget(inp, 1)
+            self._text_inputs[key] = inp
 
-        if default == "custom":
-            custom_frame.pack(fill="x", padx=12, pady=(0, 8))
+        card_layout.addWidget(custom_input_widget)
+        
+        # Connect change listener
+        group.buttonClicked.connect(lambda btn, k=key: self._on_action_toggled(k, btn.property("action_val")))
 
-    def _build_text_input(self, parent, var: tk.StringVar, placeholder: str = ""):
-        tk.Label(
-            parent,
-            text="Custom value:",
-            font=("Helvetica", 9),
-            bg=COLORS['bg_medium'], fg=COLORS['text_gray'],
-        ).pack(side="left", padx=(0, 8))
+        # Initial visibility setup
+        custom_input_widget.setVisible(default == "custom")
+        
+        return card
 
-        entry = tk.Entry(
-            parent,
-            textvariable=var,
-            bg=COLORS['bg_dark'], fg="white",
-            insertbackground="white",
-            font=("Helvetica", 9),
-            width=32,
-        )
-        entry.pack(side="left")
-        if placeholder and not var.get():
-            entry.insert(0, placeholder)
+    def _on_action_toggled(self, key: str, action: str):
+        if key in self._custom_fields:
+            self._custom_fields[key].setVisible(action == "custom")
 
-    def _build_gps_inputs(self, parent, key):
-        """Two entries for lat / lon."""
-        for lbl_text, var in [("Lat:", self._lat_var), ("Lon:", self._lon_var)]:
-            tk.Label(
-                parent, text=lbl_text,
-                font=("Helvetica", 9),
-                bg=COLORS['bg_medium'], fg=COLORS['text_gray'],
-            ).pack(side="left", padx=(0, 4))
-
-            tk.Entry(
-                parent,
-                textvariable=var,
-                bg=COLORS['bg_dark'], fg="white",
-                insertbackground="white",
-                font=("Helvetica", 9),
-                width=12,
-            ).pack(side="left", padx=(0, 12))
-
-        # Pre-fill with current GPS if available
-        cur = self._current.get("gps")
-        if cur and isinstance(cur, dict):
-            self._lat_var.set(str(cur.get("lat", "")))
-            self._lon_var.set(str(cur.get("lon", "")))
-
-    # ── Helpers ───────────────────────────────────────────────────────────────
+    def _set_all(self, action: str):
+        for key, group in self._action_groups.items():
+            for btn in group.buttons():
+                if btn.property("action_val") == action:
+                    btn.setChecked(True)
+                    self._on_action_toggled(key, action)
+                    break
 
     def _get_current_value(self, key: str) -> str:
         v = self._current.get(key)
@@ -359,105 +281,108 @@ class MetadataCustomizerDialog:
             return f"{v.get('shutter','?')}  {v.get('fnumber','?')}  ISO{v.get('iso','?')}"
         return str(v)
 
-    def _on_action_change(self, key: str, action: str):
-        frame = self._custom_frames.get(key)
-        if frame is None:
-            return
-        if action == "custom":
-            frame.pack(fill="x", padx=12, pady=(0, 8))
-        else:
-            frame.pack_forget()
-
-    def _set_all(self, action: str):
-        for key, var in self._action_vars.items():
-            var.set(action)
-            self._on_action_change(key, action)
-
-    # ── Presets ───────────────────────────────────────────────────────────────
+    def _load_current_values(self):
+        # Pre-fill custom GPS fields
+        cur_gps = self._current.get("gps")
+        if cur_gps and isinstance(cur_gps, dict):
+            self._lat_input.setText(str(cur_gps.get("lat", "")))
+            self._lon_input.setText(str(cur_gps.get("lon", "")))
 
     def _get_current_actions(self) -> dict:
-        """Read currently selected UI state into a dict."""
         result = {}
-        for key, action_var in self._action_vars.items():
-            action = action_var.get()
+        for key, group in self._action_groups.items():
+            checked_btn = group.checkedButton()
+            action = checked_btn.property("action_val") if checked_btn else "keep"
+            
             if action == "custom":
                 if key == "gps":
                     try:
-                        result[key] = {"lat": float(self._lat_var.get()), "lon": float(self._lon_var.get())}
+                        result[key] = {"lat": float(self._lat_input.text()), "lon": float(self._lon_input.text())}
                     except ValueError:
                         result[key] = "spoof"
                 else:
-                    val = self._custom_vars[key].get().strip()
+                    inp = self._text_inputs.get(key)
+                    val = inp.text().strip() if inp else ""
                     result[key] = {"value": val} if val else "spoof"
             else:
                 result[key] = action
         return result
 
     def _load_actions_into_ui(self, actions: dict):
-        """Update UI based on a field_actions dict."""
-        for key, action_var in self._action_vars.items():
+        for key, group in self._action_groups.items():
             act = actions.get(key, "keep")
-            if isinstance(act, dict):
-                action_var.set("custom")
-                self._on_action_change(key, "custom")
-                if key == "gps":
-                    self._lat_var.set(str(act.get("lat", "")))
-                    self._lon_var.set(str(act.get("lon", "")))
-                else:
-                    self._custom_vars[key].set(act.get("value", ""))
-            else:
-                action_var.set(act)
-                self._on_action_change(key, act)
+            action_val = "custom" if isinstance(act, dict) else act
+            
+            for btn in group.buttons():
+                if btn.property("action_val") == action_val:
+                    btn.setChecked(True)
+                    self._on_action_toggled(key, action_val)
+                    
+                    if isinstance(act, dict):
+                        if key == "gps":
+                            self._lat_input.setText(str(act.get("lat", "")))
+                            self._lon_input.setText(str(act.get("lon", "")))
+                        else:
+                            inp = self._text_inputs.get(key)
+                            if inp:
+                                inp.setText(act.get("value", ""))
+                    break
 
-    def _on_preset_selected(self, event=None):
-        name = self.preset_combo.get()
-        if not name: return
+    def _on_preset_selected(self, idx: int):
+        name = self.preset_combo.currentText()
+        if not name:
+            return
         data = presets.load_preset(name)
         if data:
             self._load_actions_into_ui(data)
         
-        # Disable delete for factory presets
-        if presets.is_factory(name):
-            self.del_preset_btn.config(state="disabled")
-        else:
-            self.del_preset_btn.config(state="normal")
+        self.del_preset_btn.setEnabled(not presets.is_factory(name))
 
     def _save_current_as_preset(self):
-        name = simpledialog.askstring("Save Preset", "Enter a name for this preset:", parent=self.win)
-        if not name:
+        name, ok = QInputDialog.getText(self, "Save Preset", "Enter a name for this preset:")
+        if not ok or not name:
             return
         name = name.strip()
         if not name:
             return
         if presets.is_factory(name):
-            messagebox.showerror("Error", "Cannot overwrite a factory preset.", parent=self.win)
+            QMessageBox.critical(self, "Error", "Cannot overwrite a factory preset.")
             return
         
         actions = self._get_current_actions()
         presets.save_preset(name, actions)
         
         # Refresh combo
-        self.preset_combo['values'] = presets.all_preset_names()
-        self.preset_combo.set(name)
-        self.del_preset_btn.config(state="normal")
-        messagebox.showinfo("Saved", f"Preset '{name}' saved successfully.", parent=self.win)
+        self.preset_combo.blockSignals(True)
+        self.preset_combo.clear()
+        self.preset_combo.addItems(presets.all_preset_names())
+        self.preset_combo.setCurrentText(name)
+        self.preset_combo.blockSignals(False)
+        self.del_preset_btn.setEnabled(True)
+        
+        QMessageBox.information(self, "Saved", f"Preset '{name}' saved successfully.")
 
     def _delete_selected_preset(self):
-        name = self.preset_combo.get()
+        name = self.preset_combo.currentText()
         if not name or presets.is_factory(name):
             return
-        if messagebox.askyesno("Delete Preset", f"Are you sure you want to delete '{name}'?", parent=self.win):
+        reply = QMessageBox.question(
+            self, "Delete Preset", f"Are you sure you want to delete '{name}'?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
             if presets.delete_preset(name):
-                self.preset_combo['values'] = presets.all_preset_names()
-                self.preset_combo.set("")
-                self.del_preset_btn.config(state="disabled")
-
-    # ── Result ────────────────────────────────────────────────────────────────
+                self.preset_combo.blockSignals(True)
+                self.preset_combo.clear()
+                self.preset_combo.addItems(presets.all_preset_names())
+                self.preset_combo.setCurrentIndex(-1)
+                self.preset_combo.blockSignals(False)
+                self.del_preset_btn.setEnabled(False)
 
     def _apply(self):
         self.result = self._get_current_actions()
-        self.win.destroy()
+        self.accept()
 
     def _cancel(self):
         self.result = None
-        self.win.destroy()
+        self.reject()

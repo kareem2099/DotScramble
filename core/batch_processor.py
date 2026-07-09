@@ -101,11 +101,20 @@ class BatchProcessor:
             output_filename = f"processed_{Path(input_path).stem}.jpg"
             output_path = os.path.join(output_dir, output_filename)
             
-            is_success, im_buf_arr = cv2.imencode(os.path.splitext(output_path)[1], image)
-            if is_success:
-                im_buf_arr.tofile(output_path)
-            else:
-                cv2.imwrite(output_path, image)
+            ext = os.path.splitext(output_path)[1].lower() or ".jpg"
+            saved = False
+            try:
+                is_success, im_buf_arr = cv2.imencode(ext, image)
+                if is_success:
+                    im_buf_arr.tofile(output_path)
+                    saved = True
+            except Exception:
+                pass
+            if not saved:
+                try:
+                    cv2.imwrite(output_path, image)
+                except Exception:
+                    pass
                 
             return {
                 'input_path': input_path,
@@ -151,11 +160,20 @@ class BatchProcessor:
         output_filename = f"processed_{Path(input_path).stem}.jpg"
         output_path = os.path.join(output_dir, output_filename)
         
-        is_success, im_buf_arr = cv2.imencode(os.path.splitext(output_path)[1], processed_image)
-        if is_success:
-            im_buf_arr.tofile(output_path)
-        else:
-            cv2.imwrite(output_path, processed_image)
+        ext = os.path.splitext(output_path)[1].lower() or ".jpg"
+        saved = False
+        try:
+            is_success, im_buf_arr = cv2.imencode(ext, processed_image)
+            if is_success:
+                im_buf_arr.tofile(output_path)
+                saved = True
+        except Exception:
+            pass
+        if not saved:
+            try:
+                cv2.imwrite(output_path, processed_image)
+            except Exception:
+                pass
 
         return {
             'input_path': input_path,

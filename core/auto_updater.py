@@ -7,7 +7,9 @@ import stat
 import time
 import base64
 from pathlib import Path
-from tkinter import messagebox, Toplevel, Label, ttk
+
+from PySide6.QtWidgets import QApplication, QDialog, QVBoxLayout, QLabel, QProgressBar, QMessageBox
+from PySide6.QtCore import QTimer, Qt
 
 from src.config import APP_VERSION, UPDATE_CONFIG, DIRS
 
@@ -16,7 +18,7 @@ _UPDATE_PUBLIC_KEY_B64 = "DQ0zJAi1S0c+NUhOP3050au9k5/fYwLU45ayTZIFVuI=" # The re
 
 class AutoUpdater:
     def __init__(self, root_window):
-        self.root = root_window
+        self.root = root_window  # In PySide6, this is the main window widget
         self.repo_owner = UPDATE_CONFIG['repo_owner']
         self.repo_name = UPDATE_CONFIG['repo_name']
         self.is_frozen = getattr(sys, 'frozen', False)
@@ -38,7 +40,8 @@ class AutoUpdater:
 
     def _check_environment(self, silent):
         if not self.is_frozen and not os.getenv('FORCE_UPDATE_TEST'):
-            if not silent: messagebox.showinfo("Dev Mode", "Cannot update from source code.")
+            if not silent:
+                QTimer.singleShot(0, lambda: QMessageBox.information(self.root, "Dev Mode", "Cannot update from source code."))
             return False
         return True
 
@@ -61,11 +64,12 @@ class AutoUpdater:
 
             if latest_version != APP_VERSION:
                 if download_url:
-                    self.root.after(0, lambda: self._prompt_user(latest_version, download_url, signature))
+                    QTimer.singleShot(0, lambda: self._prompt_user(latest_version, download_url, signature))
                 else:
                     if not silent: self._show_error("No compatible file found.")
             else:
-                if not silent: self.root.after(0, lambda: messagebox.showinfo("Up to date", "You are using the latest version ✅"))
+                if not silent:
+                    QTimer.singleShot(0, lambda: QMessageBox.information(self.root, "Up to date", "You are using the latest version ✅"))
         except Exception as e:
             if not silent: self._show_error(f"Error: {e}")
 
@@ -75,7 +79,8 @@ class AutoUpdater:
         if response.status_code != 200: return None, None, None
 
         data = response.json()
-        version = data['tag_name']
+        # Strip leading 'v' so 'v1.3.0' compares equal to '1.3.0'
+        version = data['tag_name'].lstrip('v')
         
         # Read the signature from release body e.g. [SIG: base64_signature]
         body = data.get('body', '')
@@ -89,10 +94,16 @@ class AutoUpdater:
         return version, url, signature
 
     def _get_asset_url(self, assets):
-        target = "DotScramble-windows.exe" if sys.platform == "win32" else \
-                 "DotScramble-macos" if sys.platform == "darwin" else "DotScramble-linux"
-        for asset in assets:
-            if asset['name'] == target: return asset['browser_download_url']
+        if sys.platform == "win32":
+            targets = ["DotScramble-windows.exe", "DotScramble-Windows-x86_64.exe"]
+        elif sys.platform == "darwin":
+            targets = ["DotScramble-macos", "DotScramble-macOS.dmg"]
+        else:  # Linux: prefer AppImage, fall back to .deb
+            targets = ["DotScramble-Linux-x86_64.AppImage", "DotScramble-Linux-x86_64.deb", "DotScramble-linux"]
+        asset_map = {a['name']: a['browser_download_url'] for a in assets}
+        for t in targets:
+            if t in asset_map:
+                return asset_map[t]
         return None
 
     def _verify_binary_signature(self, file_path: Path, signature_b64: str) -> bool:
@@ -107,7 +118,7 @@ class AutoUpdater:
             sig_bytes = base64.b64decode(signature_b64)
             pub_raw   = base64.b64decode(_UPDATE_PUBLIC_KEY_B64)
             public_key = Ed25519PublicKey.from_public_bytes(pub_raw)
-            public_key.verify(sig_bytes, binary_data) # raises exception on mismatch
+            public_key.verify(sig_bytes, binary_data)
             return True
         except Exception as e:
             print(f"[Security Alert] Cryptographic signature check failed! Target drop. Error: {e}")
@@ -126,17 +137,17 @@ class AutoUpdater:
             new_filepath = self.temp_dir / filename
 
             if gui:
-                self._start_download_gui(url, new_filepath, signature)
+                QTimer.singleShot(0, lambda: self._start_download_gui(url, new_filepath, signature))
             else:
                 response = requests.get(url, stream=True)
                 with open(new_filepath, 'wb') as file:
                     for chunk in response.iter_content(chunk_size=4096): file.write(chunk)
 
-                # Signature check before declaring updater complete
                 if self._verify_binary_signature(new_filepath, signature):
                     self.ready_file_path = new_filepath
                     self.update_ready = True
-                    if self.on_update_ready_callback: self.on_update_ready_callback()
+                    if self.on_update_ready_callback:
+                        QTimer.singleShot(0, self.on_update_ready_callback)
                 else:
                     try: new_filepath.unlink()
                     except: pass
@@ -154,15 +165,29 @@ class AutoUpdater:
 
     def _prompt_user(self, version, url, signature):
         msg = f"New update {version} available! Install now?"
-        if messagebox.askyesno("Update", msg): self._download_file(url, signature, gui=True)
+        reply = QMessageBox.question(
+            self.root, "Update", msg,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            threading.Thread(target=self._download_file, args=(url, signature, True), daemon=True).start()
 
     def _start_download_gui(self, url, target_path, signature):
-        self.dl_window = Toplevel(self.root)
-        self.dl_window.title("Updating...")
-        self.dl_window.geometry("300x120")
-        Label(self.dl_window, text="Downloading update...", pady=10).pack()
-        self.progress = ttk.Progressbar(self.dl_window, length=250, mode="determinate")
-        self.progress.pack(pady=5)
+        self.dl_window = QDialog(self.root)
+        self.dl_window.setWindowTitle("Updating...")
+        self.dl_window.setFixedSize(300, 120)
+        
+        layout = QVBoxLayout(self.dl_window)
+        lbl = QLabel("Downloading update...")
+        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(lbl)
+        
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 100)
+        self.progress.setValue(0)
+        layout.addWidget(self.progress)
+        
+        self.dl_window.show()
         threading.Thread(target=self._download_chunked_gui, args=(url, target_path, signature), daemon=True).start()
 
     def _download_chunked_gui(self, url, target_path, signature):
@@ -178,27 +203,35 @@ class AutoUpdater:
                 for chunk in response.iter_content(4096):
                     f.write(chunk)
                     dl += len(chunk)
-                    if total: self.root.after(0, lambda v=(dl/total)*100: self.progress.configure(value=v))
+                    if total:
+                        pct = int((dl/total)*100)
+                        QTimer.singleShot(0, lambda p=pct: self.progress.setValue(p))
 
             if self._verify_binary_signature(target_path, signature):
-                self.root.after(0, lambda: self._apply_update(target_path))
+                QTimer.singleShot(0, lambda: self._apply_update(target_path))
             else:
                 try: target_path.unlink()
                 except: pass
-                self.root.after(0, lambda: messagebox.showerror("Security Error", "Signature verification failed! Update aborted."))
-                self.dl_window.destroy()
+                QTimer.singleShot(0, lambda: QMessageBox.critical(self.root, "Security Error", "Signature verification failed! Update aborted."))
+                QTimer.singleShot(0, self._close_download_window)
         except Exception as e:
-            self.root.after(0, lambda: messagebox.showerror("Error", str(e)))
-            self.dl_window.destroy()
+            QTimer.singleShot(0, lambda: QMessageBox.critical(self.root, "Error", str(e)))
+            QTimer.singleShot(0, self._close_download_window)
+
+    def _close_download_window(self):
+        if hasattr(self, 'dl_window') and self.dl_window:
+            self.dl_window.close()
+            self.dl_window.deleteLater()
+            self.dl_window = None
 
     def _apply_update(self, new_filepath):
-        if hasattr(self, 'dl_window') and self.dl_window: self.dl_window.destroy()
+        self._close_download_window()
         if not new_filepath or not os.path.exists(new_filepath): return
 
         if os.path.getsize(new_filepath) < 1024 * 1024:
             try: os.unlink(new_filepath)
             except: pass
-            messagebox.showerror("Security Error", "Downloaded file is invalid.")
+            QMessageBox.critical(self.root, "Security Error", "Downloaded file is invalid.")
             return
 
         if sys.platform == "win32": self._windows_update(new_filepath)
@@ -216,7 +249,7 @@ del "%~f0"
         """
         with open(batch, "w") as f: f.write(script)
         subprocess.Popen([str(batch)], shell=True)
-        self.root.quit()
+        QApplication.quit()
         sys.exit()
 
     def _unix_update(self, new_filepath):
@@ -226,7 +259,7 @@ del "%~f0"
             os.replace(new_filepath, self.current_exe)
             os.execv(self.current_exe, sys.argv)
         except OSError as e:
-            messagebox.showerror("Error", str(e))
+            QMessageBox.critical(self.root, "Error", str(e))
 
     def _cleanup_old_files(self):
         try:
@@ -239,4 +272,4 @@ del "%~f0"
         except: pass
 
     def _show_error(self, msg):
-        self.root.after(0, lambda: messagebox.showerror("Error", msg))
+        QTimer.singleShot(0, lambda: QMessageBox.critical(self.root, "Error", msg))

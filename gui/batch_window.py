@@ -1,34 +1,39 @@
 """
-Batch Processing Window for Advanced Privacy Studio Pro
+Batch Processing Window for Advanced Privacy Studio Pro (PySide6 version)
 Handles batch image processing with progress tracking
 """
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
 import os
 import threading
-from pathlib import Path
+import time
 import logging
+from pathlib import Path
 
-# Import custom modules
+from PySide6.QtWidgets import (
+    QDialog, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QListWidget, QProgressBar, QRadioButton, QButtonGroup, QFrame,
+    QGridLayout, QFileDialog, QMessageBox, QGroupBox
+)
+from PySide6.QtCore import Qt, QObject, Signal
+
 from src.config import COLORS, SUPPORTED_FORMATS, BLUR_RANGE, PIXEL_RANGE, OPACITY_RANGE
 from core.batch_processor import BatchProcessor
 from src.managers.localization_manager import get_locale_manager
 
-class BatchWindow:
+
+class BatchSignals(QObject):
+    """Signals for thread-safe UI updates from the processing worker thread"""
+    progress = Signal(int, int, dict)
+    error = Signal(str, str)
+    complete = Signal()
+
+
+class BatchWindow(QDialog):
     """Batch processing window with file management and progress tracking"""
     
     FREE_FILE_LIMIT = 3  # Free tier cap
     
     def __init__(self, parent, batch_processor, license_manager):
-        """
-        Initialize batch processing window
-        
-        Args:
-            parent: Parent tkinter window
-            batch_processor: Instance of BatchProcessor
-            license_manager: Instance of LicenseManager (for tier checks)
-        """
-        self.parent = parent
+        super().__init__(parent)
         self.batch_processor = batch_processor
         self.license_manager = license_manager
         self.selected_files = []
@@ -36,293 +41,200 @@ class BatchWindow:
         self.logger = logging.getLogger(__name__)
         self.locale_manager = get_locale_manager()
         
-        # Create window
-        self.window = tk.Toplevel(parent)
-        self.window.title("📦 Batch Processing - Privacy Studio Pro")
-        self.window.geometry("900x650")
-        self.window.configure(bg=COLORS['bg_dark'])
+        # Get active colors from parent or default
+        if parent and hasattr(parent, 'colors'):
+            self.colors = parent.colors
+        else:
+            self.colors = COLORS
         
-        # Make window modal
-        self.window.transient(parent)
-        self.window.grab_set()
+        self.setWindowTitle("📦 Batch Processing - Privacy Studio Pro")
+        self.setMinimumSize(900, 650)
+        self.resize(900, 650)
+
+        # Thread signals
+        self.signals = BatchSignals()
+        self.signals.progress.connect(self.on_progress)
+        self.signals.error.connect(self.on_error)
+        self.signals.complete.connect(self.on_complete)
         
-        # Settings
-        self.detection_mode = tk.StringVar(value="face")
-        self.effect_type = tk.StringVar(value="blur")
-        self.blur_strength = tk.IntVar(value=BLUR_RANGE['default'])
-        self.pixel_size = tk.IntVar(value=PIXEL_RANGE['default'])
-        self.opacity = tk.IntVar(value=OPACITY_RANGE['default'])
-        
-        # Processing state
+        # UI State variables
         self.current_progress = 0
         self.total_files = 0
-        
-        self.init_ui_strings()
+        self.failed_count = 0
+        self.start_time = None
         
         self.create_widgets()
         
-        # Bind window close
-        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
-
-    def init_ui_strings(self):
-        """Initialize tk.StringVar objects for localized text"""
-        _ = self.locale_manager.get
-        
-        self.detection_keys = [
-            "detection.face", "detection.eye", "detection.body",
-            "detection.license_plate", "detection.text", "detection.full"
-        ]
-        self.detection_strings = [tk.StringVar(value=_(k)) for k in self.detection_keys]
-        
-        # Batch window uses a slightly different effect list (hardcoded strings mixed with emojis)
-        # We will keep the hardcoded ones as they are or create StringVars for them if needed.
-        # But to match main_window, let's just make the detection modes Reactive.
-    
-    def create_widgets(self):
-        """Create all GUI widgets"""
-        # Header
-        header = tk.Frame(self.window, bg=COLORS['bg_medium'], height=60)
-        header.pack(fill="x", pady=(0, 10))
-        
-        tk.Label(header, text="📦 Batch Image Processing", 
-                font=("Helvetica", 20, "bold"),
-                bg=COLORS['bg_medium'], fg=COLORS['accent_cyan']).pack(pady=15)
-        
-        # Main container
-        main_container = tk.Frame(self.window, bg=COLORS['bg_dark'])
-        main_container.pack(fill="both", expand=True, padx=15, pady=10)
-        
-        # Create sections
-        self.create_file_list_section(main_container)
-        self.create_settings_section(main_container)
-        self.create_progress_section(main_container)
-        self.create_action_buttons(main_container)
-    
-    def create_file_list_section(self, parent):
-        """Create file list section"""
-        list_frame = tk.LabelFrame(parent, text="📁 Selected Files", 
-                                   font=("Helvetica", 12, "bold"),
-                                   bg=COLORS['bg_medium'], fg=COLORS['text_white'],
-                                   relief="groove", bd=2)
-        list_frame.pack(fill="both", expand=True, pady=(0, 10))
-        
-        # File list with scrollbar
-        list_container = tk.Frame(list_frame, bg=COLORS['bg_medium'])
-        list_container.pack(fill="both", expand=True, padx=10, pady=10)
-        
-        scrollbar_y = tk.Scrollbar(list_container)
-        scrollbar_y.pack(side="right", fill="y")
-        
-        scrollbar_x = tk.Scrollbar(list_container, orient="horizontal")
-        scrollbar_x.pack(side="bottom", fill="x")
-        
-        self.file_listbox = tk.Listbox(list_container,
-                                       bg=COLORS['bg_light'],
-                                       fg=COLORS['text_white'],
-                                       font=("Courier", 10),
-                                       selectmode=tk.EXTENDED,
-                                       yscrollcommand=scrollbar_y.set,
-                                       xscrollcommand=scrollbar_x.set)
-        self.file_listbox.pack(side="left", fill="both", expand=True)
-        
-        scrollbar_y.config(command=self.file_listbox.yview)
-        scrollbar_x.config(command=self.file_listbox.xview)
-        
-        # File management buttons
-        btn_frame = tk.Frame(list_frame, bg=COLORS['bg_medium'])
-        btn_frame.pack(fill="x", padx=10, pady=(0, 10))
-        
-        self.add_btn = self.create_button(btn_frame, "➕ Add Files", 
-                                          self.add_files, 
-                                          COLORS['accent_green'])
-        self.add_btn.pack(side="left", padx=5)
-        
-        self.add_folder_btn = self.create_button(btn_frame, "📂 Add Folder", 
-                                                 self.add_folder, 
-                                                 COLORS['accent_cyan'])
-        self.add_folder_btn.pack(side="left", padx=5)
-        
-        self.remove_btn = self.create_button(btn_frame, "➖ Remove Selected", 
-                                             self.remove_selected, 
-                                             COLORS['accent_orange'])
-        self.remove_btn.pack(side="left", padx=5)
-        
-        self.clear_btn = self.create_button(btn_frame, "🗑️ Clear All", 
-                                            self.clear_all, 
-                                            COLORS['accent_red'])
-        self.clear_btn.pack(side="left", padx=5)
-        
-        # File count label
-        self.file_count_label = tk.Label(btn_frame, text="Files: 0",
-                                        font=("Helvetica", 10, "bold"),
-                                        bg=COLORS['bg_medium'], 
-                                        fg=COLORS['accent_cyan'])
-        self.file_count_label.pack(side="right", padx=10)
-    
-    def create_settings_section(self, parent):
-        """Create settings section"""
-
-        _ = self.locale_manager.get
-
-        settings_frame = tk.LabelFrame(parent, text=_("ui.controls.effect_type"), 
-                                       font=("Helvetica", 12, "bold"),
-                                       bg=COLORS['bg_medium'], 
-                                       fg=COLORS['text_white'],
-                                       relief="groove", bd=2)
-        settings_frame.pack(fill="x", pady=(0, 10))
-        
-        # Create two columns
-        left_col = tk.Frame(settings_frame, bg=COLORS['bg_medium'])
-        left_col.pack(side="left", fill="both", expand=True, padx=10, pady=10)
-        
-        right_col = tk.Frame(settings_frame, bg=COLORS['bg_medium'])
-        right_col.pack(side="right", fill="both", expand=True, padx=10, pady=10)
-        
-        # Detection mode
-        tk.Label(left_col, text="Detection Mode:", 
-                font=("Helvetica", 10, "bold"),
-                bg=COLORS['bg_medium'], fg=COLORS['text_white']).pack(anchor="w", pady=(0, 5))
-        
-        detection_modes = [
-            "face",
-            "eye",
-            "body",
-            "license_plate",
-            "text",
-            "full"
-        ]
-        
-        for i, value in enumerate(detection_modes):
-            rb = tk.Radiobutton(left_col, textvariable=self.detection_strings[i],
-                               variable=self.detection_mode, value=value,
-                               font=("Helvetica", 9),
-                               bg=COLORS['bg_medium'], fg=COLORS['text_white'],
-                               selectcolor=COLORS['bg_light'],
-                               activebackground=COLORS['bg_medium'])
-            rb.pack(anchor="w", pady=2)
-        
-        # Effect type
-        tk.Label(right_col, text="Effect Type:", 
-                font=("Helvetica", 10, "bold"),
-                bg=COLORS['bg_medium'], fg=COLORS['text_white']).pack(anchor="w", pady=(0, 5))
-        
-        effects = [
-            ("🌫️ Gaussian Blur", "blur"),
-            ("🔲 Pixelation", "pixelation"),
-            ("⬛ Black Bar", "black_bar"),
-            ("🎭 Gradient Fade", "gradient"),
-            ("🔳 Mosaic", "mosaic"),
-            ("❄️ Frosted Glass", "glass"),
-            ("🎨 Oil Paint", "oil_paint")
-        ]
-        
-        for text, value in effects:
-            rb = tk.Radiobutton(right_col, text=text,
-                               variable=self.effect_type, value=value,
-                               font=("Helvetica", 9),
-                               bg=COLORS['bg_medium'], fg=COLORS['text_white'],
-                               selectcolor=COLORS['bg_light'],
-                               activebackground=COLORS['bg_medium'])
-            rb.pack(anchor="w", pady=2)
-    
-    def create_progress_section(self, parent):
-        """Create progress tracking section"""
-        progress_frame = tk.LabelFrame(parent, text="📊 Progress", 
-                                       font=("Helvetica", 12, "bold"),
-                                       bg=COLORS['bg_medium'], 
-                                       fg=COLORS['text_white'],
-                                       relief="groove", bd=2)
-        progress_frame.pack(fill="x", pady=(0, 10))
-        
-        inner_frame = tk.Frame(progress_frame, bg=COLORS['bg_medium'])
-        inner_frame.pack(fill="x", padx=10, pady=10)
-        
-        # Progress bar
-        self.progress_bar = ttk.Progressbar(inner_frame, 
-                                           mode='determinate',
-                                           length=400)
-        self.progress_bar.pack(fill="x", pady=5)
-        
-        # Status label
-        self.status_label = tk.Label(inner_frame, 
-                                     text="Ready to process",
-                                     font=("Helvetica", 10),
-                                     bg=COLORS['bg_medium'], 
-                                     fg=COLORS['text_white'])
-        self.status_label.pack(pady=5)
-        
-        # Stats frame
-        stats_frame = tk.Frame(inner_frame, bg=COLORS['bg_medium'])
-        stats_frame.pack(fill="x", pady=5)
-        
-        self.processed_label = tk.Label(stats_frame, text="Processed: 0/0",
-                                       font=("Helvetica", 9),
-                                       bg=COLORS['bg_medium'], 
-                                       fg=COLORS['accent_green'])
-        self.processed_label.pack(side="left", padx=10)
-        
-        self.failed_label = tk.Label(stats_frame, text="Failed: 0",
-                                     font=("Helvetica", 9),
-                                     bg=COLORS['bg_medium'], 
-                                     fg=COLORS['accent_red'])
-        self.failed_label.pack(side="left", padx=10)
-        
-        self.time_label = tk.Label(stats_frame, text="Time: 0s",
-                                   font=("Helvetica", 9),
-                                   bg=COLORS['bg_medium'], 
-                                   fg=COLORS['accent_cyan'])
-        self.time_label.pack(side="right", padx=10)
-    
-    def create_action_buttons(self, parent):
-        """Create action buttons"""
-        btn_frame = tk.Frame(parent, bg=COLORS['bg_dark'])
-        btn_frame.pack(fill="x", pady=10)
-        
-        self.start_btn = self.create_button(btn_frame, "▶️ Start Processing", 
-                                            self.start_processing, 
-                                            COLORS['accent_green'],
-                                            width=20)
-        self.start_btn.pack(side="left", padx=5)
-        
-        self.stop_btn = self.create_button(btn_frame, "⏹️ Stop", 
-                                           self.stop_processing, 
-                                           COLORS['accent_red'],
-                                           width=15,
-                                           state="disabled")
-        self.stop_btn.pack(side="left", padx=5)
-        
-        self.close_btn = self.create_button(btn_frame, "❌ Close", 
-                                            self.on_close, 
-                                            COLORS['bg_light'],
-                                            width=15)
-        self.close_btn.pack(side="right", padx=5)
-    
-    def create_button(self, parent, text, command, bg_color, width=None, state="normal"):
-        """Create styled button"""
-        btn = tk.Button(parent, text=text,
-                       command=command,
-                       font=("Helvetica", 10, "bold"),
-                       bg=bg_color, fg=COLORS['text_white'],
-                       activebackground=bg_color,
-                       cursor="hand2",
-                       relief="flat",
-                       padx=15, pady=8,
-                       state=state)
-        if width:
-            btn.config(width=width)
-        return btn
-    
-    # File management methods
     def _is_max(self):
         """Check if the current user has the Max plan."""
         return self.license_manager.is_max_activated
 
-    def _check_free_limit(self, newly_added: int) -> int:
-        """Enforce the free-tier file cap.
+    def create_widgets(self):
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # Header
+        header = QFrame()
+        header.setObjectName("DialogHeader")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(20, 15, 20, 15)
         
-        Returns the number of files that were removed due to the cap.
-        Shows an upgrade prompt if the cap is exceeded.
-        """
+        title_lbl = QLabel("📦 Batch Image Processing")
+        title_lbl.setObjectName("DialogTitle")
+        header_layout.addWidget(title_lbl)
+        main_layout.addWidget(header)
+
+        # Content Frame
+        content_frame = QWidget()
+        content_layout = QVBoxLayout(content_frame)
+        content_layout.setContentsMargins(20, 15, 20, 15)
+        content_layout.setSpacing(10)
+
+        # File List Section
+        file_group = QGroupBox("📁 Selected Files")
+        file_layout = QVBoxLayout(file_group)
+        file_layout.setContentsMargins(10, 10, 10, 10)
+        
+        self.file_listbox = QListWidget()
+        file_layout.addWidget(self.file_listbox, 1)
+
+        # File list buttons row
+        fl_buttons = QHBoxLayout()
+        self.add_btn = QPushButton("➕ Add Files")
+        self.add_btn.clicked.connect(self.add_files)
+        fl_buttons.addWidget(self.add_btn)
+
+        self.add_folder_btn = QPushButton("📂 Add Folder")
+        self.add_folder_btn.clicked.connect(self.add_folder)
+        fl_buttons.addWidget(self.add_folder_btn)
+
+        self.remove_btn = QPushButton("➖ Remove Selected")
+        self.remove_btn.clicked.connect(self.remove_selected)
+        fl_buttons.addWidget(self.remove_btn)
+
+        self.clear_btn = QPushButton("🗑️ Clear All")
+        self.clear_btn.setObjectName("del_preset_btn")
+        self.clear_btn.clicked.connect(self.clear_all)
+        fl_buttons.addWidget(self.clear_btn)
+
+        fl_buttons.addStretch(1)
+
+        self.file_count_label = QLabel("Files: 0")
+        self.file_count_label.setObjectName("FileCountLabel")
+        fl_buttons.addWidget(self.file_count_label)
+        file_layout.addLayout(fl_buttons)
+
+        content_layout.addWidget(file_group, 1)
+
+        # Settings Section
+        settings_row = QHBoxLayout()
+        
+        # Left side: Detection Modes
+        detect_group = QGroupBox("🎯 Detection Mode")
+        detect_layout = QVBoxLayout(detect_group)
+        self.detect_button_group = QButtonGroup(self)
+        
+        detection_modes = [
+            ("face", "detection.face"), 
+            ("eye", "detection.eye"), 
+            ("body", "detection.body"),
+            ("license_plate", "detection.license_plate"), 
+            ("text", "detection.text"), 
+            ("full", "detection.full")
+        ]
+        
+        for i, (val, key) in enumerate(detection_modes):
+            lbl_text = self.locale_manager.get(key)
+            rb = QRadioButton(lbl_text)
+            rb.setProperty("mode_val", val)
+            self.detect_button_group.addButton(rb, i)
+            detect_layout.addWidget(rb)
+            if val == "face":
+                rb.setChecked(True)
+                
+        settings_row.addWidget(detect_group, 1)
+
+        # Right side: Effect Types
+        effects_group = QGroupBox("🎨 Effect Type")
+        effects_layout = QVBoxLayout(effects_group)
+        self.effects_button_group = QButtonGroup(self)
+        
+        effects = [
+            ("blur", "🌫️ Gaussian Blur"),
+            ("pixelation", "🔲 Pixelation"),
+            ("black_bar", "⬛ Black Bar"),
+            ("gradient", "🎭 Gradient Fade"),
+            ("mosaic", "🔳 Mosaic"),
+            ("glass", "❄️ Frosted Glass"),
+            ("oil_paint", "🎨 Oil Paint")
+        ]
+        
+        for i, (val, label) in enumerate(effects):
+            rb = QRadioButton(label)
+            rb.setProperty("effect_val", val)
+            self.effects_button_group.addButton(rb, i)
+            effects_layout.addWidget(rb)
+            if val == "blur":
+                rb.setChecked(True)
+
+        settings_row.addWidget(effects_group, 1)
+        content_layout.addLayout(settings_row)
+
+        # Progress Section
+        progress_group = QGroupBox("📊 Progress")
+        progress_layout = QVBoxLayout(progress_group)
+        
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setValue(0)
+        progress_layout.addWidget(self.progress_bar)
+
+        self.status_label = QLabel("Ready to process")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        progress_layout.addWidget(self.status_label)
+
+        stats_row = QHBoxLayout()
+        self.processed_label = QLabel("Processed: 0/0")
+        self.processed_label.setObjectName("SuccessLabel")
+        stats_row.addWidget(self.processed_label)
+
+        self.failed_label = QLabel("Failed: 0")
+        self.failed_label.setObjectName("FailedLabel")
+        stats_row.addWidget(self.failed_label)
+        
+        stats_row.addStretch(1)
+
+        self.time_label = QLabel("Time: 0s")
+        self.time_label.setObjectName("TimeLabel")
+        stats_row.addWidget(self.time_label)
+        progress_layout.addLayout(stats_row)
+        
+        content_layout.addWidget(progress_group)
+
+        # Action Buttons
+        actions_row = QHBoxLayout()
+        self.start_btn = QPushButton("▶️ Start Processing")
+        self.start_btn.setObjectName("primary_action")
+        self.start_btn.clicked.connect(self.start_processing)
+        actions_row.addWidget(self.start_btn)
+
+        self.stop_btn = QPushButton("⏹️ Stop")
+        self.stop_btn.setEnabled(False)
+        self.stop_btn.clicked.connect(self.stop_processing)
+        actions_row.addWidget(self.stop_btn)
+
+        actions_row.addStretch(1)
+
+        self.close_btn = QPushButton("❌ Close")
+        self.close_btn.clicked.connect(self.close)
+        actions_row.addWidget(self.close_btn)
+        
+        content_layout.addLayout(actions_row)
+        
+        main_layout.addWidget(content_frame, 1)
+
+    def _check_free_limit(self, newly_added: int) -> int:
+        """Enforce the free-tier file cap."""
         if self._is_max():
             return 0
         
@@ -335,24 +247,25 @@ class BatchWindow:
         self.selected_files = self.selected_files[:self.FREE_FILE_LIMIT]
         
         # Sync listbox
-        self.file_listbox.delete(0, tk.END)
+        self.file_listbox.clear()
         for f in self.selected_files:
-            self.file_listbox.insert(tk.END, f"\U0001f4c4 {os.path.basename(f)}")
+            self.file_listbox.addItem(f"📄 {os.path.basename(f)}")
         
-        messagebox.showwarning(
+        QMessageBox.warning(
+            self,
             "Free Plan Limit",
             f"Free plan is limited to {self.FREE_FILE_LIMIT} images per batch.\n\n"
             f"{excess} file(s) were removed.\n\n"
-            "Upgrade to Max to process unlimited images.",
-            parent=self.window,
+            "Upgrade to Max to process unlimited images."
         )
         return excess
 
     def add_files(self):
-        """Add files to processing list"""
-        files = filedialog.askopenfilenames(
-            title="Select Images",
-            filetypes=SUPPORTED_FORMATS
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Select Images",
+            os.path.expanduser("~"),
+            "Images (*.png *.jpg *.jpeg *.bmp *.webp *.tiff *.tif)"
         )
         
         if files:
@@ -360,21 +273,19 @@ class BatchWindow:
             for file in files:
                 if file not in self.selected_files:
                     self.selected_files.append(file)
-                    self.file_listbox.insert(tk.END, f"📄 {os.path.basename(file)}")
+                    self.file_listbox.addItem(f"📄 {os.path.basename(file)}")
                     added_count += 1
             
             removed = self._check_free_limit(added_count)
             added_count = max(0, added_count - removed)
             self.update_file_count()
             if added_count > 0:
-                self.status_label.config(text=f"Added {added_count} file(s)")
-    
+                self.status_label.setText(f"Added {added_count} file(s)")
+
     def add_folder(self):
-        """Add all images from a folder"""
-        folder = filedialog.askdirectory(title="Select Folder")
-        
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
         if folder:
-            supported_exts = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff']
+            supported_exts = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp']
             added_count = 0
             
             for file in Path(folder).glob('*'):
@@ -382,65 +293,59 @@ class BatchWindow:
                     file_path = str(file)
                     if file_path not in self.selected_files:
                         self.selected_files.append(file_path)
-                        self.file_listbox.insert(tk.END, f"📄 {file.name}")
+                        self.file_listbox.addItem(f"📄 {file.name}")
                         added_count += 1
             
             removed = self._check_free_limit(added_count)
             added_count = max(0, added_count - removed)
             self.update_file_count()
             if added_count > 0:
-                self.status_label.config(text=f"Added {added_count} file(s) from folder")
+                self.status_label.setText(f"Added {added_count} file(s) from folder")
             else:
-                messagebox.showinfo("Info", "No valid images found in folder", parent=self.window)
-    
+                QMessageBox.information(self, "Info", "No valid images found in folder")
+
     def remove_selected(self):
-        """Remove selected files from list"""
-        selected_indices = self.file_listbox.curselection()
-        
-        if not selected_indices:
-            messagebox.showinfo("Info", "Please select files to remove", parent=self.window)
+        selected_items = self.file_listbox.selectedItems()
+        if not selected_items:
+            QMessageBox.information(self, "Info", "Please select files to remove")
             return
-        
-        # Remove in reverse order to maintain indices
-        for index in reversed(selected_indices):
-            del self.selected_files[index]
-            self.file_listbox.delete(index)
-        
+            
+        for item in selected_items:
+            row = self.file_listbox.row(item)
+            self.file_listbox.takeItem(row)
+            if row < len(self.selected_files):
+                del self.selected_files[row]
+                
         self.update_file_count()
-        self.status_label.config(text=f"Removed {len(selected_indices)} file(s)")
-    
+        self.status_label.setText(f"Removed {len(selected_items)} file(s)")
+
     def clear_all(self):
-        """Clear all files from list"""
         if not self.selected_files:
             return
-        
-        if messagebox.askyesno("Confirm", "Clear all files from list?", parent=self.window):
+        reply = QMessageBox.question(
+            self, "Confirm", "Clear all files from list?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
             self.selected_files = []
-            self.file_listbox.delete(0, tk.END)
+            self.file_listbox.clear()
             self.update_file_count()
-            self.status_label.config(text="Cleared all files")
-    
+            self.status_label.setText("Cleared all files")
+
     def update_file_count(self):
-        """Update file count label"""
         count = len(self.selected_files)
-        self.file_count_label.config(text=f"Files: {count}")
-    
-    # Processing methods
+        self.file_count_label.setText(f"Files: {count}")
+
     def start_processing(self):
-        """Start batch processing"""
         if not self.selected_files:
-            messagebox.showwarning("Warning", "No files selected!", parent=self.window)
+            QMessageBox.warning(self, "Warning", "No files selected!")
             return
-        
-        # Select output directory
-        output_dir = filedialog.askdirectory(title="Select Output Folder")
+            
+        output_dir = QFileDialog.getExistingDirectory(self, "Select Output Folder")
         if not output_dir:
             return
-        
-        # Validate files
-        valid_files, invalid_files = self.batch_processor.validate_input_files(
-            self.selected_files
-        )
+            
+        valid_files, invalid_files = self.batch_processor.validate_input_files(self.selected_files)
         
         if invalid_files:
             msg = f"Found {len(invalid_files)} invalid file(s):\n\n"
@@ -449,86 +354,91 @@ class BatchWindow:
                 msg += f"\n... and {len(invalid_files) - 5} more"
             msg += f"\n\nProcess {len(valid_files)} valid file(s)?"
             
-            if not messagebox.askyesno("Invalid Files", msg, parent=self.window):
+            reply = QMessageBox.question(
+                self, "Invalid Files", msg,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply != QMessageBox.StandardButton.Yes:
                 return
+
+        # Read active radio values
+        sel_mode_btn = self.detect_button_group.checkedButton()
+        mode_val = sel_mode_btn.property("mode_val") if sel_mode_btn else "face"
         
-        # Prepare settings
+        sel_effect_btn = self.effects_button_group.checkedButton()
+        effect_val = sel_effect_btn.property("effect_val") if sel_effect_btn else "blur"
+
         settings = {
-            'detection_mode': self.detection_mode.get(),
-            'effect_type': self.effect_type.get(),
+            'detection_mode': mode_val,
+            'effect_type': effect_val,
             'is_pro': self._is_max(),
             'effect_params': {
-                'blur_strength': self.blur_strength.get(),
-                'pixel_size': self.pixel_size.get(),
-                'opacity': self.opacity.get()
+                'blur_strength': BLUR_RANGE['default'],
+                'pixel_size': PIXEL_RANGE['default'],
+                'opacity': OPACITY_RANGE['default']
             }
         }
-        
-        # Start processing in thread
+
         self.processing = True
         self.total_files = len(valid_files)
         self.current_progress = 0
         self.failed_count = 0
-        self.start_time = None
+        self.start_time = time.time()
         
         self.update_ui_state(processing=True)
-        
+        self.progress_bar.setValue(0)
+        self.processed_label.setText(f"Processed: 0/{self.total_files}")
+        self.failed_label.setText("Failed: 0")
+
         def process_worker():
-            import time
-            self.start_time = time.time()
-            
+            def progress_cb(current, total, result):
+                self.signals.progress.emit(current, total, result)
+                
+            def error_cb(file_path, error_msg):
+                self.signals.error.emit(file_path, error_msg)
+                
             self.batch_processor.process_batch(
                 valid_files,
                 output_dir,
                 settings,
-                progress_callback=self.on_progress,
-                error_callback=self.on_error,
+                progress_callback=progress_cb,
+                error_callback=error_cb,
                 is_cancelled=lambda: not self.processing
             )
             
-            # Processing complete
-            self.window.after(0, self.on_complete)
-        
+            self.signals.complete.emit()
+
         thread = threading.Thread(target=process_worker, daemon=True)
         thread.start()
-    
+
     def stop_processing(self):
-        """Stop batch processing"""
-        if messagebox.askyesno("Confirm", "Stop processing?", parent=self.window):
+        reply = QMessageBox.question(
+            self, "Confirm", "Stop processing?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
             self.processing = False
-            self.status_label.config(text="Processing stopped by user")
+            self.status_label.setText("Processing stopped by user")
             self.update_ui_state(processing=False)
-    
+
     def on_progress(self, current, total, result):
-        """Handle progress update"""
         if not self.processing:
             return
-        
-        def update_ui():
-            if not self.processing:
-                return
-            self.current_progress = current
-            progress = (current / total) * 100
-            self.progress_bar.config(value=progress)
-            self.processed_label.config(text=f"Processed: {current}/{total}")
-            self.status_label.config(text=f"Processing: {os.path.basename(result['input_path'])}")
-            if self.start_time:
-                import time
-                elapsed = int(time.time() - self.start_time)
-                self.time_label.config(text=f"Time: {elapsed}s")
+        self.current_progress = current
+        progress = int((current / total) * 100)
+        self.progress_bar.setValue(progress)
+        self.processed_label.setText(f"Processed: {current}/{total}")
+        self.status_label.setText(f"Processing: {os.path.basename(result['input_path'])}")
+        if self.start_time:
+            elapsed = int(time.time() - self.start_time)
+            self.time_label.setText(f"Time: {elapsed}s")
 
-        self.window.after(0, update_ui)
-    
     def on_error(self, file_path, error_msg):
-        """Handle processing error"""
-        def update_ui_error():
-            self.failed_count += 1
-            self.failed_label.config(text=f"Failed: {self.failed_count}")
-        self.window.after(0, update_ui_error)
+        self.failed_count += 1
+        self.failed_label.setText(f"Failed: {self.failed_count}")
         self.logger.error(f"Failed to process {file_path}: {error_msg}")
-    
+
     def on_complete(self):
-        """Handle processing completion"""
         self.processing = False
         self.update_ui_state(processing=False)
         
@@ -539,27 +449,28 @@ class BatchWindow:
         msg += f"❌ Failed: {self.failed_count}\n"
         msg += f"📊 Total: {self.total_files}"
         
-        messagebox.showinfo("Complete", msg, parent=self.window)
-        self.status_label.config(text="Processing complete!")
-    
+        QMessageBox.information(self, "Complete", msg)
+        self.status_label.setText("Processing complete!")
+
     def update_ui_state(self, processing):
-        """Update UI state during processing"""
-        state = "disabled" if processing else "normal"
-        
-        self.add_btn.config(state=state)
-        self.add_folder_btn.config(state=state)
-        self.remove_btn.config(state=state)
-        self.clear_btn.config(state=state)
-        self.start_btn.config(state=state)
-        self.close_btn.config(state=state)
-        
-        self.stop_btn.config(state="normal" if processing else "disabled")
-    
-    def on_close(self):
-        """Handle window close"""
+        self.add_btn.setEnabled(not processing)
+        self.add_folder_btn.setEnabled(not processing)
+        self.remove_btn.setEnabled(not processing)
+        self.clear_btn.setEnabled(not processing)
+        self.start_btn.setEnabled(not processing)
+        self.close_btn.setEnabled(not processing)
+        self.stop_btn.setEnabled(processing)
+
+    def closeEvent(self, event):
         if self.processing:
-            if not messagebox.askyesno("Confirm", "Processing in progress. Close anyway?", parent=self.window):
-                return
-            self.processing = False
-        
-        self.window.destroy()
+            reply = QMessageBox.question(
+                self, "Confirm", "Processing in progress. Close anyway?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if reply == QMessageBox.StandardButton.Yes:
+                self.processing = False
+                event.accept()
+            else:
+                event.ignore()
+        else:
+            event.accept()

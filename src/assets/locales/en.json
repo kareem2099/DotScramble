@@ -49,6 +49,15 @@
             "title": "DotScramble",
             "preview": "🔴 Real-time Preview"
         },
+        "tier": {
+            "pro_badge": "⭐ PRO",
+            "free_badge": "🔓 FREE",
+            "pro_desc": "AI-powered detection active",
+            "free_desc": "Haar Cascade · Upgrade for AI",
+            "upgrade_btn": "⭐ Upgrade to Pro",
+            "upgrade_menu": "⭐️ Upgrade to Pro",
+            "pro_activated_menu": "⭐️ PRO Activated"
+        },
         "buttons": {
             "load": "📁 Load Image",
             "apply": "✨ Apply Effect",
@@ -78,7 +87,9 @@
                 "original": "Original",
                 "processed": "Processed",
                 "compare": "Compare"
-            }
+            },
+            "placeholder_title": "Drag & Drop Image Here",
+            "placeholder_subtitle": "or click 'Load Image' to start"
         },
         "status": {
             "ready": "Ready to load image...",
@@ -103,7 +114,8 @@
         "gradient": "🎭 Gradient",
         "mosaic": "🔳 Mosaic",
         "glass": "❄️ Frosted Glass",
-        "oil_paint": "🎨 Oil Paint"
+        "oil_paint": "🎨 Oil Paint",
+        "ai_evasion": "🛡️ AI Evasion (PRO)"
     },
     "detection": {
         "face": "🎭 Face",
@@ -225,5 +237,23 @@
     "languages": {
         "english": "English (الإنجليزية)",
         "arabic": "Arabic (العربية)"
+    },
+    "image_picker": {
+        "title": "Select Image",
+        "search_placeholder": "🔍  Filter files…",
+        "quick_access": "QUICK ACCESS",
+        "cancel": "Cancel",
+        "open": "Open",
+        "empty_folder": "No images found in this folder",
+        "bookmarks": {
+            "home": "Home",
+            "pictures": "Pictures",
+            "downloads": "Downloads",
+            "desktop": "Desktop",
+            "documents": "Documents",
+            "music": "Music",
+            "volumes": "Volumes",
+            "root": "Root"
+        }
     }
 }

@@ -1,6 +1,4 @@
 # --- Core Dependencies ---
-arabic-reshaper
-python-bidi
 numpy
 opencv-python
 Pillow
@@ -8,7 +6,7 @@ piexif
 cryptography
 pytesseract
 requests
-tkinterdnd2
+PySide6
 
 # --- PRO Feature (Lazy Loaded) ---
 # AI-powered face/eye detection (~100MB download)

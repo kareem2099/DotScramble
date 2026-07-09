@@ -105,6 +105,7 @@ class LocalAuthManager:
         self.thread = None
         self.port = None
         self.state_token = None
+        self._lock = threading.Lock()
         
     def start(self):
         """Start the local background server and return port and state token"""
@@ -130,11 +131,12 @@ class LocalAuthManager:
         
     def stop(self):
         """Shutdown the local server"""
-        if self.server:
-            self.server.shutdown()
-            self.server.server_close()
-            self.server = None
-            logger.info("Local auth server stopped")
+        with self._lock:
+            if self.server:
+                self.server.shutdown()
+                self.server.server_close()
+                self.server = None
+                logger.info("Local auth server stopped")
             
     def verify_state(self, state):
         """Verify the received state token matches the expected one"""

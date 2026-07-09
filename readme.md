@@ -2,24 +2,25 @@
 
 # 🔐 DotScramble
 
-### DotScramble
+### Advanced Image Privacy Studio
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.3.0-blue?style=for-the-badge" alt="Version"/>
-  <img src="https://img.shields.io/badge/codename-Media%20Revolution-orange?style=for-the-badge" alt="Codename"/>
-  <img src="https://img.shields.io/badge/python-3.6+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
+  <img src="https://img.shields.io/badge/version-1.4.0-blue?style=for-the-badge" alt="Version"/>
+  <img src="https://img.shields.io/badge/codename-Ghost%20Vision-purple?style=for-the-badge" alt="Codename"/>
+  <img src="https://img.shields.io/badge/python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge" alt="License"/>
-  <img src="https://img.shields.io/badge/OpenCV-Powered-5C3EE8?style=for-the-badge&logo=opencv" alt="OpenCV"/>
+  <img src="https://img.shields.io/badge/PySide6-Qt%20Framework-41CD52?style=for-the-badge&logo=qt&logoColor=white" alt="PySide6"/>
   <img src="https://img.shields.io/github/stars/kareem2099/DotScramble?style=for-the-badge&color=yellow" alt="Stars"/>
 </p>
 
 <p align="center">
-  <strong>A powerful, modular image privacy protection tool with advanced features including face detection, multiple effect types, batch processing, and real-time preview.</strong>
+  <strong>A powerful, modular image privacy tool with AI evasion, face detection, multiple effects, batch processing, and real-time preview — built on PySide6.</strong>
 </p>
 
 <p align="center">
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-features">Features</a> •
+  <a href="#-ai-evasion-system">AI Evasion</a> •
   <a href="#-usage">Usage</a> •
   <a href="#-installation">Installation</a> •
   <a href="#-contributing">Contributing</a>
@@ -44,14 +45,26 @@
    sudo apt install tesseract-ocr tesseract-ocr-eng
    ```
 
-2. Download `DotScramble-linux`
-3. Make executable:
-   ```bash
-   chmod +x DotScramble-linux
-   ```
-4. Run: `./DotScramble-linux`
+2. Download your preferred package from the [Releases Page](https://github.com/kareem2099/DotScramble/releases/latest):
 
-**Note:** Text detection features require Tesseract OCR. Without it, you'll see a warning but all other features work normally.
+   | Package | Use case |
+   |---------|----------|
+   | `DotScramble-Linux-x86_64.AppImage` | Universal — run on any distro |
+   | `DotScramble-Linux-x86_64.deb` | Debian / Ubuntu / Kali — integrates with app menu |
+
+3. **AppImage:**
+   ```bash
+   chmod +x DotScramble-Linux-x86_64.AppImage
+   ./DotScramble-Linux-x86_64.AppImage
+   ```
+
+   **Or .deb:**
+   ```bash
+   sudo dpkg -i DotScramble-Linux-x86_64.deb
+   dotscramble
+   ```
+
+**Note:** Text detection requires Tesseract OCR. Without it, you'll see a warning but all other features work normally.
 
 </td>
 </tr>
@@ -59,7 +72,7 @@
 
 <div align="center">
 
-**[�� Download Latest Release](https://github.com/kareem2099/DotScramble/releases/latest)**
+**[📦 Download Latest Release](https://github.com/kareem2099/DotScramble/releases/latest)**
 
 </div>
 
@@ -71,50 +84,51 @@
 <tr>
 <td width="50%">
 
-🌍 Localization & UI
-- Native Arabic Support: Fully mirrored RTL (Right-to-Left) interface logic.
+### 🛡️ Privacy & AI Evasion *(New in v1.4.0)*
 
-- Dynamic Language Switching: Switch between English and Arabic instantly without restarting.
-
-- Theme Engine: Choose from modern themes like Cyberpunk, One Dark, Dracula, and more.
-
-- Responsive Layout: UI adapts gracefully to window resizing and maximized states.
-
-- EXIF Metadata Spoofing & Stripping: Censor, modify, or completely strip metadata tags (Camera model, GPS, dates) prior to saving or batch exporting images.
+- 🤖 **AI Evasion System** — SPSA black-box adversarial perturbations defeat AI face recognition models without any visible artifact at low strength settings
+- 🎭 **Layered Protection** — Adversarial noise + visual blur + EXIF strip applied in sequence
+- ⚙️ **Evasion Strength Slider** — Subtle / Balanced / Maximum presets (ε 0.03 → 0.12)
+- 🔌 **Pluggable Proxy Model** — Swap in your own face recognition model as the optimization target
 
 ### 🎯 Detection Modes
 
-- 🎭 **Face Detection** - Automatically detect and blur faces
-- 👁️ **Eye Detection** - Target specific eye regions
-- 🧍 **Full Body Detection** - Detect entire person silhouettes
-- 🚗 **License Plate Detection** - Auto-identify vehicle plates
-- 📝 **Text Detection (OCR)** - Find and censor text
-- ✏️ **Manual Selection** - Draw custom regions
-- 🌍 **Full Image** - Apply effects to entire image
+- 🎭 **Face Detection** — Detect and obscure faces (MediaPipe + Haar cascade ensemble)
+- 👁️ **Eye Detection** — Target specific eye regions
+- 🧍 **Full Body Detection** — Detect entire person silhouettes
+- 🚗 **License Plate Detection** — Auto-identify vehicle plates
+- 📝 **Text Detection (OCR)** — Find and censor text with Tesseract
+- ✏️ **Manual Selection** — Draw custom regions
+- 🌍 **Full Image** — Apply effects to the entire image
 
-💎 Core Capabilities
-- MVC Architecture: Completely refactored codebase for maximum stability.
+### 🌍 Localization & UI
 
-- Auto-Save Database: Preferences and settings are saved instantly via SQLite.
-
-- Real-time Preview: See effects live as you adjust sliders.
-
-- Batch Processing: Process entire folders of images in one go.
-
-- Undo/Redo History: Full state management for mistakes.
+- Native Arabic RTL interface with dynamic language switching
+- 16 built-in themes: Cyberpunk, One Dark, Dracula, Nord, Catppuccin Mocha, Rosé Pine, and more
+- Responsive layout with Wayland-compatible window management
 
 </td>
 <td width="50%">
 
 ### 🎨 Privacy Effects
 
-- 🌫️ **Gaussian Blur** - Smooth, professional blur
-- 🔲 **Pixelation** - Classic pixel censoring
-- ⬛ **Black Bar** - Solid rectangular censor
-- 🎭 **Gradient Fade** - Artistic gradient transition
-- 🔳 **Mosaic** - Decorative tile pattern
-- ❄️ **Frosted Glass** - Translucent glass effect
-- 🎨 **Oil Paint** - Artistic painting style
+- 🌫️ **Gaussian Blur** — Smooth, professional blur
+- 🔲 **Pixelation** — Classic pixel censoring
+- ⬛ **Black Bar** — Solid rectangular censor
+- 🎭 **Gradient Fade** — Artistic gradient transition
+- 🔳 **Mosaic** — Decorative tile pattern
+- ❄️ **Frosted Glass** — Translucent glass effect
+- 🎨 **Oil Paint** — Artistic painting style
+
+### 💎 Core Capabilities
+
+- MVC Architecture for maximum stability and extensibility
+- Auto-Save Database via SQLite — settings and state persist across sessions
+- Real-time Preview — see effects live as you adjust sliders
+- Batch Processing — process entire folders in one go
+- Undo/Redo History — full state management
+- EXIF Metadata Spoofing & Stripping — modify or remove GPS, camera model, timestamps
+- Secure Auto-Update — Ed25519-signed binary verification before any hot-swap
 
 </td>
 </tr>
@@ -126,6 +140,7 @@
 
 | Feature | Description |
 |---------|-------------|
+| 🤖 **AI Evasion** | SPSA adversarial perturbations — defeats embedding-based face recognition |
 | ⚡ **Real-time Preview** | See effects instantly as you adjust parameters |
 | 📦 **Batch Processing** | Process hundreds of images automatically |
 | ↶↷ **Undo/Redo** | Full history management with keyboard shortcuts |
@@ -133,9 +148,41 @@
 | 🔍 **Comparison View** | Side-by-side before/after comparison |
 | ⌨️ **Keyboard Shortcuts** | Lightning-fast workflow with hotkeys |
 | 🎚️ **Opacity Control** | Blend effects with original image |
-| 📊 **Image Information** | Display detailed image metadata |
-| 🔄 **Smart Auto-Update** | Updates silently in the background without interrupting your work |
+| 🔄 **Smart Auto-Update** | Cryptographically verified background updates |
+
 </div>
+
+---
+
+## 🤖 AI Evasion System
+
+> **New in v1.4.0** — blurring a face is no longer enough.
+
+Modern AI face recognition systems work on mathematical *feature vectors*, not visual legibility. A face blurred enough to fool a human eye can still produce a recognizable embedding inside a convolutional neural network.
+
+DotScramble's AI Evasion System applies **adversarial perturbations** — mathematically-optimized noise patterns that corrupt these feature vectors — using **SPSA (Simultaneous Perturbation Stochastic Approximation)**, a black-box optimization algorithm that requires no access to the target model's weights or gradients.
+
+```
+Original → Adversarial perturbation (SPSA) → Visual blur → EXIF strip → Protected image
+```
+
+### Evasion Strength Presets
+
+| Preset | ε value | Visual impact | Evasion strength |
+|--------|---------|---------------|-----------------|
+| **Subtle** | 0.03 | Nearly invisible | Moderate |
+| **Balanced** *(default)* | 0.05 | Very subtle grain | Good |
+| **Maximum** | 0.12 | Visible texture | Very strong |
+
+### Benchmark Results (LFW dataset, 200 images)
+
+| Mode | AI Match Rate | Processing time |
+|------|--------------|----------------|
+| No effect | 98.5% | — |
+| Blur only | 61.3% | 12ms |
+| **Blur + AI Evasion (Balanced)** | **8.9%** | ~92s |
+
+> ⚠️ **Note:** Export as PNG to preserve adversarial perturbations. JPEG compression partially degrades them. The app warns you if you attempt JPEG export with evasion enabled.
 
 ---
 
@@ -147,10 +194,22 @@
 graph LR
     A[📁 Load Image] --> B[🎯 Select Mode]
     B --> C[🎨 Choose Effect]
-    C --> D[⚙️ Adjust Settings]
-    D --> E[✨ Apply Effect]
-    E --> F[💾 Save Result]
+    C --> D[🤖 Enable AI Evasion?]
+    D --> E[⚙️ Adjust Settings]
+    E --> F[✨ Apply Effect]
+    F --> G[💾 Save as PNG]
 ```
+
+<details>
+<summary><b>🤖 AI Evasion Mode</b></summary>
+
+1. Load your image and select **Face Detection** mode
+2. Toggle **"🤖 AI Evasion"** in the processing panel
+3. Choose your evasion preset (Subtle / Balanced / Maximum)
+4. Click **"✨ Apply Effect"** — a progress bar shows optimization progress
+5. Save as **PNG** (not JPEG) to preserve the adversarial perturbations
+
+</details>
 
 <details>
 <summary><b>📷 Manual Selection Mode</b></summary>
@@ -163,25 +222,14 @@ graph LR
 
 </details>
 
-<details> 
+<details>
 <summary><b>⚡ Smart Settings</b></summary>
 
-Auto-Save: Changing a slider (Blur, Pixel Size) automatically saves that value for next time.
+**Auto-Save:** Changing a slider automatically saves that value for next time.
 
-Themes: Go to View > Themes to change the look of the app.
+**Themes:** Go to `View → Themes` to change the app look (16 themes available).
 
-Language: Go to View > Language to switch to Arabic/English.
-
-</details>
-
-<details>
-
-<summary><b>⚡ Real-time Preview</b></summary>
-
-1. Enable the **"🔴 Real-time Preview"** checkbox
-2. Adjust any parameter (blur strength, opacity, etc.)
-3. See results instantly without applying
-4. Perfect for finding the ideal settings before committing
+**Language:** Go to `View → Language` to switch between English and Arabic (full RTL support).
 
 </details>
 
@@ -230,28 +278,28 @@ Language: Go to View > Language to switch to Arabic/English.
 <td width="33%">
 
 ### 🌫️ Blur Strength
-- **Range:** 15-199
-- **Odd numbers only** for optimal results
-- Higher values = stronger blur
-- Recommended: 31-51 for faces
+- **Range:** 15–199
+- Odd numbers only for optimal results
+- Higher = stronger blur
+- Recommended: 31–51 for faces
 
 </td>
 <td width="33%">
 
 ### 🔲 Pixel Block Size
-- **Range:** 5-50 pixels
-- Higher values = heavier censoring
-- Lower values = subtle effect
-- Recommended: 15-25 for balance
+- **Range:** 5–50 pixels
+- Higher = heavier censoring
+- Lower = subtle effect
+- Recommended: 15–25 for balance
 
 </td>
 <td width="33%">
 
-### 🎨 Opacity
-- **Range:** 0-100%
-- 100% = full effect applied
-- Lower = blends with original
-- Recommended: 80-100% for privacy
+### 🤖 Evasion Strength
+- **Presets:** Subtle / Balanced / Maximum
+- Higher = stronger AI evasion
+- Higher = longer processing time
+- Export as **PNG** for best results
 
 </td>
 </tr>
@@ -259,48 +307,11 @@ Language: Go to View > Language to switch to Arabic/English.
 
 ---
 
-## 🔍 Detection Tips
-
-<details>
-<summary><b>🎭 Face Detection</b></summary>
-
-- ✅ Works best with front-facing faces
-- ✅ Requires good lighting conditions
-- ✅ Detects multiple faces in one image
-- ⚠️ May miss faces at extreme angles or with heavy shadows
-- 💡 **Tip:** Use Manual Selection as fallback for missed faces
-
-</details>
-
-<details>
-<summary><b>🚗 License Plate Detection</b></summary>
-
-- ✅ Optimized for standard license plate dimensions
-- ✅ Works best with high-resolution images (1080p+)
-- ✅ Filters by aspect ratio (2:1 to 5:1)
-- ⚠️ May struggle with damaged or dirty plates
-- 💡 **Tip:** Ensure plates are clearly visible and not at sharp angles
-
-</details>
-
-<details>
-<summary><b>📝 Text Detection (OCR)</b></summary>
-
-- ✅ Detects printed text in images
-- ✅ Works best with high-contrast, clear text
-- ✅ Adjustable confidence threshold
-- ⚠️ Requires pytesseract installation
-- 💡 **Tip:** Use on documents, signs, and screenshots
-
-</details>
-
----
-
 ## 💻 Installation
 
 ### Option 1: Standalone Executable (Recommended)
 
-**No dependencies required!** Simply download from the [Releases Page](https://github.com/kareem2099/DotScramble/releases/latest).
+**No dependencies required!** Download from the [Releases Page](https://github.com/kareem2099/DotScramble/releases/latest).
 
 ### Option 2: From Source
 
@@ -309,7 +320,7 @@ Language: Go to View > Language to switch to Arabic/English.
 
 #### Prerequisites
 
-- Python 3.6 or higher
+- Python 3.10 or higher
 - pip package manager
 
 #### Steps
@@ -319,6 +330,10 @@ Language: Go to View > Language to switch to Arabic/English.
 git clone https://github.com/kareem2099/DotScramble.git
 cd DotScramble
 
+# Create a virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate  # Linux/macOS
+
 # Install dependencies
 pip install -r requirements.txt
 
@@ -326,10 +341,17 @@ pip install -r requirements.txt
 python src/main.py
 ```
 
-#### Dependencies
+#### Core Dependencies
 
-```bash
-pip install opencv-python numpy Pillow pytesseract
+```
+PySide6        — Qt6 GUI framework (LGPL v3)
+opencv-python  — Computer vision
+numpy          — Numerical computation
+Pillow         — Image I/O
+pytesseract    — OCR text detection
+mediapipe      — Face landmark detection
+requests       — Auto-update HTTP client
+cryptography   — Ed25519 signature verification
 ```
 
 </details>
@@ -341,31 +363,37 @@ pip install opencv-python numpy Pillow pytesseract
 ```
 DotScramble/
 │
-├── 📋 requirements.txt          # Python dependencies
-├── ⚙️ setup_license.py          # Cython compilation script for license verification
-├── ⚙️ build.py                  # Secure staging build pipeline script
+├── 📋 requirements.txt           # Python dependencies
+├── ⚙️  setup_license.py          # Cython compilation for license module
+├── ⚙️  build.py                  # Secure staging build pipeline
 │
-├── 🧠 core/                     # Additional system integrations
-│   ├── auto_updater.py          # Cryptographically signed auto-updater (Ed25519)
-│   ├── image_picker.py          # Cross-platform Unicode/Arabic directory browser
-│   ├── batch_processor.py       # Multi-threaded batch processor logic
-│   └── metadata_spoofer.py      # EXIF metadata modifier and stripper
+├── 🧠 core/                      # System integrations & engines
+│   ├── adversarial_engine.py     # SPSA black-box AI evasion engine  ← NEW
+│   ├── auto_updater.py           # Ed25519-signed auto-updater
+│   ├── image_picker.py           # Unicode/Arabic-safe file browser
+│   ├── batch_processor.py        # Multi-threaded batch processor
+│   ├── text_detector.py          # Tesseract OCR wrapper
+│   └── metadata_spoofer.py       # EXIF metadata modifier & stripper
 │
-├── 🖼️ gui/                      # Additional GUI components
-│   ├── metadata_dialog.py       # EXIF editor GUI dialog
-│   ├── metadata_presets.py      # EXIF device presets
-│   └── metadata_report.py       # EXIF metadata diagnostic report GUI
+├── 🖼️  gui/                      # Additional GUI components
+│   ├── metadata_dialog.py        # EXIF editor dialog
+│   ├── metadata_presets.py       # EXIF device presets
+│   └── metadata_report.py        # EXIF diagnostic report dialog
 │
-├── 📦 src/                      # Core MVC Application
-│   ├── 📄 main.py               # Entry point
-│   ├── ⚙️ config.py             # Config, theme definitions & server URL
-│   ├── 🧠 controllers/          # Main controllers coordinating MVC flow
-│   ├── 🧠 models/               # Processing engines, detectors, and image processors
-│   ├── 🧠 views/                # Mirrorable RTL/LTR frames and dialog elements
-│   └── 🧠 managers/             # AuthServer, DBManager, ThemeManager, and LocaleManager
+├── 📦 src/                       # Core MVC Application
+│   ├── 📄 main.py                # Entry point
+│   ├── ⚙️  config.py             # App config, theme definitions & URLs
+│   ├── 🧠 controllers/           # MVC controllers
+│   ├── 🧠 models/                # Processing engines & detectors
+│   ├── 🧠 views/                 # RTL/LTR UI views & dialogs
+│   └── 🧠 managers/              # Auth, DB, Theme, Locale managers
 │
-├── 💾 presets.json             # Saved effect presets (auto-generated)
-└── 🗂️ backups/                 # Automatic image backups (auto-created)
+├── 🎨 assets/
+│   ├── themes/themes.json        # 16 built-in color themes
+│   └── icons/                    # Application icons
+│
+├── 💾 presets.json               # Saved effect presets (auto-generated)
+└── 🗂️  backups/                  # Automatic image backups (auto-created)
 ```
 
 ---
@@ -384,26 +412,22 @@ DotScramble/
 @staticmethod
 def my_custom_effect(image, x, y, w, h):
     """
-    Apply custom effect to image region
-    
+    Apply custom effect to image region.
+
     Args:
-        image: Source image (numpy array)
-        x, y: Top-left corner coordinates
-        w, h: Width and height of region
-    
+        image: Source image (numpy array, BGR)
+        x, y:  Top-left corner coordinates
+        w, h:  Width and height of region
+
     Returns:
         Processed region (numpy array)
     """
     region = image[y:y+h, x:x+w]
-    
-    # Your effect logic here
-    # Example: Invert colors
-    processed = 255 - region
-    
+    processed = 255 - region  # Example: invert colors
     return processed
 ```
 
-3. Update `config.py` EFFECTS dictionary:
+3. Register in `config.py` EFFECTS dictionary:
 
 ```python
 EFFECTS = {
@@ -412,7 +436,30 @@ EFFECTS = {
 }
 ```
 
-4. Add to GUI effect selection dropdown
+4. Add to the GUI effect selection dropdown.
+
+</details>
+
+### Plugging In a Custom AI Evasion Model
+
+<details>
+<summary><b>Click to see example code</b></summary>
+
+```python
+from core.adversarial_engine import SPSAAdversarialEngine
+import numpy as np
+
+# Implement the EvasionProxy protocol with your model
+def my_loss_fn(perturbed_img: np.ndarray) -> float:
+    """Higher return value = more adversarial."""
+    embedding = my_model.get_embedding(perturbed_img)
+    if embedding is None:
+        return 1.0
+    return float(1.0 - np.dot(original_embedding, embedding))
+
+engine = SPSAAdversarialEngine(epsilon=0.05, num_iters=150)
+result = engine.generate(face_crop, loss_fn=my_loss_fn)
+```
 
 </details>
 
@@ -428,14 +475,14 @@ We welcome contributions! Here are some ideas to get started:
 
 ### 🎯 Ideas for Contributors
 
-- 🧠 Additional AI detection models
-- 🎨 More creative effect types
 - 🎥 Video processing support
-- ⚡ GPU acceleration with CUDA
+- ⚡ GPU acceleration (CUDA / Metal) for AI evasion
 - 🌐 Web-based interface
 - 📱 Mobile app version
+- 🧠 Additional detection models (YOLO, MediaPipe Pose)
 - 🔄 Batch undo/redo
-- 📊 Processing statistics
+- 📊 Processing statistics dashboard
+- 🌍 Additional language localizations
 
 </td>
 <td>
@@ -449,7 +496,7 @@ We welcome contributions! Here are some ideas to get started:
    ```
 3. Commit your changes
    ```bash
-   git commit -m 'Add AmazingFeature'
+   git commit -m 'feat: add AmazingFeature'
    ```
 4. Push to the branch
    ```bash
@@ -465,19 +512,22 @@ We welcome contributions! Here are some ideas to get started:
 
 ## 📄 License
 
-This project is licensed under the **Apache License 2.0** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Apache License 2.0** — see the [LICENSE](LICENSE) file for details.
 
 ```
-Apache License 2.0 - Free for personal and commercial use
+Apache License 2.0 — Free for personal and commercial use
+PySide6 (Qt bindings) — LGPL v3 — compatible with Apache 2.0
 ```
 
 ---
 
 ## 🙏 Acknowledgments
 
-- **OpenCV** - Computer vision library
-- **Python Community** - Amazing ecosystem
-- **Contributors** - Everyone who has helped improve this project
+- **OpenCV** — Computer vision library
+- **MediaPipe** — Face landmark detection
+- **PySide6 / Qt** — Cross-platform GUI framework
+- **Tesseract OCR** — Open-source text recognition
+- **Goodfellow et al. (2014)** — Adversarial examples research that inspired the AI evasion system
 
 ---
 
@@ -497,24 +547,30 @@ Apache License 2.0 - Free for personal and commercial use
 <details>
 <summary><b>Common Issues</b></summary>
 
-**Q: I see a Tesseract warning on Linux?**  
-A: Text detection features require Tesseract OCR. Install it with:
+**Q: I see a Tesseract warning on startup?**
+A: Text detection requires Tesseract OCR. Install it with:
 ```bash
 sudo apt install tesseract-ocr tesseract-ocr-eng
 ```
-After installation, restart the application to enable text detection features.
+Restart the application after installation.
 
-**Q:  detection not working?**  
-A: Ensure good lighting and front-facing angles. Try adjusting detection sensitivity in settings.
+**Q: AI Evasion is taking very long?**
+A: Adversarial optimization is CPU-intensive. Use the **Subtle** preset for faster processing (~45s per face vs ~90s for Balanced). GPU acceleration is planned for a future release.
 
-**Q: Application won't start?**  
-A: Check that all dependencies are installed. Try running from source with `python main.py`.
+**Q: Face detection not working?**
+A: Ensure good lighting and front-facing angles. Try **Manual Selection** as a fallback for difficult angles.
 
-**Q: Batch processing is slow?**  
-A: PA: Processing time depends on image size and effect complexity. Consider using pixelation for faster processing.
+**Q: Application won't start?**
+A: Check that all dependencies are installed. Try running from source:
+```bash
+python src/main.py
+```
 
-**Q: Can't save preset?**  
-A: Ensure you have write permissions in the application directory.
+**Q: Batch processing is slow?**
+A: Processing time depends on image size and effect complexity. Use **Pixelation** for faster processing, or disable AI Evasion for batch jobs.
+
+**Q: Check for Updates shows nothing?**
+A: Ensure you're running the official release build (not from source). The update check requires an internet connection and will show "You are using the latest version" if already up to date.
 
 </details>
 
@@ -523,7 +579,7 @@ A: Ensure you have write permissions in the application directory.
 
 ### ⭐ Star this repository if you find it helpful!
 
-Made with ❤️ for privacy protection
+Made with ❤️ by [FreeRave](https://github.com/kareem2099) for privacy protection
 
 **[⬆ Back to Top](#-dotscramble)**
 

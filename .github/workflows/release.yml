@@ -1,0 +1,131 @@
+name: Release — Validate & Publish
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DESIGN NOTES:
+#
+# The build happens LOCALLY (not here). Why?
+#   - license_manager.py is a Cython-compiled security module.
+#   - Its source is intentionally excluded from git.
+#   - GitHub Actions has no access to it — and that's by design.
+#
+# Release workflow:
+#   1. Developer runs `python3 build.py` locally.
+#   2. Developer runs `gh release create vX.Y.Z release/* ...` to upload artifacts.
+#   3. This workflow fires on release publication, validates the release, and
+#      injects the version tag so downstream references are correct.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  release:
+    types: [published]
+
+  # Also allow manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.4.0)'
+        required: true
+        default: 'v1.4.0'
+
+permissions:
+  contents: write
+
+jobs:
+  validate-release:
+    name: Validate Release Assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract clean version (strip leading v)
+        id: version
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Release version: $VERSION"
+
+      - name: Verify version matches codebase
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          CODEBASE_VERSION=$(grep -oP '(?<=APP_VERSION = \")[^\"]+' src/config.py || echo "not found")
+          echo "Tag version:       $VERSION"
+          echo "Codebase version:  $CODEBASE_VERSION"
+          if [ "$VERSION" != "$CODEBASE_VERSION" ]; then
+            echo "⚠️ Warning: tag version ($VERSION) does not match config.py ($CODEBASE_VERSION)"
+            echo "   Make sure to bump version_info.py and src/config.py before tagging."
+          else
+            echo "✅ Version match confirmed."
+          fi
+
+      - name: Validate release assets are present
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          EXPECTED=(
+            "DotScramble-Linux-x86_64.AppImage"
+            "DotScramble-Linux-x86_64.AppImage.asc"
+            "DotScramble-Linux-x86_64.deb"
+            "DotScramble-Linux-x86_64.deb.asc"
+            "sha.txt"
+          )
+
+          echo "Fetching assets for release $TAG..."
+          ASSETS=$(gh release view "$TAG" --json assets --jq '[.assets[].name]' 2>/dev/null || echo "[]")
+          echo "Found assets: $ASSETS"
+
+          ALL_OK=true
+          for asset in "${EXPECTED[@]}"; do
+            if echo "$ASSETS" | grep -q "\"$asset\""; then
+              echo "  ✅ $asset"
+            else
+              echo "  ❌ Missing: $asset"
+              ALL_OK=false
+            fi
+          done
+
+          if [ "$ALL_OK" = "false" ]; then
+            echo ""
+            echo "⚠️ Some expected assets are missing from the release."
+            echo "   Upload them with:"
+            echo "   gh release upload $TAG release/DotScramble-Linux-x86_64.AppImage ..."
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ All release assets validated."
+
+      - name: Update release body with validation stamp
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Append a validation badge to the release notes
+          STAMP="
+
+---
+> ✅ **Release validated by GitHub Actions** on $(date -u '+%Y-%m-%d %H:%M UTC')
+> 📦 Version: \`$VERSION\` | 🔐 Artifacts signed with GPG detached signatures (\`.asc\`)
+> Verify integrity: \`sha256sum -c sha.txt\`"
+
+          CURRENT_BODY=$(gh release view "$TAG" --json body --jq '.body' 2>/dev/null || echo "")
+          if ! echo "$CURRENT_BODY" | grep -q "Release validated by GitHub Actions"; then
+            gh release edit "$TAG" --notes "${CURRENT_BODY}${STAMP}"
+            echo "✅ Release notes updated with validation stamp."
+          else
+            echo "ℹ️ Validation stamp already present, skipping."
+          fi

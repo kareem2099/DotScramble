@@ -5,7 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-07-09
+
+### Added
+- **AI Evasion System**: Black-box adversarial perturbation engine (`core/adversarial_engine.py`) using SPSA (Simultaneous Perturbation Stochastic Approximation) to generate mathematically-optimized noise that defeats AI face recognition models without requiring gradient access.
+- **Adversarial Worker Thread**: `QThread`-based worker streaming real-time progress to the UI during adversarial optimization, keeping the interface fully responsive during multi-minute computation.
+- **Pluggable Evasion Proxy Protocol**: Formal `EvasionProxy` protocol allowing advanced users to substitute their own face recognition model as the optimization target.
+- **Layered Evasion Pipeline**: Ordered pipeline (adversarial perturbation → visual effect → EXIF strip) ensuring perturbations survive downstream processing steps.
+
+### Changed
+- **UI Framework: Tkinter → PySide6**: Full migration from Tkinter to PySide6 (Qt official binding, LGPL v3), resolving the Apache 2.0 / GPL v3 license incompatibility and enabling proper Arabic RTL support, native Wayland compatibility, and a modern widget toolkit.
+- **Evasion Strength UI**: Exposed `epsilon` and `num_iters` parameters as a labeled slider with three presets (Subtle / Balanced / Maximum) in the processing panel.
+
+### Fixed
+- **Tesseract Binary Path on Linux**: `setup_tesseract_configuration()` now uses platform-aware binary name (`tesseract` on Linux/macOS, `tesseract.exe` on Windows only) instead of hard-coded `.exe` extension.
+- **Frozen Build Crash (`No module named 'tkinter'`)**: Removed unused `from PIL import ImageTk` import in `core/utils.py` that pulled in tkinter at runtime, crashing the PyInstaller executable.
+- **Core Dump on Startup (`QWidget: Must construct a QApplication before a QWidget`)**: Refactored `check_dependencies()` to log errors to console first and only attempt a Qt dialog after safely acquiring `QApplication.instance()`.
+- **Auto-Updater Silent Failure**: Fixed version comparison mismatch (`"v1.3.0"` vs `"1.3.0"`) by stripping the leading `v` from GitHub tag names before comparing to `APP_VERSION`.
+- **Auto-Updater Wrong Asset Name**: Updated `_get_asset_url()` to match actual release artifact names (`DotScramble-Linux-x86_64.AppImage`, `DotScramble-Linux-x86_64.deb`) instead of the non-existent `DotScramble-linux` target.
+- **One Dark Theme Low Contrast**: Raised `text_secondary` in the One Dark theme from `#5c6370` (2.13:1 contrast ratio) to `#7f8795` (3.56:1) to meet the minimum 3:1 readability threshold.
+
 ## [1.3.0] - 2026-06-09
+
 
 ### Added
 - **Advanced Metadata Spoofing & Stripping**: Native GUI dialog with preset values (e.g., Camera Model, GPS location) to spoof or strip EXIF metadata from processed images.

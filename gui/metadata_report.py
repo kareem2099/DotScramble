@@ -1,15 +1,17 @@
 """
-DotScramble — Metadata Save Report Dialog
+DotScramble — Metadata Save Report Dialog (PySide6 version)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Shows a quick summary of what metadata actions will be applied
 before the user confirms the save operation.
 """
 from __future__ import annotations
 
-import tkinter as tk
-from tkinter import ttk
-import sys, os
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import sys
+import os
+from PySide6.QtWidgets import (
+    QDialog, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame
+)
+from PySide6.QtCore import Qt
 
 from src.config import COLORS
 
@@ -38,184 +40,210 @@ _FIELD_LABELS = {
 }
 
 
-def _describe_action(key: str, action) -> tuple[str, str, str]:
+def _describe_action(key: str, action, action_colors) -> tuple[str, str, str]:
     """Return (icon, color, description) for a field action."""
     if isinstance(action, dict):
         if key == "gps":
             lat = action.get("lat", "?")
             lon = action.get("lon", "?")
-            return ("✏️", "#FF9800", f"Custom GPS: {lat}, {lon}")
+            return ("✏️", action_colors.get("custom", "#FF9800"), f"Custom GPS: {lat}, {lon}")
         val = action.get("value", "")
-        return ("✏️", "#FF9800", f"Custom value: '{val[:30]}'" if val else "Custom (empty → spoof)")
-    return _ACTION_ICONS.get(action, ("❓", "#888", action))
+        return ("✏️", action_colors.get("custom", "#FF9800"), f"Custom value: '{val[:30]}'" if val else "Custom (empty → spoof)")
+    icon, _, desc = _ACTION_ICONS.get(action, ("❓", "#888", action))
+    return icon, action_colors.get(action, "#888888"), desc
 
 
-class MetadataReportDialog:
+class MetadataReportDialog(QDialog):
     """
     Pre-save confirmation dialog.
-
-    Returns:
-        self.confirmed  True  → user clicked "Save"
-                        False → user cancelled
     """
 
     def __init__(
         self,
-        parent: tk.Tk | tk.Toplevel,
+        parent=None,
         *,
         mode: str,                        # "scrub" | "spoof" | "restore"
         profile: str | None = None,       # ghost / troll / artist / custom
         field_actions: dict | None = None,
         filename: str = "",
     ):
+        super().__init__(parent)
         self.confirmed = False
 
-        self.win = tk.Toplevel(parent)
-        self.win.title("DotScramble — Confirm Save")
-        self.win.configure(bg=COLORS['bg_dark'])
-        self.win.resizable(False, False)
-        self.win.transient(parent)
-        self.win.grab_set()
+        # Get active colors from parent or default
+        if parent and hasattr(parent, 'colors'):
+            self.colors = parent.colors
+        else:
+            self.colors = COLORS
 
-        # Center
-        self.win.update_idletasks()
-        pw, ph = parent.winfo_width(), parent.winfo_height()
-        px, py = parent.winfo_x(), parent.winfo_y()
-        w, h = 500, 420
-        self.win.geometry(f"{w}x{h}+{px + (pw - w)//2}+{py + (ph - h)//2}")
+        self.action_colors = {
+            "keep":   self.colors.get('accent_green', '#4CAF50'),
+            "strip":  self.colors.get('accent_red', '#F44336'),
+            "spoof":  self.colors.get('accent_cyan', '#2196F3'),
+            "custom": self.colors.get('accent_orange', '#FF9800'),
+        }
+        
+        self.setWindowTitle("DotScramble — Confirm Save")
+        self.setMinimumSize(520, 460)
+        self.resize(520, 460)
 
         self._build(mode, profile, field_actions, filename)
-        self.win.wait_window()
-
-    # ── Build UI ──────────────────────────────────────────────────────────────
 
     def _build(self, mode, profile, field_actions, filename):
-        # ── Header ────────────────────────────────────────────────────────────
-        hdr = tk.Frame(self.win, bg=COLORS['bg_medium'], height=64)
-        hdr.pack(fill="x")
-        hdr.pack_propagate(False)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        tk.Label(hdr, text="📋  Metadata Summary",
-                 font=("Helvetica", 14, "bold"),
-                 bg=COLORS['bg_medium'], fg=COLORS['accent_cyan']
-                 ).pack(side="left", padx=20, pady=15)
+        # ── Header ────────────────────────────────────────────────────────────
+        hdr = QFrame()
+        hdr.setObjectName("DialogHeader")
+        hdr_layout = QHBoxLayout(hdr)
+        hdr_layout.setContentsMargins(20, 10, 20, 10)
+
+        title_lbl = QLabel("📋  Metadata Summary")
+        title_lbl.setObjectName("DialogTitle")
+        title_lbl_font = title_lbl.font()
+        title_lbl_font.setPointSize(14)
+        title_lbl_font.setBold(True)
+        title_lbl.setFont(title_lbl_font)
+        hdr_layout.addWidget(title_lbl)
 
         if filename:
             short = filename if len(filename) <= 32 else "…" + filename[-29:]
-            tk.Label(hdr, text=short,
-                     font=("Helvetica", 8, "italic"),
-                     bg=COLORS['bg_medium'], fg=COLORS['text_gray']
-                     ).pack(side="right", padx=16)
+            fn_lbl = QLabel(short)
+            fn_lbl.setObjectName("preset_lbl")
+            fn_lbl_font = fn_lbl.font()
+            fn_lbl_font.setPointSize(10)
+            fn_lbl_font.setItalic(True)
+            fn_lbl.setFont(fn_lbl_font)
+            hdr_layout.addWidget(fn_lbl, alignment=Qt.AlignmentFlag.AlignRight)
+
+        main_layout.addWidget(hdr)
 
         # ── Mode banner ───────────────────────────────────────────────────────
         if mode == "scrub":
             banner_text  = "🗑  All metadata will be STRIPPED"
-            banner_color = "#F44336"
+            banner_color = self.action_colors["strip"]
             banner_desc  = "GPS, camera model, timestamps and all other EXIF data will be permanently removed."
         elif mode == "restore":
             banner_text  = "✅  Original metadata will be PRESERVED"
-            banner_color = "#4CAF50"
+            banner_color = self.action_colors["keep"]
             banner_desc  = "The image's original EXIF data will be restored exactly as it was."
         else:   # spoof
             pname, pdesc = _PROFILE_SUMMARY.get(profile or "ghost", ("🎲 Spoof", ""))
             banner_text  = f"🎭  Metadata will be SPOOFED  ({pname})"
-            banner_color = "#2196F3"
+            banner_color = self.action_colors["spoof"]
             banner_desc  = pdesc
 
-        banner = tk.Frame(self.win, bg=banner_color)
-        banner.pack(fill="x", padx=0, pady=0)
+        banner = QFrame()
+        banner.setStyleSheet(f"background-color: {banner_color}; border-radius: 6px; border: none; margin: 10px;")
+        banner_layout = QVBoxLayout(banner)
+        banner_layout.setContentsMargins(20, 10, 20, 10)
+        banner_layout.setSpacing(4)
 
-        tk.Label(banner, text=banner_text,
-                 font=("Helvetica", 10, "bold"),
-                 bg=banner_color, fg="white",
-                 padx=20, pady=8
-                 ).pack(anchor="w")
+        b_title = QLabel(banner_text)
+        b_title.setStyleSheet("color: white; font-weight: bold; font-size: 14px;")
+        banner_layout.addWidget(b_title)
 
-        tk.Label(banner, text=banner_desc,
-                 font=("Helvetica", 8, "italic"),
-                 bg=banner_color, fg="white",
-                 padx=20, pady=(0, 8), wraplength=460, justify="left"
-                 ).pack(anchor="w")
+        b_desc = QLabel(banner_desc)
+        b_desc.setStyleSheet("color: white; font-style: italic; font-size: 11px;")
+        b_desc.setWordWrap(True)
+        banner_layout.addWidget(b_desc)
 
-        # ── Per-field detail (only for spoof / custom) ────────────────────────
+        main_layout.addWidget(banner)
+
+        # ── Detail area ───────────────────────────────────────────────────────
+        detail_widget = QWidget()
+        detail_layout = QVBoxLayout(detail_widget)
+        detail_layout.setContentsMargins(20, 15, 20, 15)
+
         if mode == "spoof" and field_actions:
-            detail_frame = tk.Frame(self.win, bg=COLORS['bg_dark'])
-            detail_frame.pack(fill="both", expand=True, padx=16, pady=(12, 4))
-
-            tk.Label(detail_frame, text="Field-by-field actions:",
-                     font=("Helvetica", 9, "bold"),
-                     bg=COLORS['bg_dark'], fg=COLORS['text_gray']
-                     ).pack(anchor="w", pady=(0, 6))
+            lbl = QLabel("Field-by-field actions:")
+            lbl.setObjectName("preset_lbl")
+            lbl_font = lbl.font()
+            lbl_font.setBold(True)
+            lbl_font.setPointSize(11)
+            lbl.setFont(lbl_font)
+            detail_layout.addWidget(lbl)
 
             for key, action in field_actions.items():
                 label = _FIELD_LABELS.get(key, key)
-                icon, color, desc = _describe_action(key, action)
+                icon, color, desc = _describe_action(key, action, self.action_colors)
 
-                row = tk.Frame(detail_frame, bg=COLORS['bg_medium'])
-                row.pack(fill="x", pady=2)
+                row = QFrame()
+                row.setObjectName("card_frame")
+                row_layout = QHBoxLayout(row)
+                row_layout.setContentsMargins(10, 6, 10, 6)
 
-                tk.Label(row, text=f"  {label}",
-                         font=("Helvetica", 9),
-                         bg=COLORS['bg_medium'], fg=COLORS['text_white'],
-                         width=24, anchor="w"
-                         ).pack(side="left")
+                field_lbl = QLabel(label)
+                field_lbl_font = field_lbl.font()
+                field_lbl_font.setBold(True)
+                field_lbl.setFont(field_lbl_font)
+                row_layout.addWidget(field_lbl, 1)
 
-                tk.Label(row, text=f"{icon} {desc}",
-                         font=("Helvetica", 9),
-                         bg=color, fg="white",
-                         padx=6, pady=2
-                         ).pack(side="left", padx=6)
+                act_lbl = QLabel(f"{icon} {desc}")
+                act_lbl.setStyleSheet(f"background-color: {color}; color: white; border-radius: 3px; padding: 2px 8px; font-size: 11px;")
+                row_layout.addWidget(act_lbl)
+
+                detail_layout.addWidget(row)
 
         elif mode == "scrub":
-            # Simple list of what gets removed
-            detail_frame = tk.Frame(self.win, bg=COLORS['bg_dark'])
-            detail_frame.pack(fill="both", expand=True, padx=16, pady=(12, 4))
+            lbl = QLabel("The following data will be permanently removed:")
+            lbl.setObjectName("preset_lbl")
+            lbl_font = lbl.font()
+            lbl_font.setBold(True)
+            lbl_font.setPointSize(11)
+            lbl.setFont(lbl_font)
+            detail_layout.addWidget(lbl)
 
             items = ["📍 GPS coordinates", "📷 Camera make & model",
                      "💻 Software identifier", "🕐 Timestamps",
                      "©️  Copyright", "🔆 Exposure data", "🔒 Device fingerprint"]
             for item in items:
-                tk.Label(detail_frame, text=f"  🗑  {item}",
-                         font=("Helvetica", 9),
-                         bg=COLORS['bg_dark'], fg="#ef9a9a",
-                         anchor="w"
-                         ).pack(anchor="w", pady=1)
-
+                item_lbl = QLabel(f"  🗑  {item}")
+                item_lbl.setStyleSheet(f"color: {self.colors.get('accent_red', '#ef9a9a')}; font-weight: bold; font-size: 12px; padding: 2px 0;")
+                detail_layout.addWidget(item_lbl)
         else:
             # restore or simple spoof without custom fields
-            detail_frame = tk.Frame(self.win, bg=COLORS['bg_dark'])
-            detail_frame.pack(fill="both", expand=True)
             if mode == "spoof" and profile in _PROFILE_SUMMARY:
                 _, pdesc = _PROFILE_SUMMARY[profile]
-                tk.Label(detail_frame, text=pdesc,
-                         font=("Helvetica", 9, "italic"),
-                         bg=COLORS['bg_dark'], fg=COLORS['text_gray'],
-                         wraplength=460, justify="left"
-                         ).pack(anchor="w", padx=16, pady=12)
+                desc_lbl = QLabel(pdesc)
+                desc_lbl.setObjectName("preset_lbl")
+                desc_lbl_font = desc_lbl.font()
+                desc_lbl_font.setItalic(True)
+                desc_lbl_font.setPointSize(11)
+                desc_lbl.setFont(desc_lbl_font)
+                desc_lbl.setWordWrap(True)
+                detail_layout.addWidget(desc_lbl)
+            else:
+                detail_layout.addStretch(1)
+
+        detail_layout.addStretch(1)
+        main_layout.addWidget(detail_widget, 1)
 
         # ── Bottom buttons ────────────────────────────────────────────────────
-        btn_frame = tk.Frame(self.win, bg=COLORS['bg_medium'], height=55)
-        btn_frame.pack(fill="x", side="bottom")
-        btn_frame.pack_propagate(False)
+        btn_frame = QFrame()
+        btn_frame.setObjectName("btn_frame")
+        btn_layout = QHBoxLayout(btn_frame)
+        btn_layout.setContentsMargins(20, 10, 20, 10)
 
-        tk.Button(btn_frame, text="Cancel",
-                  font=("Helvetica", 10),
-                  bg=COLORS['bg_light'], fg=COLORS['text_white'],
-                  relief="flat", cursor="hand2", padx=20,
-                  command=self._cancel
-                  ).pack(side="right", padx=(8, 20), pady=10)
+        btn_layout.addStretch(1)
 
-        tk.Button(btn_frame, text="💾  Save",
-                  font=("Helvetica", 10, "bold"),
-                  bg=COLORS['accent_cyan'], fg=COLORS['bg_dark'],
-                  relief="flat", cursor="hand2", padx=24,
-                  command=self._confirm
-                  ).pack(side="right", padx=4, pady=10)
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(self._cancel)
+        btn_layout.addWidget(cancel_btn)
+
+        save_btn = QPushButton("💾  Save")
+        save_btn.setObjectName("primary_action")
+        save_btn.clicked.connect(self._confirm)
+        btn_layout.addWidget(save_btn)
+
+        main_layout.addWidget(btn_frame)
 
     def _confirm(self):
         self.confirmed = True
-        self.win.destroy()
+        self.accept()
 
     def _cancel(self):
         self.confirmed = False
-        self.win.destroy()
+        self.reject()

@@ -6,7 +6,7 @@ import numpy as np
 import json
 import os
 from datetime import datetime
-from PIL import Image, ImageTk
+from PIL import Image
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 

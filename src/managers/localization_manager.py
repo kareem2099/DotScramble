@@ -8,14 +8,7 @@ import locale
 import logging
 from typing import Dict, List, Optional, Any
 
-# Import Arabic text shaping libraries
-try:
-    import arabic_reshaper
-    from bidi.algorithm import get_display
-    ARABIC_SUPPORT = True
-except ImportError:
-    ARABIC_SUPPORT = False
-    print("⚠️ Arabic support libraries not found. Run: pip install arabic-reshaper python-bidi")
+
 
 # Import database manager
 from src.managers.database_manager import get_db_manager
@@ -122,23 +115,7 @@ class LocalizationManager:
 
     def _fix_text_rendering(self, text: str) -> str:
         """Helper to reshape Arabic text for correct display"""
-        if not ARABIC_SUPPORT:
-            # Fallback: at least set proper text direction for RTL languages
-            if self.is_rtl():
-                # Add Right-to-Left Mark (U+200F) at the beginning
-                return f"\u200F{text}"
-            return text
-            
-        # If current language is Arabic (or any RTL language), apply the fix
-        if self.is_rtl():
-            try:
-                reshaped_text = arabic_reshaper.reshape(text)
-                bidi_text = get_display(reshaped_text)
-                return bidi_text
-            except:
-                # Fallback to RTL mark if reshaping fails
-                return f"\u200F{text}"
-        return text
+        return text  # Qt6 handles bidi + shaping internally
 
     def get(self, key: str, **kwargs) -> str:
         """Get translated text handling nested keys and Arabic reshaping"""
@@ -179,7 +156,7 @@ class LocalizationManager:
         
     def _detect_system_language(self) -> str:
         try:
-            sys_lang = locale.getdefaultlocale()[0]
+            sys_lang = locale.getlocale()[0] or os.environ.get('LANG', '')
             if sys_lang:
                 code = sys_lang.split('_')[0].lower()
                 if code in self.language_info:

@@ -5,7 +5,7 @@ Enhanced with multi-word phrase support and better preprocessing
 """
 import cv2
 import numpy as np
-from tkinter import messagebox
+from PySide6.QtWidgets import QMessageBox
 import logging
 
 # Try to import pytesseract
@@ -53,7 +53,8 @@ class TextDetector:
             list: List of tuples (x, y, w, h) representing bounding boxes
         """
         if not TESSERACT_AVAILABLE:
-            messagebox.showerror(
+            QMessageBox.critical(
+                None,
                 "OCR Not Available", 
                 "Tesseract OCR is not installed.\n\n"
                 "Please install:\n"
@@ -87,7 +88,7 @@ class TextDetector:
         except Exception as e:
             error_msg = f"OCR Error: {str(e)}\n\n"
             error_msg += "Please verify Tesseract is properly installed."
-            messagebox.showerror("OCR Error", error_msg)
+            QMessageBox.critical(None, "OCR Error", error_msg)
             self.logger.error(f"Tesseract error: {e}")
             return []
         

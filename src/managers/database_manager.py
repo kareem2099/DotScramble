@@ -29,7 +29,7 @@ try:
     from src.config import DIRS
 except ImportError:
     # Fallback if config not available
-    DIRS = {'backups': Path.home() / '.advanced_privacy_studio' / 'backups'}
+    DIRS = {'backups': Path.home() / '.DotScramble' / 'backups'}
 
 
 class DatabaseManager:
