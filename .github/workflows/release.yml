@@ -113,19 +113,15 @@ jobs:
         run: |
           TAG="${{ steps.tag.outputs.tag }}"
           VERSION="${{ steps.version.outputs.version }}"
+          DATE=$(date -u '+%Y-%m-%d %H:%M UTC')
 
-          # Append a validation badge to the release notes
-          STAMP="
-
----
-> ✅ **Release validated by GitHub Actions** on $(date -u '+%Y-%m-%d %H:%M UTC')
-> 📦 Version: \`$VERSION\` | 🔐 Artifacts signed with GPG detached signatures (\`.asc\`)
-> Verify integrity: \`sha256sum -c sha.txt\`"
+          # Build stamp as a single line to avoid YAML multiline issues
+          STAMP=$(printf '\n\n---\n> Release validated by GitHub Actions on %s\n> Version: %s | Artifacts signed with GPG (.asc)\n> Verify integrity: sha256sum -c sha.txt' "$DATE" "$VERSION")
 
           CURRENT_BODY=$(gh release view "$TAG" --json body --jq '.body' 2>/dev/null || echo "")
           if ! echo "$CURRENT_BODY" | grep -q "Release validated by GitHub Actions"; then
             gh release edit "$TAG" --notes "${CURRENT_BODY}${STAMP}"
-            echo "✅ Release notes updated with validation stamp."
+            echo "Release notes updated with validation stamp."
           else
-            echo "ℹ️ Validation stamp already present, skipping."
+            echo "Validation stamp already present, skipping."
           fi
