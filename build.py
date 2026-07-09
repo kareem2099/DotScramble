@@ -452,7 +452,22 @@ def create_release_package():
         if appimage_file:
             built_files.append(appimage_file)
             
-        # 3. Create signatures & sha.txt
+        # 3. Build Tar.gz Package
+        print("Building tar.gz package...")
+        try:
+            import tarfile
+            tar_output = release_dir / "DotScramble-Linux-x86_64.tar.gz"
+            if tar_output.exists():
+                tar_output.unlink()
+            with tarfile.open(tar_output, "w:gz") as tar:
+                # Pack the executable with its original filename
+                tar.add(dest_file, arcname=dest_file.name)
+            print(f"   ✅ Tar.gz package created: {tar_output.name}")
+            built_files.append(tar_output)
+        except Exception as e:
+            print(f"   ❌ Failed to create tar.gz package: {e}")
+            
+        # 4. Create signatures & sha.txt
         if built_files:
             sign_and_checksum_files(built_files, release_dir)
     else:
