@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-07-10
+
+### Added
+- **Arch Linux package** (`DotScramble-Linux-x86_64.pkg.tar.zst`): Native package for Arch Linux and Manjaro, installable with `sudo pacman -U`. Includes proper `.PKGINFO` metadata, launcher script, desktop entry, and icon.
+- **Public GPG key** (`public_key.asc`): FreeRave signing key (`0D9B71AF1791DA36`) now shipped as a release asset so users can verify signatures offline without a keyserver.
+- **Security & Integrity Verification** section in README with step-by-step GPG verification guide for AppImage, .deb, and .pkg.tar.zst packages.
+
+### Changed
+- **GPG signing key**: Migrated from `kareem ehab` (D3EB5327471C8F22) to new **FreeRave** key (`0D9B71AF1791DA36`, RSA-4096, expires 2029). All release artifacts are now signed with the FreeRave identity.
+- **Checksum file renamed**: `sha.txt` → `SHA256SUMS` to match the standard Linux convention compatible with `sha256sum -c` directly.
+- **Build pipeline**: `build.py` now explicitly pins GPG signing to `--local-user 0D9B71AF1791DA36` and generates `.pkg.tar.zst` in addition to `.deb`, `.AppImage`, and `.tar.gz`.
+
+### Fixed
+- GPG `--detach-sign` in `build.py` no longer relies on the default key, preventing accidental signing with an expired key.
+
+---
+
 ## [1.4.0] - 2026-07-09
 
 ### Added

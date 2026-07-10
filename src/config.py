@@ -16,7 +16,7 @@ APP_AUTHOR = "FreeRave"
 try:
     from version_info import VERSION as APP_VERSION
 except ImportError:
-    APP_VERSION = "1.4.0"  # Will be replaced by GitHub Actions
+    APP_VERSION = "1.4.1"  # Will be replaced by GitHub Actions
 
 # ============================================================================
 # DIRECTORIES (Enterprise Standard - AppData)

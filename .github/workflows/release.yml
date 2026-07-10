@@ -25,7 +25,7 @@ on:
       tag:
         description: 'Release tag (e.g. v1.4.0)'
         required: true
-        default: 'v1.4.0'
+        default: 'v1.4.1'
 
 permissions:
   contents: write
@@ -79,7 +79,9 @@ jobs:
             "DotScramble-Linux-x86_64.AppImage.asc"
             "DotScramble-Linux-x86_64.deb"
             "DotScramble-Linux-x86_64.deb.asc"
-            "sha.txt"
+            "DotScramble-Linux-x86_64.pkg.tar.zst"
+            "DotScramble-Linux-x86_64.pkg.tar.zst.asc"
+            "SHA256SUMS"
           )
 
           echo "Fetching assets for release $TAG..."
@@ -116,7 +118,7 @@ jobs:
           DATE=$(date -u '+%Y-%m-%d %H:%M UTC')
 
           # Build stamp as a single line to avoid YAML multiline issues
-          STAMP=$(printf '\n\n---\n> Release validated by GitHub Actions on %s\n> Version: %s | Artifacts signed with GPG (.asc)\n> Verify integrity: sha256sum -c sha.txt' "$DATE" "$VERSION")
+          STAMP=$(printf '\n\n---\n> Release validated by GitHub Actions on %s\n> Version: %s | Artifacts signed with GPG (.asc)\n> Verify integrity: sha256sum -c SHA256SUMS' "$DATE" "$VERSION")
 
           CURRENT_BODY=$(gh release view "$TAG" --json body --jq '.body' 2>/dev/null || echo "")
           if ! echo "$CURRENT_BODY" | grep -q "Release validated by GitHub Actions"; then

@@ -5,7 +5,7 @@
 ### Advanced Image Privacy Studio
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.4.0-blue?style=for-the-badge" alt="Version"/>
+  <img src="https://img.shields.io/badge/version-1.4.1-blue?style=for-the-badge" alt="Version"/>
   <img src="https://img.shields.io/badge/codename-Ghost%20Vision-purple?style=for-the-badge" alt="Codename"/>
   <img src="https://img.shields.io/badge/python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
   <img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=for-the-badge" alt="License"/>
@@ -51,6 +51,7 @@
    |---------|----------|
    | `DotScramble-Linux-x86_64.AppImage` | Universal — run on any distro |
    | `DotScramble-Linux-x86_64.deb` | Debian / Ubuntu / Kali — integrates with app menu |
+   | `DotScramble-Linux-x86_64.pkg.tar.zst` | Arch Linux / Manjaro — install with pacman |
 
 3. **AppImage:**
    ```bash
@@ -61,6 +62,12 @@
    **Or .deb:**
    ```bash
    sudo dpkg -i DotScramble-Linux-x86_64.deb
+   dotscramble
+   ```
+
+   **Or Arch (.pkg.tar.zst):**
+   ```bash
+   sudo pacman -U DotScramble-Linux-x86_64.pkg.tar.zst
    dotscramble
    ```
 
@@ -75,6 +82,58 @@
 **[📦 Download Latest Release](https://github.com/kareem2099/DotScramble/releases/latest)**
 
 </div>
+
+---
+
+## 🔏 Security & Integrity Verification
+
+All release binaries are signed with GPG. You can verify authenticity before running anything.
+
+<details>
+<summary><b>🔑 Step-by-step verification guide</b></summary>
+
+### 1. Import the signing public key
+
+```bash
+# Option A — from the release assets (download public_key.asc first)
+gpg --import public_key.asc
+
+# Option B — from Ubuntu Keyserver
+gpg --keyserver keyserver.ubuntu.com --recv-keys 0D9B71AF1791DA36
+```
+
+### 2. Verify the key fingerprint
+
+```
+Key ID    : 0D9B71AF1791DA36
+Fingerprint: 7D06 4BC6 C9E2 34B8 948D D12D 0D9B 71AF 1791 DA36
+UID       : FreeRave <kareem209907@gmail.com>
+```
+
+```bash
+gpg --fingerprint 0D9B71AF1791DA36
+```
+
+### 3. Verify a release binary
+
+```bash
+# Verify AppImage
+gpg --verify DotScramble-Linux-x86_64.AppImage.asc DotScramble-Linux-x86_64.AppImage
+
+# Verify .deb
+gpg --verify DotScramble-Linux-x86_64.deb.asc DotScramble-Linux-x86_64.deb
+```
+
+A **Good signature** message confirms the file is authentic and unmodified. ✅
+
+### 4. Verify SHA-256 checksums
+
+```bash
+# Download SHA256SUMS from the release, then:
+sha256sum -c SHA256SUMS
+```
+
+</details>
 
 ---
 
