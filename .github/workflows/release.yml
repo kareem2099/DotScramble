@@ -115,8 +115,8 @@ jobs:
           desktop-file-validate squashfs-root/DotScramble.desktop
           version=$(cd .. && python -c "import version_info; print(version_info.VERSION)")
           grep -q "<release version=\"$version\"" \
-            squashfs-root/usr/share/metainfo/dev.dotsuite.DotScramble.metainfo.xml
-          appstreamcli validate --no-net squashfs-root/usr/share/metainfo/dev.dotsuite.DotScramble.metainfo.xml \
+            squashfs-root/usr/share/metainfo/dev.dotsuite.DotScramble.appdata.xml
+          appstreamcli validate --no-net squashfs-root/usr/share/metainfo/dev.dotsuite.DotScramble.appdata.xml \
             || echo "::warning::appstreamcli reported problems in the metainfo (see above)"
           rm -rf squashfs-root
           # the binary must carry the compiled license module and none of its readable forms

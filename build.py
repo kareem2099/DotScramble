@@ -33,7 +33,10 @@ StartupWMClass=DotScramble
 """
 
 APPSTREAM_ID = "dev.dotsuite.DotScramble"
-METAINFO_TEMPLATE = Path("assets/linux") / f"{APPSTREAM_ID}.metainfo.xml"
+# .appdata.xml, not .metainfo.xml: AppImageHub reads the summary and description for its
+# listing only from usr/share/metainfo/*.appdata.xml (both names are valid AppStream).
+METAINFO_NAME = f"{APPSTREAM_ID}.appdata.xml"
+METAINFO_TEMPLATE = Path("assets/linux") / METAINFO_NAME
 ICON_SIZES = (16, 24, 32, 48, 64, 128, 256, 512)  # assets/icons/png/dotscramble-<size>.png
 
 # Embedded in the AppImage: AppImageUpdate and Gear Lever fetch this .zsync from the latest release
@@ -388,7 +391,7 @@ exec "$HERE/usr/bin/DotScramble" "$@"
         except ImportError:
             from version_info import VERSION as APP_VERSION
         (appdir / "usr/share/metainfo").mkdir(parents=True)
-        (appdir / f"usr/share/metainfo/{APPSTREAM_ID}.metainfo.xml").write_text(metainfo_xml(APP_VERSION), encoding="utf-8")
+        (appdir / f"usr/share/metainfo/{METAINFO_NAME}").write_text(metainfo_xml(APP_VERSION), encoding="utf-8")
         
         # 6. Get appimagetool
         appimagetool = Path("appimagetool-x86_64.AppImage")

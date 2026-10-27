@@ -28,6 +28,11 @@ def test_metainfo_lists_the_current_version_first():
     assert len(releases) == len(set(releases)) <= 5
 
 
+def test_metainfo_is_named_the_way_appimagehub_reads_it():
+    assert build.METAINFO_NAME == f"{build.APPSTREAM_ID}.appdata.xml"
+    assert build.METAINFO_TEMPLATE.is_file()
+
+
 def test_metainfo_refuses_a_version_missing_from_the_changelog():
     with pytest.raises(ValueError, match="CHANGELOG"):
         build.metainfo_xml("99.0.0")

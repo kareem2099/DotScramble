@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- AppStream metadata, shipped in the AppImage as usr/share/metainfo/dev.dotsuite.DotScramble.metainfo.xml.
+<!-- AppStream metadata, shipped in the AppImage as usr/share/metainfo/dev.dotsuite.DotScramble.appdata.xml
+     (the name AppImageHub looks for).
      build.py fills in the empty releases element with the newest versions from CHANGELOG.md. -->
 <component type="desktop-application">
   <id>dev.dotsuite.DotScramble</id>
