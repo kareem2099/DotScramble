@@ -8,7 +8,7 @@
 blur, pixelate or black-bar **faces, eyes, license plates and text**, strip or fake **EXIF and
 GPS metadata**, and hide faces from **AI face detection**. Everything runs on your computer.
 
-[![Version](https://img.shields.io/badge/version-1.5.1-00BCD4?style=flat-square)](https://github.com/kareem2099/DotScramble/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.5.2-00BCD4?style=flat-square)](https://github.com/kareem2099/DotScramble/blob/main/CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-2FD38B?style=flat-square)](https://github.com/kareem2099/DotScramble/blob/main/LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-2FC8F0?style=flat-square&logo=python&logoColor=white)](https://github.com/kareem2099/DotScramble/blob/main/requirements.txt)
 [![Linux](https://img.shields.io/badge/platform-Linux%20x86__64-FFB547?style=flat-square&logo=linux&logoColor=black)](#supported-systems)
@@ -227,7 +227,8 @@ the one you pick.
 DotScramble checks GitHub for a new release in the background. When there is one, it downloads
 the file that matches how you installed it, verifies the checksum and the signature, and offers
 to restart. If a version is ever retired, an older copy shows a clear **Update required** screen
-with a download button. Running from source never updates itself.
+with a download button. Running from source never updates itself. The AppImage also carries
+update information, so AppImageUpdate, Gear Lever and AppImageLauncher can update it too.
 
 ## What goes online
 

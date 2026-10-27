@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata, shipped in the AppImage as usr/share/metainfo/dev.dotsuite.DotScramble.metainfo.xml.
+     build.py fills in the empty releases element with the newest versions from CHANGELOG.md. -->
+<component type="desktop-application">
+  <id>dev.dotsuite.DotScramble</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
+
+  <name>DotScramble</name>
+  <summary>Blur faces, license plates and text in photos</summary>
+  <developer id="dev.dotsuite">
+    <name>FreeRave</name>
+  </developer>
+
+  <description>
+    <p>
+      DotScramble is a photo privacy studio: it hides what shouldn't be seen before you share a
+      picture. Blur, pixelate or black-bar faces, eyes, license plates and text, and strip or
+      replace the EXIF and GPS metadata hidden in the file. Your photos are processed on your
+      computer and never uploaded.
+    </p>
+    <ul>
+      <li>Detect faces, eyes, full bodies, license plates, any text, or one specific word, or draw the regions yourself</li>
+      <li>Seven effects: blur, pixelation, black bar, gradient, mosaic, frosted glass and oil paint</li>
+      <li>A detect preview that outlines every region before anything changes, so you can skip the ones you want to keep</li>
+      <li>Before / after compare, zoom and pan, live preview, undo and redo</li>
+      <li>Strip GPS, camera and device tags on save, or replace them with believable decoys</li>
+      <li>AI Evasion: an optimized pattern that hides faces from face detection software</li>
+      <li>Batch processing for whole folders</li>
+      <li>Seven languages with right-to-left layouts, and sixteen themes</li>
+    </ul>
+    <p>
+      The core tools are free and open source. An optional Pro plan adds AI-powered detection,
+      AI Evasion, the metadata tools and unlimited batches.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">DotScramble.desktop</launchable>
+  <provides>
+    <binary>DotScramble</binary>
+  </provides>
+
+  <url type="homepage">https://dotsuite.dev/en/product/dotscramble</url>
+  <url type="bugtracker">https://github.com/kareem2099/DotScramble/issues</url>
+  <url type="vcs-browser">https://github.com/kareem2099/DotScramble</url>
+  <url type="donation">https://github.com/sponsors/kareem2099</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Four faces found in a group photo and pixelated</caption>
+      <image>https://raw.githubusercontent.com/kareem2099/DotScramble/main/docs/screenshots/hero.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Before and after, side by side</caption>
+      <image>https://raw.githubusercontent.com/kareem2099/DotScramble/main/docs/screenshots/compare.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Arabic, right to left, on the light theme</caption>
+      <image>https://raw.githubusercontent.com/kareem2099/DotScramble/main/docs/screenshots/arabic.png</image>
+    </screenshot>
+  </screenshots>
+
+  <keywords>
+    <keyword>blur</keyword>
+    <keyword>pixelate</keyword>
+    <keyword>privacy</keyword>
+    <keyword>face</keyword>
+    <keyword>anonymize</keyword>
+    <keyword>redact</keyword>
+    <keyword>license plate</keyword>
+    <keyword>EXIF</keyword>
+    <keyword>metadata</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases/>
+</component>

@@ -5,6 +5,7 @@ Builds a standalone executable using PyInstaller with Staging isolation.
 """
 
 import os
+import re
 import sys
 import subprocess
 import shutil
@@ -16,6 +17,54 @@ STAGING_DIR = Path("build_staging")
 # `--no-sign`: build the packages only. CI writes SHA256SUMS and the GPG signatures
 # in a separate job, so the build job never sees the signing key.
 SIGN = "--no-sign" not in sys.argv
+
+# The same desktop entry for every package; only the command differs.
+DESKTOP_ENTRY = """[Desktop Entry]
+Type=Application
+Name=DotScramble
+GenericName=Photo Privacy Editor
+Comment=Blur faces, license plates and text in photos
+Exec={exec_cmd}
+Icon=dotscramble
+Terminal=false
+Categories=Graphics;2DGraphics;RasterGraphics;Photography;
+Keywords=blur;pixelate;privacy;face;anonymize;redact;license plate;exif;metadata;
+StartupWMClass=DotScramble
+"""
+
+APPSTREAM_ID = "dev.dotsuite.DotScramble"
+METAINFO_TEMPLATE = Path("assets/linux") / f"{APPSTREAM_ID}.metainfo.xml"
+ICON_SIZES = (16, 24, 32, 48, 64, 128, 256, 512)  # assets/icons/png/dotscramble-<size>.png
+
+# Embedded in the AppImage: AppImageUpdate and Gear Lever fetch this .zsync from the latest release
+APPIMAGE_UPDATE_INFO = "gh-releases-zsync|kareem2099|DotScramble|latest|DotScramble-Linux-x86_64.AppImage.zsync"
+
+
+def desktop_entry(exec_cmd):
+    return DESKTOP_ENTRY.format(exec_cmd=exec_cmd)
+
+
+def appstream_releases(changelog_text, limit=5):
+    """The newest CHANGELOG.md versions as an AppStream <releases> block."""
+    found = re.findall(r"^## \[(\d+\.\d+\.\d+)\] - (\d{4}-\d{2}-\d{2})", changelog_text, re.M)[:limit]
+    lines = ["<releases>"]
+    for version, date in found:
+        lines += [f'    <release version="{version}" date="{date}">',
+                  f'      <url type="details">https://github.com/kareem2099/DotScramble/releases/tag/v{version}</url>',
+                  "    </release>"]
+    lines.append("  </releases>")
+    return found, "\n".join(lines)
+
+
+def metainfo_xml(version):
+    """The AppStream metainfo with its releases filled in; the newest must be `version`."""
+    found, releases = appstream_releases(Path("CHANGELOG.md").read_text(encoding="utf-8"))
+    if not found or found[0][0] != version:
+        raise ValueError(f"CHANGELOG.md has no entry for {version} at the top")
+    template = METAINFO_TEMPLATE.read_text(encoding="utf-8")
+    if template.count("<releases/>") != 1:
+        raise ValueError(f"{METAINFO_TEMPLATE} needs exactly one empty <releases/> element")
+    return template.replace("<releases/>", releases)
 
 def run_command(cmd, cwd=None):
     """Run a command and return success status"""
@@ -259,17 +308,7 @@ exec /usr/share/dotscramble/DotScramble "$@"
             
         # 4. Create desktop entry in /usr/share/applications/DotScramble.desktop
         desktop_file = deb_staging / "usr/share/applications/DotScramble.desktop"
-        desktop_content = """[Desktop Entry]
-Type=Application
-Name=DotScramble
-Comment=DotScramble - Privacy, Simplified
-Exec=dotscramble
-Icon=dotscramble
-Terminal=false
-Categories=Utility;Graphics;
-StartupWMClass=DotScramble
-"""
-        desktop_file.write_text(desktop_content)
+        desktop_file.write_text(desktop_entry("dotscramble"))
         
         # 5. Create DEBIAN/control file
         try:
@@ -328,28 +367,30 @@ exec "$HERE/usr/bin/DotScramble" "$@"
         apprun.write_text(apprun_content)
         apprun.chmod(apprun.stat().st_mode | 0o111) # make executable
         
-        # 3. Copy icon to root of AppDir
-        icon_src = Path("assets/icons/Square150x150Logo.png")
-        if not icon_src.exists():
-            icon_src = Path("assets/icons/icon.png")
-        if icon_src.exists():
-            shutil.copy2(icon_src, appdir / "dotscramble.png")
-            
-        # 4. Create desktop entry at root of AppDir
-        desktop_file = appdir / "DotScramble.desktop"
-        desktop_content = """[Desktop Entry]
-Type=Application
-Name=DotScramble
-Comment=Advanced Privacy Studio Pro
-Exec=DotScramble
-Icon=dotscramble
-Terminal=false
-Categories=Utility;Graphics;
-StartupWMClass=DotScramble
-"""
-        desktop_file.write_text(desktop_content)
+        # 3. Icons: the 256 px one at the root (appimagetool makes it .DirIcon), plus the hicolor set
+        shutil.copy2("assets/icons/png/dotscramble-256.png", appdir / "dotscramble.png")
+        for size in ICON_SIZES:
+            icon_dir = appdir / f"usr/share/icons/hicolor/{size}x{size}/apps"
+            icon_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f"assets/icons/png/dotscramble-{size}.png", icon_dir / "dotscramble.png")
+        scalable = appdir / "usr/share/icons/hicolor/scalable/apps"
+        scalable.mkdir(parents=True)
+        shutil.copy2("assets/icons/dotscramble.svg", scalable / "dotscramble.svg")
+
+        # 4. Desktop entry, at the root (AppImage) and in usr/share/applications (AppStream's launchable)
+        (appdir / "DotScramble.desktop").write_text(desktop_entry("DotScramble"))
+        (appdir / "usr/share/applications").mkdir(parents=True)
+        shutil.copy2(appdir / "DotScramble.desktop", appdir / "usr/share/applications/DotScramble.desktop")
+
+        # 5. AppStream metainfo (what AppImageHub and software centers show)
+        try:
+            from src.config import APP_VERSION
+        except ImportError:
+            from version_info import VERSION as APP_VERSION
+        (appdir / "usr/share/metainfo").mkdir(parents=True)
+        (appdir / f"usr/share/metainfo/{APPSTREAM_ID}.metainfo.xml").write_text(metainfo_xml(APP_VERSION), encoding="utf-8")
         
-        # 5. Get appimagetool
+        # 6. Get appimagetool
         appimagetool = Path("appimagetool-x86_64.AppImage")
         if not appimagetool.exists():
             print("Downloading appimagetool...")
@@ -368,10 +409,20 @@ StartupWMClass=DotScramble
         appimage_output = release_dir / "DotScramble-Linux-x86_64.AppImage"
         if appimage_output.exists():
             appimage_output.unlink()
-        # Run appimagetool with ARCH=x86_64 env var
-        cmd = f"ARCH=x86_64 ./appimagetool-x86_64.AppImage {appdir} {appimage_output}"
+        zsync_output = Path(f"{appimage_output}.zsync")
+        for stale in (zsync_output, Path(zsync_output.name)):
+            stale.unlink(missing_ok=True)
+        # ARCH=x86_64, and the update information; with zsyncmake installed this also writes the .zsync
+        cmd = f"ARCH=x86_64 ./appimagetool-x86_64.AppImage -u '{APPIMAGE_UPDATE_INFO}' {appdir} {appimage_output}"
         if run_command(cmd):
+            # appimagetool writes the .zsync into the working folder
+            if Path(zsync_output.name).exists() and not zsync_output.exists():
+                shutil.move(zsync_output.name, zsync_output)
             print(f"   ✅ AppImage package created: {appimage_output.name}")
+            if zsync_output.exists():
+                print(f"   ✅ zsync file created: {zsync_output.name}")
+            else:
+                print("   ⚠️ No .zsync written (zsyncmake missing): AppImageUpdate can't update this build")
             return appimage_output
         else:
             print("   ❌ appimagetool build failed")
@@ -440,17 +491,7 @@ def build_arch_package(exe_path, release_dir):
             shutil.copy2(icon_src, arch_staging / "usr/share/pixmaps/dotscramble.png")
 
         # 4. Desktop entry
-        desktop_content = """[Desktop Entry]
-Type=Application
-Name=DotScramble
-Comment=DotScramble - Privacy, Simplified
-Exec=dotscramble
-Icon=dotscramble
-Terminal=false
-Categories=Utility;Graphics;
-StartupWMClass=DotScramble
-"""
-        (arch_staging / "usr/share/applications/DotScramble.desktop").write_text(desktop_content)
+        (arch_staging / "usr/share/applications/DotScramble.desktop").write_text(desktop_entry("dotscramble"))
 
         # 5. Calculate installed size (in KiB — Arch standard)
         total_size = sum(f.stat().st_size for f in arch_staging.rglob("*") if f.is_file())
@@ -553,6 +594,9 @@ def create_release_package():
         appimage_file = build_appimage_package(dest_file, release_dir)
         if appimage_file:
             built_files.append(appimage_file)
+            zsync_file = Path(f"{appimage_file}.zsync")
+            if zsync_file.exists():
+                built_files.append(zsync_file)
             
         # 3. Build Arch Linux Package (.pkg.tar.zst)
         arch_file = build_arch_package(dest_file, release_dir)

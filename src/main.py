@@ -204,7 +204,9 @@ def setup_linux_desktop_entry():
         import shutil
         from src.config import SYSTEM_DIR
         
-        current_exe = sys.executable
+        # Inside an AppImage sys.executable is in a temporary /tmp/.mount_* folder that
+        # disappears on exit; the runtime puts the .AppImage file's own path in $APPIMAGE.
+        current_exe = os.environ.get("APPIMAGE") or sys.executable
         base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         
         # Determine the target .desktop file path
@@ -236,11 +238,13 @@ def setup_linux_desktop_entry():
         desktop_content = f"""[Desktop Entry]
 Type=Application
 Name=DotScramble
-Comment=Advanced Privacy Studio Pro
+GenericName=Photo Privacy Editor
+Comment=Blur faces, license plates and text in photos
 Exec="{current_exe}"
 Icon={icon_dest}
 Terminal=false
-Categories=Utility;Graphics;
+Categories=Graphics;2DGraphics;RasterGraphics;Photography;
+Keywords=blur;pixelate;privacy;face;anonymize;redact;license plate;exif;metadata;
 StartupWMClass=DotScramble
 """
         # Only write if it doesn't exist, or if the Exec path or StartupWMClass is missing/different
@@ -248,7 +252,7 @@ StartupWMClass=DotScramble
         if desktop_file.exists():
             try:
                 content = desktop_file.read_text()
-                if (f'Exec="{current_exe}"' in content or f'Exec={current_exe}' in content) and 'StartupWMClass' in content:
+                if (f'Exec="{current_exe}"' in content or f'Exec={current_exe}' in content) and 'Categories=Graphics;2DGraphics;' in content:
                     write_needed = False
             except:
                 pass

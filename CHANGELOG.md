@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2026-10-27
+
+Ready for AppImageHub and AppImage tools.
+
+### Added
+- **AppStream metadata in the AppImage** (`dev.dotsuite.DotScramble`): description, screenshots,
+  links and release history, for AppImageHub and software centers.
+- **AppImage update information.** The AppImage now says where its updates are, and every release
+  ships `DotScramble-Linux-x86_64.AppImage.zsync` (checksummed and signed like the packages), so
+  AppImageUpdate, Gear Lever and AppImageLauncher can update it. The built-in updater works as
+  before.
+- The AppImage carries the full icon set (16–512 px and SVG) instead of one 150 px icon.
+
+### Fixed
+- The app menu shortcut an AppImage creates for itself pointed at a temporary folder that is
+  gone once the app closes; it now points at the `.AppImage` file.
+- The app no longer appears twice in some app menus: it is listed under Graphics only
+  (`Graphics;2DGraphics;RasterGraphics;Photography;`), with a clearer description and search
+  keywords.
+
+---
+
 ## [1.5.1] - 2026-10-27
 
 ### Fixed

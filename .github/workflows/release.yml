@@ -4,6 +4,8 @@ name: Release
 #   DotScramble-Linux-x86_64.{AppImage,deb,pkg.tar.zst,tar.gz}, SHA256SUMS,
 #   a detached .asc signature for each package, and the public signing key.
 # The in-app updater (core/auto_updater.py) looks for exactly these asset names.
+# DotScramble-Linux-x86_64.AppImage.zsync is for AppImageUpdate / Gear Lever: the AppImage
+# embeds update information pointing at it (build.py APPIMAGE_UPDATE_INFO).
 #
 # Secrets (Settings → Secrets and variables → Actions):
 #   LICENSE_MANAGER_PY_B64  base64 of src/managers/license_manager.py, which is gitignored.
@@ -60,7 +62,8 @@ jobs:
             | sudo tee /etc/apt/apt.conf.d/99ci-network > /dev/null
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon0 libfontconfig1 \
-            libdbus-1-3 libxcb-cursor0 tesseract-ocr libarchive-tools zstd
+            libdbus-1-3 libxcb-cursor0 tesseract-ocr libarchive-tools zstd \
+            zsync desktop-file-utils appstream
           pip install -r requirements.txt
 
       - name: Version matches the tag
@@ -100,6 +103,21 @@ jobs:
           dpkg-deb -c DotScramble-Linux-x86_64.deb | grep -q usr/share/dotscramble/DotScramble
           bsdtar -tf DotScramble-Linux-x86_64.pkg.tar.zst | grep -q '^\./\.PKGINFO$\|^\.PKGINFO$'
           tar -tzf DotScramble-Linux-x86_64.tar.gz | grep -qx DotScramble
+          # the AppImage: update information, its .zsync, desktop entry and AppStream metainfo
+          chmod +x DotScramble-Linux-x86_64.AppImage
+          # read from the ELF section (with APPIMAGE_EXTRACT_AND_RUN, --appimage-updateinformation starts
+          # the app instead). readelf only reads; objcopy would rewrite the file and drop the squashfs.
+          info=$(readelf --string-dump=.upd_info DotScramble-Linux-x86_64.AppImage | sed -n 's/^ *\[ *0\] *//p')
+          echo "update information: $info"
+          case "$info" in gh-releases-zsync\|*\|DotScramble-Linux-x86_64.AppImage.zsync) ;; *) echo "::error::AppImage has no zsync update information"; exit 1 ;; esac
+          grep -q '^URL: DotScramble-Linux-x86_64.AppImage$' DotScramble-Linux-x86_64.AppImage.zsync
+          ./DotScramble-Linux-x86_64.AppImage --appimage-extract > /dev/null
+          desktop-file-validate squashfs-root/DotScramble.desktop
+          grep -q '<release version="'"$(python -c "import version_info; print(version_info.VERSION)")"'"' \
+            squashfs-root/usr/share/metainfo/dev.dotsuite.DotScramble.metainfo.xml
+          appstreamcli validate --no-net squashfs-root/usr/share/metainfo/dev.dotsuite.DotScramble.metainfo.xml \
+            || echo "::warning::appstreamcli reported problems in the metainfo (see above)"
+          rm -rf squashfs-root
           # the binary must carry the compiled license module and none of its readable forms
           pyi-archive_viewer -l -r DotScramble > contents.txt
           grep -q "license_manager\.cpython-.*\.so" contents.txt
@@ -134,6 +152,7 @@ jobs:
           if-no-files-found: error
           path: |
             release/DotScramble-Linux-x86_64.AppImage
+            release/DotScramble-Linux-x86_64.AppImage.zsync
             release/DotScramble-Linux-x86_64.deb
             release/DotScramble-Linux-x86_64.pkg.tar.zst
             release/DotScramble-Linux-x86_64.tar.gz
@@ -226,7 +245,7 @@ jobs:
       - name: Every file the in-app updater needs is here
         run: |
           missing=0
-          for f in AppImage deb pkg.tar.zst tar.gz; do
+          for f in AppImage AppImage.zsync deb pkg.tar.zst tar.gz; do
             for asset in "DotScramble-Linux-x86_64.$f" "DotScramble-Linux-x86_64.$f.asc"; do
               [ -s "release/$asset" ] || { echo "::error::missing $asset"; missing=1; }
             done
