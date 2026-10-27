@@ -1,0 +1,551 @@
+{
+    "app": {
+        "title": "DotScramble",
+        "version": "نسخه {version}",
+        "author": "ساخته‌شده با ❤️ توسط FreeRave"
+    },
+    "menu": {
+        "file": "فایل",
+        "edit": "ویرایش",
+        "presets": "پیش‌تنظیم‌ها",
+        "view": "نما",
+        "help": "راهنما",
+        "file_items": {
+            "open_image": "باز کردن تصویر",
+            "open_recent": "باز کردن موارد اخیر",
+            "no_recent": "فایل اخیری وجود ندارد",
+            "clear_history": "پاک کردن تاریخچه",
+            "save_result": "ذخیره نتیجه",
+            "save_comparison": "ذخیره به‌صورت مقایسه",
+            "open_exports": "باز کردن پوشه خروجی‌ها",
+            "batch_process": "پردازش دسته‌ای",
+            "exit": "خروج"
+        },
+        "edit_items": {
+            "undo": "واگرد",
+            "redo": "انجام دوباره",
+            "clear_selections": "پاک کردن انتخاب‌ها",
+            "reset_image": "بازنشانی تصویر"
+        },
+        "presets_items": {
+            "save_settings": "ذخیره تنظیمات فعلی",
+            "load_preset": "بارگذاری پیش‌تنظیم",
+            "manage_presets": "مدیریت پیش‌تنظیم‌ها"
+        },
+        "view_items": {
+            "themes": "🎨 پوسته‌ها",
+            "language": "🌐 زبان"
+        },
+        "help_items": {
+            "check_updates": "بررسی به‌روزرسانی",
+            "open_app_data": "باز کردن پوشه داده‌های برنامه",
+            "donate": "حمایت مالی",
+            "about": "درباره",
+            "shortcuts": "میان‌برها"
+        }
+    },
+    "ui": {
+        "header": {
+            "title": "DotScramble",
+            "preview": "🔴 پیش‌نمایش زنده"
+        },
+        "tier": {
+            "pro_badge": "⭐ PRO",
+            "free_badge": "🔓 رایگان",
+            "pro_desc": "تشخیص مبتنی بر هوش مصنوعی فعال است",
+            "free_desc": "Haar Cascade · برای هوش مصنوعی ارتقا دهید",
+            "upgrade_btn": "⭐ ارتقا به Pro",
+            "upgrade_menu": "⭐️ ارتقا به Pro",
+            "pro_activated_menu": "⭐️ PRO فعال است"
+        },
+        "buttons": {
+            "load": "📁 بارگذاری تصویر",
+            "apply": "✨ اعمال افکت",
+            "reset": "🗑️ پاک کردن انتخاب‌ها"
+        },
+        "controls": {
+            "title": "⚙️ کنترل‌ها",
+            "load_image": "📁 بارگذاری تصویر",
+            "effect_type": "🎨 نوع افکت:",
+            "detection_mode": "🎯 حالت تشخیص:",
+            "parameters": "🔧 پارامترهای افکت:",
+            "blur_strength": "شدت محوسازی",
+            "pixel_size": "اندازه بلوک پیکسل",
+            "opacity": "شفافیت افکت (%)",
+            "target_text": "کلمه‌ای را برای محوسازی بنویسید:",
+            "apply_effect": "✨ اعمال افکت",
+            "undo": "↶ واگرد",
+            "redo": "↷ انجام دوباره",
+            "clear_selections": "🗑️ پاک کردن انتخاب‌ها",
+            "save_result": "💾 ذخیره نتیجه",
+            "batch_process": "📦 پردازش دسته‌ای",
+            "tip": "💡 نکته: پیش‌نمایش زنده را فعال کنید\nتا نتیجه را فوراً ببینید!"
+        },
+        "canvas": {
+            "title": "🖼️ بوم تصویر",
+            "views": {
+                "original": "اصلی",
+                "processed": "پردازش‌شده",
+                "compare": "مقایسه"
+            },
+            "placeholder_title": "تصویر را اینجا بکشید و رها کنید",
+            "placeholder_subtitle": "یا برای مرور تصاویر Ctrl+O را بزنید",
+            "before": "قبل",
+            "after": "بعد"
+        },
+        "status": {
+            "ready": "آماده بارگذاری تصویر...",
+            "loaded": "بارگذاری شد: {filename}",
+            "processed": "{count} ناحیه پردازش شد",
+            "saved": "ذخیره شد: {filename}",
+            "preview_enabled": "پیش‌نمایش زنده فعال شد",
+            "preview_disabled": "پیش‌نمایش زنده غیرفعال شد",
+            "region_added": "ناحیه اضافه شد (در مجموع {count})",
+            "cleared": "همه انتخاب‌ها پاک شد",
+            "reset": "تصویر به حالت اصلی بازگشت",
+            "failed_load": "بارگذاری تصویر ناموفق بود",
+            "detected": "{shown} از {count} ناحیه پنهان می‌شود — برای رد کردن، روی یکی کلیک کنید",
+            "detected_none": "با این حالت تشخیص چیزی پیدا نشد.",
+            "detect_unavailable": "پیش‌نمایش تشخیص فقط با حالت‌های خودکار کار می‌کند (نه دستی یا کل تصویر).",
+            "compare_on": "مقایسه: جداکننده را بکشید تا قبل / بعد را ببینید",
+            "applied": "افکت اعمال شد.",
+            "undo_done": "واگرد انجام شد",
+            "redo_done": "دوباره انجام شد",
+            "activating": "در حال فعال‌سازی…",
+            "activated": "DotScramble Pro فعال شد!",
+            "activation_failed": "فعال‌سازی ناموفق بود.",
+            "restart_to_update": "برای به‌روزرسانی، برنامه را دوباره اجرا کنید",
+            "ai_cancelled": "گریز از هوش مصنوعی لغو شد.",
+            "ai_success": "✅ گریز از هوش مصنوعی کامل شد — چهره از تشخیص‌دهنده‌های هوش مصنوعی پنهان است",
+            "ai_partial": "⚠️ گریز از هوش مصنوعی ناقص — نرخ گریز {percent}%",
+            "ai_failed": "❌ گریز از هوش مصنوعی ناموفق بود — چهره محو شده اما پنهان بودن آن از هوش مصنوعی تأیید نشده است",
+            "detection_unavailable": "⚠️ تشخیص در دسترس نیست — چیزی پنهان نشد"
+        },
+        "info": {
+            "image_info": "{width}x{height} | {size_kb} کیلوبایت"
+        },
+        "toolbar": {
+            "open": "باز کردن",
+            "open_tip": "باز کردن تصویر (Ctrl+O)",
+            "save": "ذخیره",
+            "save_tip": "ذخیره نتیجه (Ctrl+S)",
+            "undo_tip": "واگرد (Ctrl+Z)",
+            "redo_tip": "انجام دوباره (Ctrl+Y)",
+            "detect": "تشخیص",
+            "detect_tip": "پیش‌نمایش آنچه پنهان می‌شود — برای رد کردن یک ناحیه روی آن کلیک کنید (Ctrl+F)",
+            "compare": "مقایسه",
+            "compare_tip": "نمای قبل / بعد — جداکننده را بکشید (Ctrl+Shift+C)",
+            "zoom_in_tip": "بزرگ‌نمایی (Ctrl++)",
+            "zoom_out_tip": "کوچک‌نمایی (Ctrl+-)",
+            "zoom_label_tip": "برای جابه‌جایی بین «جا شدن در پنجره» و 100% کلیک کنید",
+            "fit_tip": "جا شدن در پنجره (Ctrl+0)",
+            "live": "پیش‌نمایش زنده",
+            "live_tip": "با هر تغییر تنظیمات، افکت به‌طور خودکار دوباره اعمال شود",
+            "upgrade": "ارتقا",
+            "upgrade_tip": "تشخیص هوش مصنوعی، گریز از هوش مصنوعی و ابزارهای فراداده را باز کنید",
+            "pro": "PRO"
+        },
+        "sidebar": {
+            "detect_title": "چه چیزی پنهان شود",
+            "effect_title": "چگونه پنهان شود",
+            "settings_title": "تنظیم دقیق",
+            "metadata_title": "فراداده هنگام ذخیره",
+            "ai_heading": "گریز از هوش مصنوعی",
+            "ai_hybrid": "ترکیبی — محوسازی + پنهان از هوش مصنوعی",
+            "ai_hybrid_tip": "چهره را از تشخیص‌دهنده‌های هوش مصنوعی پنهان می‌کند و برای انسان‌ها محو می‌کند (فقط چهره، حدود ۳۰ تا ۹۰ ثانیه)",
+            "ai_invisible": "نامرئی — فقط پنهان از هوش مصنوعی",
+            "ai_invisible_tip": "چهره را از تشخیص‌دهنده‌های هوش مصنوعی پنهان می‌کند ولی برای انسان‌ها واضح می‌ماند (فقط چهره، حدود ۳۰ تا ۹۰ ثانیه)",
+            "free_hint": "تشخیص پایه. نسخه Pro دقت هوش مصنوعی را اضافه می‌کند.",
+            "pro_hint": "تشخیص مبتنی بر هوش مصنوعی فعال است.",
+            "ai_face_only": "گریز از هوش مصنوعی فقط روی چهره کار می‌کند.",
+            "word_placeholder": "کلمه برای محوسازی، مثلاً یک نام",
+            "manual_hint": "روی تصویر بکشید تا ناحیه‌های پنهان‌شونده را رسم کنید.",
+            "apply": "اعمال افکت",
+            "apply_tip": "اعمال افکت (Ctrl+Enter)",
+            "clear": "پاک کردن انتخاب‌ها",
+            "batch": "پردازش دسته‌ای",
+            "locked_title": "ویژگی Pro",
+            "locked_msg": "«{name}» در DotScramble Pro در دسترس است.\n\nهمین حالا ارتقا می‌دهید؟"
+        },
+        "metadata": {
+            "keep": "حفظ",
+            "strip": "حذف",
+            "spoof": "جعلی",
+            "keep_desc": "فراداده اصلی همان‌طور که هست حفظ می‌شود.",
+            "strip_desc": "موقعیت مکانی، اطلاعات دوربین و دستگاه برای همیشه حذف می‌شود.",
+            "spoof_desc": "فراداده واقعی با داده‌های جعلی باورپذیر جایگزین می‌شود.",
+            "profiles": {
+                "ghost": "شبح — نوکیا در قطب جنوب، سال ۲۰۰۰",
+                "troll": "شیطون — اقیانوس تصادفی، دوربین قدیمی",
+                "artist": "هنرمند — موقعیت مکانی را پنهان می‌کند، حق نشر را نگه می‌دارد",
+                "custom": "سفارشی — کنترل هر فیلد"
+            },
+            "editor": "باز کردن ویرایشگر فراداده…",
+            "locked": "در نسخه Pro — ارتقا دهید",
+            "custom_saved": "قوانین سفارشی فراداده ذخیره شد."
+        },
+        "ai": {
+            "progress_title": "گریز از هوش مصنوعی — در حال پردازش",
+            "progress_start": "در حال محاسبه گریز از هوش مصنوعی…\nاین کار ممکن است ۳۰ تا ۹۰ ثانیه طول بکشد.",
+            "progress_step": "چهره {face}/{faces} — تکرار {iter}/{iters} · امتیاز {score}",
+            "no_oval": "گریز از هوش مصنوعی فقط روی ناحیه بیضی چهره کار می‌کند.\nهیچ چهره‌ای تشخیص داده نشد — حالت تشخیص چهره را امتحان کنید.",
+            "cancel": "لغو"
+        },
+        "faces": {
+            "title": "گریز از هوش مصنوعی — انتخاب چهره‌ها",
+            "header": "<b>{count} چهره تشخیص داده شد.</b> انتخاب کنید کدام‌ها با گریز از هوش مصنوعی محافظت شوند.",
+            "face_n": "چهره {n}",
+            "select": "انتخاب",
+            "select_all": "انتخاب همه",
+            "deselect_all": "لغو انتخاب همه",
+            "note": "شدت گریز از هوش مصنوعی با نوار <b>شفافیت</b> تنظیم می‌شود.",
+            "apply": "اعمال گریز از هوش مصنوعی"
+        },
+        "activation": {
+            "title": "فعال‌سازی DotScramble Pro",
+            "waiting": "در انتظار احراز هویت…",
+            "desc": "لطفاً فعال‌سازی را در مرورگر کامل کنید.\nاین پنجره به‌طور خودکار بسته می‌شود.",
+            "manual_btn": "وارد کردن دستی کلید",
+            "manual_title": "فعال‌سازی Pro",
+            "manual_prompt": "برای باز کردن DotScramble Pro، کلید API حساب DotSuite خود را وارد کنید:",
+            "failed_title": "فعال‌سازی ناموفق بود"
+        },
+        "model": {
+            "title": "مدل هوش مصنوعی لازم است",
+            "prompt": "این ویژگی Pro به یک فایل مدل هوش مصنوعی (حدود ۸ مگابایت) نیاز دارد.\n\nهمین حالا دانلود شود؟",
+            "downloading_title": "در حال دانلود مدل هوش مصنوعی",
+            "downloading": "در حال دانلود face_landmarker.task…",
+            "success": "مدل هوش مصنوعی دانلود شد. ویژگی‌های Pro اکنون فعال‌اند.",
+            "failed_title": "دانلود ناموفق بود",
+            "failed": "دانلود مدل هوش مصنوعی ممکن نشد. لطفاً اتصال اینترنت خود را بررسی کنید."
+        },
+        "messages": {
+            "title_error": "خطا",
+            "title_info": "اطلاعات",
+            "title_success": "موفق",
+            "file_not_found": "فایل پیدا نشد!",
+            "unsupported_title": "فایل پشتیبانی نمی‌شود",
+            "unsupported_drop": "نوع فایل '{ext}' پشتیبانی نمی‌شود.\n\nقالب‌های پشتیبانی‌شده: JPG, PNG, BMP, TIFF, WebP, GIF",
+            "display_error": "نمایش تصویر ممکن نشد: {error}",
+            "open_folder_error": "باز کردن پوشه ممکن نشد: {error}",
+            "save_dialog_title": "ذخیره تصویر پردازش‌شده",
+            "comparison_dialog_title": "ذخیره تصویر مقایسه",
+            "select_preset_prompt": "یک پیش‌تنظیم برای بارگذاری انتخاب کنید:",
+            "preset_loaded": "پیش‌تنظیم '{name}' بارگذاری شد!",
+            "delete_preset_title": "حذف پیش‌تنظیم",
+            "delete_preset_prompt": "یک پیش‌تنظیم برای حذف انتخاب کنید:",
+            "preset_deleted": "پیش‌تنظیم '{name}' حذف شد!",
+            "close": "بستن",
+            "update_ready_title": "به‌روزرسانی آماده است",
+            "restart_title": "راه‌اندازی دوباره برنامه",
+            "clear_history_title": "پاک کردن تاریخچه",
+            "zoom": "بزرگ‌نمایی / کوچک‌نمایی",
+            "zoom_fit_actual": "جا شدن در پنجره / اندازه واقعی",
+            "cascades_missing": "تشخیص پایه اجرا نمی‌شود: فایل‌های cascade کتابخانه OpenCV وجود ندارند ({files}).\n\nچیزی پنهان نشد. وابستگی‌ها را دوباره نصب کنید:\npip install -r requirements.txt"
+        },
+        "version_gate": {
+            "title": "به‌روزرسانی لازم است",
+            "message": "DotScramble {current} دیگر پشتیبانی نمی‌شود.\n\nبرای ادامه استفاده، لطفاً جدیدترین نسخه (حداقل {minimum}) را دانلود کنید. تنظیمات شما حفظ می‌شود.",
+            "download": "دانلود جدیدترین نسخه",
+            "quit": "خروج"
+        }
+    },
+    "effects": {
+        "blur": "🌫️ محوسازی",
+        "pixelation": "🔲 پیکسلی",
+        "black_bar": "⬛ نوار سیاه",
+        "gradient": "🎭 گرادیان",
+        "mosaic": "🔳 موزاییک",
+        "glass": "❄️ شیشه مات",
+        "oil_paint": "🎨 رنگ روغن",
+        "ai_evasion": "🛡️ گریز از هوش مصنوعی - ترکیبی (PRO)",
+        "ai_evasion_invisible": "🛡️ گریز از هوش مصنوعی - نامرئی (PRO)"
+    },
+    "detection": {
+        "face": "🎭 چهره",
+        "eye": "👁️ چشم‌ها",
+        "body": "🧍 تمام بدن",
+        "license_plate": "🚗 پلاک خودرو",
+        "text": "📝 متن",
+        "target_text": "✍️ متن مشخص",
+        "manual": "✏️ دستی",
+        "full": "🌍 کل تصویر"
+    },
+    "dialogs": {
+        "error": {
+            "loading": "خطا",
+            "loading_image": "بارگذاری تصویر ناموفق بود:\n{error}",
+            "processing": "پردازش ناموفق بود: {error}",
+            "saving": "ذخیره تصویر ممکن نشد: {error}",
+            "no_image": "هیچ تصویری بارگذاری نشده است",
+            "no_selections": "ابتدا ناحیه‌ها را روی تصویر رسم کنید!",
+            "no_word": "لطفاً کلمه‌ای را که می‌خواهید محو شود بنویسید.",
+            "word_not_found": "کلمه '{word}' در این تصویر پیدا نشد.",
+            "image_empty": "تصویر بارگذاری‌شده خالی است!",
+            "image_corrupted": "بارگذاری تصویر ممکن نشد!\n\nفایل: {filename}\n\nدلایل احتمالی:\n• فایل خراب است\n• قالب پشتیبانی نمی‌شود\n• مسیر فایل نویسه‌های خاص دارد",
+            "dependencies": "وابستگی‌های لازم وجود ندارند:\n\n{deps}\n\nلطفاً آن‌ها را با این دستور نصب کنید:\npip install {deps}",
+            "import": "خطای import: {error}\n\nلطفاً مطمئن شوید همه ماژول‌ها در جای درست هستند:\n- gui/main_window.py\n- gui/batch_window.py\n- core/image_processor.py\n- core/batch_processor.py\n- core/utils.py\n- config.py",
+            "fatal": "اجرای برنامه ناموفق بود:\n\n{error}\n\nلطفاً برای جزئیات، فایل گزارش را بررسی کنید."
+        },
+        "info": {
+            "saved": "تصویر با موفقیت ذخیره شد!",
+            "comparison_saved": "مقایسه ذخیره شد!",
+            "preset_saved": "پیش‌تنظیم '{name}' ذخیره شد!",
+            "update_ready": "یک به‌روزرسانی جدید در پس‌زمینه دانلود شد.\nهر زمان بخواهید می‌توانید با دکمه نوار وضعیت برنامه را دوباره اجرا کنید.",
+            "donate": "حمایت از توسعه‌دهنده",
+            "donate_text": "از اینکه به حمایت از این پروژه فکر می‌کنید سپاسگزاریم!\nروش حمایت دلخواه خود را انتخاب کنید:",
+            "about": "DotScramble\nنسخه {version}\n\nحفاظت از حریم خصوصی در عصر دیجیتال\n\nحمایت از توسعه‌دهنده:\n• PayPal: https://paypal.me/freerave1\n• Buy Me a Coffee: https://buymeacoffee.com/freerave\n• Ko-fi: https://ko-fi.com/freerave\n\nساخته‌شده با ❤️ توسط FreeRave",
+            "shortcuts": "میان‌برهای صفحه‌کلید",
+            "update_check": "در حال بررسی به‌روزرسانی...",
+            "update_available": "به‌روزرسانی در دسترس است: {version}\nدانلود و نصب شود؟",
+            "dev_update_available": "نسخه جدیدی ({version}) در دسترس است!\n\nتوجه: به‌روزرسانی خودکار در حالت توسعه غیرفعال است. لطفاً آخرین تغییرات را pull کنید یا نسخه را از GitHub دانلود کنید.",
+            "no_updates": "شما از آخرین نسخه استفاده می‌کنید",
+            "update_failed": "بررسی به‌روزرسانی ناموفق بود: {error}",
+            "update_downloading": "در حال دانلود به‌روزرسانی در پس‌زمینه...",
+            "update_complete": "به‌روزرسانی با موفقیت دانلود شد!",
+            "restart_required": "برنامه برای اعمال به‌روزرسانی بسته می‌شود. ادامه می‌دهید؟",
+            "update_manual": "نسخه {version} در دسترس است، اما این نسخه از DotScramble نمی‌تواند خودش را به‌طور خودکار به‌روز کند. صفحه دانلود باز شود؟",
+            "update_installing": "در حال نصب به‌روزرسانی...",
+            "update_install_failed": "نصب به‌روزرسانی ناموفق بود: {error}"
+        },
+        "warning": {
+            "clear_history": "آیا مطمئنید که می‌خواهید تاریخچه فایل‌های اخیر را پاک کنید؟",
+            "unsaved_changes": "تغییرات ذخیره‌نشده دارید. ادامه می‌دهید؟",
+            "large_image": "تصویر بسیار بزرگ است ({width}x{height}). پردازش ممکن است کند باشد.",
+            "unsupported_format": "قالب فایل ممکن است کاملاً پشتیبانی نشود. برخی ویژگی‌ها ممکن است درست کار نکنند."
+        },
+        "confirm": {
+            "exit": "قبل از خروج تغییرات ذخیره شوند؟",
+            "restart": "برنامه برای اعمال به‌روزرسانی بسته می‌شود. ادامه می‌دهید؟"
+        }
+    },
+    "presets": {
+        "save": "ذخیره پیش‌تنظیم",
+        "save_prompt": "نام پیش‌تنظیم را وارد کنید:",
+        "load": "بارگذاری پیش‌تنظیم",
+        "manage": "مدیریت پیش‌تنظیم‌ها",
+        "no_presets": "هیچ پیش‌تنظیمی وجود ندارد",
+        "light_privacy": "حریم خصوصی سبک",
+        "medium_privacy": "حریم خصوصی متوسط",
+        "maximum_privacy": "حداکثر حریم خصوصی",
+        "artistic_blur": "محوسازی هنری",
+        "license_plate_blur": "محوسازی پلاک خودرو",
+        "text_redaction": "پنهان‌سازی متن"
+    },
+    "batch": {
+        "title": "پردازش دسته‌ای",
+        "select_folder": "انتخاب پوشه ورودی",
+        "select_output": "انتخاب پوشه خروجی",
+        "start": "شروع پردازش",
+        "stop": "توقف پردازش",
+        "progress": "{current} از {count} فایل پردازش شد",
+        "complete": "پردازش دسته‌ای کامل شد!",
+        "error": "پردازش دسته‌ای ناموفق بود: {error}",
+        "no_files": "در پوشه انتخاب‌شده هیچ فایل تصویری پیدا نشد",
+        "settings_saved": "تنظیمات دسته‌ای ذخیره شد!",
+        "window_title": "📦 پردازش دسته‌ای — DotScramble",
+        "header": "📦 پردازش دسته‌ای تصاویر",
+        "files_group": "📁 فایل‌های انتخاب‌شده",
+        "add_files": "➕ افزودن فایل",
+        "add_folder": "📂 افزودن پوشه",
+        "remove": "➖ حذف انتخاب‌شده‌ها",
+        "clear_all": "🗑️ پاک کردن همه",
+        "files_count": "فایل‌ها: {count}",
+        "detect_group": "🎯 حالت تشخیص",
+        "effect_group": "🎨 نوع افکت",
+        "progress_group": "📊 پیشرفت",
+        "ready": "آماده پردازش",
+        "processed": "پردازش‌شده: {current}/{total}",
+        "failed": "ناموفق: {count}",
+        "time": "زمان: {seconds} ثانیه",
+        "stop_btn": "⏹️ توقف",
+        "close": "بستن",
+        "free_limit_title": "محدودیت نسخه رایگان",
+        "free_limit_msg": "نسخه رایگان به {count} تصویر در هر دسته محدود است.",
+        "free_limit_removed": "{count} فایل حذف شد.",
+        "free_limit_upgrade": "برای پردازش نامحدود تصاویر به Max ارتقا دهید.",
+        "select_images": "انتخاب تصاویر",
+        "image_filter": "تصاویر",
+        "added": "{count} فایل اضافه شد",
+        "added_from_folder": "{count} فایل از پوشه اضافه شد",
+        "info_title": "اطلاعات",
+        "select_to_remove": "لطفاً فایل‌هایی را که می‌خواهید حذف شوند انتخاب کنید",
+        "removed": "{count} فایل حذف شد",
+        "confirm_title": "تأیید",
+        "confirm_clear": "همه فایل‌ها از فهرست پاک شوند؟",
+        "cleared": "همه فایل‌ها پاک شد",
+        "warning_title": "هشدار",
+        "no_selected": "هیچ فایلی انتخاب نشده است!",
+        "invalid_title": "فایل‌های نامعتبر",
+        "invalid_found": "{count} فایل نامعتبر پیدا شد:",
+        "invalid_more": "... و {count} مورد دیگر",
+        "invalid_process": "{count} فایل معتبر پردازش شود؟",
+        "stop_confirm": "پردازش متوقف شود؟",
+        "stopped": "پردازش توسط کاربر متوقف شد",
+        "processing_file": "در حال پردازش: {filename}",
+        "complete_title": "کامل شد",
+        "complete_summary": "✅ موفق: {success}\n❌ ناموفق: {failed}\n📊 مجموع: {total}",
+        "done": "پردازش کامل شد!",
+        "close_confirm": "پردازش در جریان است. با این حال بسته شود؟"
+    },
+    "themes": {
+        "midnight": "🌑 نیمه‌شب تیره",
+        "ocean": "🌊 آبی اقیانوسی",
+        "cyberpunk": "🤖 سایبرپانک",
+        "dracula": "🧛 دراکولا",
+        "forest": "🌲 جنگل",
+        "light": "☀️ حالت روشن",
+        "nord": "❄️ Nord",
+        "monokai": "🔥 Monokai",
+        "solarized_dark": "🌗 Solarized تیره",
+        "solarized_light": "☀️ Solarized روشن",
+        "tokyo_night": "🗼 شب توکیو",
+        "gruvbox_dark": "🍂 Gruvbox تیره",
+        "one_dark": "⚫ One Dark",
+        "material": "🎨 Material",
+        "catppuccin_mocha": "☕ Catppuccin Mocha",
+        "rosepine": "🌹 Rosé Pine"
+    },
+    "donate": {
+        "paypal": "💳 PayPal",
+        "buy_coffee": "☕ Buy Me a Coffee",
+        "kofi": "🎨 Ko-fi",
+        "github": "⭐ GitHub Sponsors",
+        "url_error": "مرورگر باز نشد. لطفاً به این نشانی بروید:\n{url}"
+    },
+    "shortcuts": {
+        "load": "Ctrl+O: بارگذاری تصویر",
+        "save": "Ctrl+S: ذخیره نتیجه",
+        "save_as": "Ctrl+Shift+S: ذخیره با نام دیگر",
+        "undo": "Ctrl+Z: واگرد",
+        "redo": "Ctrl+Y: انجام دوباره",
+        "process": "Ctrl+P: اعمال افکت",
+        "clear": "Ctrl+D: پاک کردن انتخاب‌ها",
+        "batch": "Ctrl+B: پردازش دسته‌ای",
+        "quit": "Ctrl+Q: خروج",
+        "export": "Ctrl+E: خروجی گرفتن",
+        "preferences": "Ctrl+, : ترجیحات"
+    },
+    "languages": {
+        "english": "انگلیسی (English)",
+        "arabic": "عربی (العربية)"
+    },
+    "image_picker": {
+        "title": "انتخاب تصویر",
+        "search_placeholder": "🔍  فیلتر فایل‌ها…",
+        "quick_access": "دسترسی سریع",
+        "cancel": "لغو",
+        "open": "باز کردن",
+        "empty_folder": "در این پوشه هیچ تصویری پیدا نشد",
+        "bookmarks": {
+            "home": "خانه",
+            "pictures": "تصاویر",
+            "downloads": "دانلودها",
+            "desktop": "دسکتاپ",
+            "documents": "اسناد",
+            "music": "موسیقی",
+            "volumes": "درایوها",
+            "root": "ریشه"
+        },
+        "loading": "در حال بارگذاری…",
+        "no_matches": "هیچ فایل مطابقی پیدا نشد"
+    },
+    "metadata": {
+        "fields": {
+            "gps": "📍 موقعیت مکانی (GPS)",
+            "make": "📷 سازنده دوربین",
+            "model": "📷 مدل دوربین",
+            "software": "💻 نرم‌افزار",
+            "datetime": "🕐 تاریخ / زمان",
+            "copyright": "©️  حق نشر",
+            "exposure": "🔆 داده‌های نوردهی"
+        },
+        "actions": {
+            "keep": "✅ حفظ",
+            "strip": "🗑 حذف",
+            "spoof": "🎲 جعل",
+            "custom": "✏️ سفارشی"
+        },
+        "cancel": "لغو",
+        "customizer": {
+            "window_title": "DotScramble — کنترل سفارشی فراداده",
+            "title": "🛡️  کنترل سفارشی فراداده",
+            "plan": "طرح Max",
+            "preset": "پیش‌تنظیم:",
+            "preset_placeholder": "یک پیش‌تنظیم انتخاب کنید...",
+            "save_as": "💾 ذخیره با نام...",
+            "delete": "🗑 حذف",
+            "spoof_all": "🎲 جعل همه",
+            "strip_all": "🗑 حذف همه",
+            "apply": "✅  اعمال",
+            "lat": "عرض جغرافیایی:",
+            "lon": "طول جغرافیایی:",
+            "lat_placeholder": "عرض جغرافیایی",
+            "lon_placeholder": "طول جغرافیایی",
+            "custom_value": "مقدار سفارشی:",
+            "save_title": "ذخیره پیش‌تنظیم",
+            "save_prompt": "یک نام برای این پیش‌تنظیم وارد کنید:",
+            "error_title": "خطا",
+            "factory_error": "پیش‌تنظیم‌های پیش‌فرض قابل بازنویسی نیستند.",
+            "saved_title": "ذخیره شد",
+            "saved_msg": "پیش‌تنظیم '{name}' با موفقیت ذخیره شد.",
+            "delete_title": "حذف پیش‌تنظیم",
+            "delete_confirm": "آیا مطمئنید که می‌خواهید '{name}' را حذف کنید؟"
+        },
+        "report": {
+            "window_title": "DotScramble — تأیید ذخیره",
+            "title": "📋  خلاصه فراداده",
+            "strip_title": "🗑  همه فراداده‌ها حذف می‌شوند",
+            "strip_desc": "موقعیت مکانی، مدل دوربین، زمان‌ها و همه داده‌های EXIF دیگر برای همیشه حذف می‌شوند.",
+            "keep_title": "✅  فراداده اصلی حفظ می‌شود",
+            "keep_desc": "داده‌های EXIF اصلی تصویر دقیقاً همان‌طور که بود بازگردانده می‌شود.",
+            "spoof_title": "🎭  فراداده جعل می‌شود  ({profile})",
+            "spoof_default": "🎲 جعل",
+            "field_actions": "عملکرد هر فیلد:",
+            "strip_list_title": "داده‌های زیر برای همیشه حذف می‌شوند:",
+            "strip_items": {
+                "gps": "📍 مختصات جغرافیایی",
+                "camera": "📷 سازنده و مدل دوربین",
+                "software": "💻 شناسه نرم‌افزار",
+                "timestamps": "🕐 تاریخ و زمان‌ها",
+                "copyright": "©️  حق نشر",
+                "exposure": "🔆 داده‌های نوردهی",
+                "fingerprint": "🔒 اثر انگشت دستگاه"
+            },
+            "action_desc": {
+                "keep": "بدون تغییر حفظ می‌شود",
+                "strip": "حذف می‌شود",
+                "spoof": "با داده جعلی جایگزین می‌شود"
+            },
+            "custom_gps": "موقعیت سفارشی: {lat}, {lon}",
+            "custom_value": "مقدار سفارشی: '{value}'",
+            "custom_empty": "سفارشی (خالی ← جعل)",
+            "save": "💾  ذخیره",
+            "profiles": {
+                "ghost": {
+                    "name": "👻 پروفایل شبح",
+                    "desc": "نوکیا 3310 · موقعیت در قطب جنوب · تاریخ سال ۲۰۰۰"
+                },
+                "troll": {
+                    "name": "🌊 پروفایل شیطون",
+                    "desc": "دوربین قدیمی تصادفی · موقعیت تصادفی در اقیانوس · تاریخ نسبتاً جدید"
+                },
+                "artist": {
+                    "name": "🎨 پروفایل هنرمند",
+                    "desc": "موقعیت مکانی و دوربین را پنهان می‌کند · فیلد حق نشر را نگه می‌دارد"
+                },
+                "custom": {
+                    "name": "⚙️ پروفایل سفارشی",
+                    "desc": "قوانین هر فیلد (جزئیات در پایین)"
+                }
+            }
+        },
+        "presets": {
+            "strip_all": "🔇 حذف همه‌چیز",
+            "strip_gps": "📍 فقط حذف موقعیت مکانی",
+            "strip_camera_gps": "📷 حذف دوربین + موقعیت",
+            "photographer": "🎨 عکاس (حفظ ©)",
+            "spoof_all": "🎲 جعل همه‌چیز"
+        }
+    }
+}

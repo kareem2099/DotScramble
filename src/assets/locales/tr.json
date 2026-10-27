@@ -1,0 +1,551 @@
+{
+    "app": {
+        "title": "DotScramble",
+        "version": "Sürüm {version}",
+        "author": "FreeRave tarafından ❤️ ile yapıldı"
+    },
+    "menu": {
+        "file": "Dosya",
+        "edit": "Düzen",
+        "presets": "Hazır Ayarlar",
+        "view": "Görünüm",
+        "help": "Yardım",
+        "file_items": {
+            "open_image": "Görsel Aç",
+            "open_recent": "Son Kullanılanlar",
+            "no_recent": "Son kullanılan dosya yok",
+            "clear_history": "Geçmişi Temizle",
+            "save_result": "Sonucu Kaydet",
+            "save_comparison": "Karşılaştırma Olarak Kaydet",
+            "open_exports": "Dışa Aktarma Klasörünü Aç",
+            "batch_process": "Toplu İşlem",
+            "exit": "Çıkış"
+        },
+        "edit_items": {
+            "undo": "Geri Al",
+            "redo": "Yinele",
+            "clear_selections": "Seçimleri Temizle",
+            "reset_image": "Görseli Sıfırla"
+        },
+        "presets_items": {
+            "save_settings": "Geçerli Ayarları Kaydet",
+            "load_preset": "Hazır Ayar Yükle",
+            "manage_presets": "Hazır Ayarları Yönet"
+        },
+        "view_items": {
+            "themes": "🎨 Temalar",
+            "language": "🌐 Dil"
+        },
+        "help_items": {
+            "check_updates": "Güncellemeleri Denetle",
+            "open_app_data": "Uygulama Veri Klasörünü Aç",
+            "donate": "Bağış Yap",
+            "about": "Hakkında",
+            "shortcuts": "Kısayollar"
+        }
+    },
+    "ui": {
+        "header": {
+            "title": "DotScramble",
+            "preview": "🔴 Gerçek Zamanlı Önizleme"
+        },
+        "tier": {
+            "pro_badge": "⭐ PRO",
+            "free_badge": "🔓 ÜCRETSİZ",
+            "pro_desc": "Yapay zekâ destekli algılama etkin",
+            "free_desc": "Haar Cascade · Yapay zekâ için yükseltin",
+            "upgrade_btn": "⭐ Pro'ya Yükselt",
+            "upgrade_menu": "⭐️ Pro'ya Yükselt",
+            "pro_activated_menu": "⭐️ PRO Etkin"
+        },
+        "buttons": {
+            "load": "📁 Görsel Yükle",
+            "apply": "✨ Efekti Uygula",
+            "reset": "🗑️ Seçimleri Temizle"
+        },
+        "controls": {
+            "title": "⚙️ Kontroller",
+            "load_image": "📁 Görsel Yükle",
+            "effect_type": "🎨 Efekt Türü:",
+            "detection_mode": "🎯 Algılama Modu:",
+            "parameters": "🔧 Efekt Parametreleri:",
+            "blur_strength": "Bulanıklık Gücü",
+            "pixel_size": "Piksel Blok Boyutu",
+            "opacity": "Efekt Opaklığı (%)",
+            "target_text": "Bulanıklaştırılacak kelimeyi yazın:",
+            "apply_effect": "✨ Efekti Uygula",
+            "undo": "↶ Geri Al",
+            "redo": "↷ Yinele",
+            "clear_selections": "🗑️ Seçimleri Temizle",
+            "save_result": "💾 Sonucu Kaydet",
+            "batch_process": "📦 Toplu İşlem",
+            "tip": "💡 İpucu: Anında sonuç için\ngerçek zamanlı önizlemeyi açın!"
+        },
+        "canvas": {
+            "title": "🖼️ Görsel Tuvali",
+            "views": {
+                "original": "Orijinal",
+                "processed": "İşlenmiş",
+                "compare": "Karşılaştır"
+            },
+            "placeholder_title": "Görseli Buraya Sürükleyip Bırakın",
+            "placeholder_subtitle": "veya görsellerinize göz atmak için Ctrl+O'ya basın",
+            "before": "ÖNCE",
+            "after": "SONRA"
+        },
+        "status": {
+            "ready": "Görsel yüklemeye hazır...",
+            "loaded": "Yüklendi: {filename}",
+            "processed": "{count} bölge işlendi",
+            "saved": "Kaydedildi: {filename}",
+            "preview_enabled": "Gerçek zamanlı önizleme açık",
+            "preview_disabled": "Gerçek zamanlı önizleme kapalı",
+            "region_added": "Bölge eklendi (toplam {count})",
+            "cleared": "Tüm seçimler temizlendi",
+            "reset": "Görsel orijinal haline döndürüldü",
+            "failed_load": "Görsel yüklenemedi",
+            "detected": "{count} bölgeden {shown} tanesi gizlenecek — atlamak için birine tıklayın",
+            "detected_none": "Bu algılama modunda hiçbir şey bulunamadı.",
+            "detect_unavailable": "Algılama önizlemesi yalnızca otomatik modlarda çalışır (Manuel veya Tüm Görsel değil).",
+            "compare_on": "Karşılaştırma: önce / sonrayı görmek için ayırıcıyı sürükleyin",
+            "applied": "Efekt uygulandı.",
+            "undo_done": "Geri alındı",
+            "redo_done": "Yinelendi",
+            "activating": "Etkinleştiriliyor…",
+            "activated": "DotScramble Pro etkinleştirildi!",
+            "activation_failed": "Etkinleştirme başarısız.",
+            "restart_to_update": "Güncellemek için yeniden başlat",
+            "ai_cancelled": "Yapay zekâdan kaçınma iptal edildi.",
+            "ai_success": "✅ Yapay zekâdan kaçınma tamamlandı — yüz, yapay zekâ algılayıcılarından gizlendi",
+            "ai_partial": "⚠️ Kısmi yapay zekâdan kaçınma — kaçınma oranı %{percent}",
+            "ai_failed": "❌ Yapay zekâdan kaçınma başarısız — yüz bulanıklaştırıldı ancak yapay zekâ algılamasına karşı DOĞRULANMADI",
+            "detection_unavailable": "⚠️ Algılama kullanılamıyor — hiçbir şey gizlenmedi"
+        },
+        "info": {
+            "image_info": "{width}x{height} | {size_kb} KB"
+        },
+        "toolbar": {
+            "open": "Aç",
+            "open_tip": "Görsel aç (Ctrl+O)",
+            "save": "Kaydet",
+            "save_tip": "Sonucu kaydet (Ctrl+S)",
+            "undo_tip": "Geri al (Ctrl+Z)",
+            "redo_tip": "Yinele (Ctrl+Y)",
+            "detect": "Algıla",
+            "detect_tip": "Nelerin gizleneceğini önizleyin — atlamak için bir bölgeye tıklayın (Ctrl+F)",
+            "compare": "Karşılaştır",
+            "compare_tip": "Önce / sonra bölünmüş görünüm — ayırıcıyı sürükleyin (Ctrl+Shift+C)",
+            "zoom_in_tip": "Yakınlaştır (Ctrl++)",
+            "zoom_out_tip": "Uzaklaştır (Ctrl+-)",
+            "zoom_label_tip": "Sığdır ve %100 arasında geçiş yapmak için tıklayın",
+            "fit_tip": "Pencereye sığdır (Ctrl+0)",
+            "live": "Canlı önizleme",
+            "live_tip": "Bir ayar her değiştiğinde efekti otomatik olarak yeniden uygula",
+            "upgrade": "Yükselt",
+            "upgrade_tip": "Yapay zekâ algılamasının, yapay zekâdan kaçınmanın ve meta veri araçlarının kilidini açın",
+            "pro": "PRO"
+        },
+        "sidebar": {
+            "detect_title": "Neyi gizlemeli",
+            "effect_title": "Nasıl gizlemeli",
+            "settings_title": "İnce ayar",
+            "metadata_title": "Kaydederken meta veri",
+            "ai_heading": "Yapay Zekâdan Kaçınma",
+            "ai_hybrid": "Hibrit — bulanıklık + yapay zekâdan gizle",
+            "ai_hybrid_tip": "Yüzü yapay zekâ algılayıcılarından gizler ve insanlar için bulanıklaştırır (yalnızca yüzler, ~30–90 sn)",
+            "ai_invisible": "Görünmez — yalnızca yapay zekâdan gizle",
+            "ai_invisible_tip": "Yüzü yapay zekâ algılayıcılarından gizler, insanlar için net kalır (yalnızca yüzler, ~30–90 sn)",
+            "free_hint": "Temel algılama. Pro, yapay zekâ hassasiyeti ekler.",
+            "pro_hint": "Yapay zekâ destekli algılama etkin.",
+            "ai_face_only": "Yapay zekâdan kaçınma yalnızca yüzlerde çalışır.",
+            "word_placeholder": "Bulanıklaştırılacak kelime, ör. bir isim",
+            "manual_hint": "Gizlenecek bölgeleri çizmek için görselin üzerinde sürükleyin.",
+            "apply": "Efekti uygula",
+            "apply_tip": "Efekti uygula (Ctrl+Enter)",
+            "clear": "Seçimleri temizle",
+            "batch": "Toplu işlem",
+            "locked_title": "Pro özelliği",
+            "locked_msg": "“{name}” DotScramble Pro'da kullanılabilir.\n\nŞimdi yükseltilsin mi?"
+        },
+        "metadata": {
+            "keep": "Koru",
+            "strip": "Sil",
+            "spoof": "Sahte",
+            "keep_desc": "Orijinal meta veriler olduğu gibi korunur.",
+            "strip_desc": "GPS, kamera ve cihaz etiketlerini kalıcı olarak siler.",
+            "spoof_desc": "Gerçek meta verileri inandırıcı sahte verilerle değiştirir.",
+            "profiles": {
+                "ghost": "Hayalet — Antarktika'da Nokia, 2000 yılı",
+                "troll": "Trol — rastgele okyanus, eski kamera",
+                "artist": "Sanatçı — GPS'i gizler, telif hakkını korur",
+                "custom": "Özel — alan bazında kontrol"
+            },
+            "editor": "Meta veri düzenleyicisini aç…",
+            "locked": "Pro'da kullanılabilir — yükselt",
+            "custom_saved": "Özel meta veri kuralları kaydedildi."
+        },
+        "ai": {
+            "progress_title": "Yapay Zekâdan Kaçınma — İşleniyor",
+            "progress_start": "Yapay zekâdan kaçınma hesaplanıyor…\nBu işlem 30–90 saniye sürebilir.",
+            "progress_step": "Yüz {face}/{faces} — yineleme {iter}/{iters} · puan {score}",
+            "no_oval": "Yapay zekâdan kaçınma yalnızca yüz ovali bölgelerinde çalışır.\nYüz algılanmadı — Yüz algılama modunu deneyin.",
+            "cancel": "İptal"
+        },
+        "faces": {
+            "title": "Yapay Zekâdan Kaçınma — Yüzleri Seç",
+            "header": "<b>{count} yüz algılandı.</b> Hangilerinin yapay zekâdan kaçınma ile korunacağını seçin.",
+            "face_n": "Yüz {n}",
+            "select": "Seç",
+            "select_all": "Tümünü seç",
+            "deselect_all": "Seçimi kaldır",
+            "note": "Yapay zekâdan kaçınmanın şiddeti <b>Opaklık</b> kaydırıcısıyla ayarlanır.",
+            "apply": "Yapay Zekâdan Kaçınmayı Uygula"
+        },
+        "activation": {
+            "title": "DotScramble Pro Etkinleştiriliyor",
+            "waiting": "Kimlik doğrulama bekleniyor…",
+            "desc": "Lütfen etkinleştirmeyi tarayıcınızda tamamlayın.\nBu pencere otomatik olarak kapanacak.",
+            "manual_btn": "Anahtarı elle gir",
+            "manual_title": "Pro'yu Etkinleştir",
+            "manual_prompt": "DotScramble Pro'nun kilidini açmak için DotSuite API anahtarınızı girin:",
+            "failed_title": "Etkinleştirme Başarısız"
+        },
+        "model": {
+            "title": "Yapay Zekâ Modeli Gerekli",
+            "prompt": "Bu Pro özelliği bir yapay zekâ model dosyasına (~8 MB) ihtiyaç duyar.\n\nŞimdi indirilsin mi?",
+            "downloading_title": "Yapay Zekâ Modeli İndiriliyor",
+            "downloading": "face_landmarker.task indiriliyor…",
+            "success": "Yapay zekâ modeli indirildi. Pro özellikleri artık etkin.",
+            "failed_title": "İndirme Başarısız",
+            "failed": "Yapay zekâ modeli indirilemedi. Lütfen internet bağlantınızı kontrol edin."
+        },
+        "messages": {
+            "title_error": "Hata",
+            "title_info": "Bilgi",
+            "title_success": "Başarılı",
+            "file_not_found": "Dosya bulunamadı!",
+            "unsupported_title": "Desteklenmeyen Dosya",
+            "unsupported_drop": "'{ext}' dosya türü desteklenmiyor.\n\nDesteklenen biçimler: JPG, PNG, BMP, TIFF, WebP, GIF",
+            "display_error": "Görsel gösterilemedi: {error}",
+            "open_folder_error": "Klasör açılamadı: {error}",
+            "save_dialog_title": "İşlenmiş Görseli Kaydet",
+            "comparison_dialog_title": "Karşılaştırma Görselini Kaydet",
+            "select_preset_prompt": "Yüklenecek hazır ayarı seçin:",
+            "preset_loaded": "'{name}' hazır ayarı yüklendi!",
+            "delete_preset_title": "Hazır Ayarı Sil",
+            "delete_preset_prompt": "Silinecek hazır ayarı seçin:",
+            "preset_deleted": "'{name}' hazır ayarı silindi!",
+            "close": "Kapat",
+            "update_ready_title": "Güncelleme Hazır",
+            "restart_title": "Uygulamayı Yeniden Başlat",
+            "clear_history_title": "Geçmişi Temizle",
+            "zoom": "Yakınlaştır / uzaklaştır",
+            "zoom_fit_actual": "Pencereye sığdır / gerçek boyut",
+            "cascades_missing": "Temel algılama çalışamıyor: OpenCV cascade dosyaları eksik ({files}).\n\nHiçbir şey gizlenmedi. Bağımlılıkları şu komutla yeniden kurun:\npip install -r requirements.txt"
+        },
+        "version_gate": {
+            "title": "Güncelleme gerekli",
+            "message": "DotScramble {current} artık desteklenmiyor.\n\nUygulamayı kullanmaya devam etmek için lütfen en son sürümü (en az {minimum}) indirin. Ayarlarınız korunur.",
+            "download": "En son sürümü indir",
+            "quit": "Çık"
+        }
+    },
+    "effects": {
+        "blur": "🌫️ Bulanıklık",
+        "pixelation": "🔲 Pikselleştirme",
+        "black_bar": "⬛ Siyah Bant",
+        "gradient": "🎭 Gradyan",
+        "mosaic": "🔳 Mozaik",
+        "glass": "❄️ Buzlu Cam",
+        "oil_paint": "🎨 Yağlı Boya",
+        "ai_evasion": "🛡️ Yapay Zekâdan Kaçınma - Hibrit (PRO)",
+        "ai_evasion_invisible": "🛡️ Yapay Zekâdan Kaçınma - Görünmez (PRO)"
+    },
+    "detection": {
+        "face": "🎭 Yüz",
+        "eye": "👁️ Gözler",
+        "body": "🧍 Tüm Vücut",
+        "license_plate": "🚗 Plaka",
+        "text": "📝 Metin",
+        "target_text": "✍️ Belirli Metin",
+        "manual": "✏️ Manuel",
+        "full": "🌍 Tüm Görsel"
+    },
+    "dialogs": {
+        "error": {
+            "loading": "Hata",
+            "loading_image": "Görsel yüklenemedi:\n{error}",
+            "processing": "İşlem başarısız: {error}",
+            "saving": "Görsel kaydedilemedi: {error}",
+            "no_image": "Yüklü görsel yok",
+            "no_selections": "Önce görselin üzerine bölgeler çizin!",
+            "no_word": "Lütfen bulanıklaştırmak istediğiniz kelimeyi yazın.",
+            "word_not_found": "'{word}' kelimesi bu görselde bulunamadı.",
+            "image_empty": "Yüklenen görsel boş!",
+            "image_corrupted": "Görsel yüklenemedi!\n\nDosya: {filename}\n\nOlası nedenler:\n• Dosya bozuk\n• Desteklenmeyen biçim\n• Dosya yolu özel karakterler içeriyor",
+            "dependencies": "Gerekli bağımlılıklar eksik:\n\n{deps}\n\nLütfen şu komutla kurun:\npip install {deps}",
+            "import": "İçe aktarma hatası: {error}\n\nLütfen tüm modüllerin doğru yerde olduğundan emin olun:\n- gui/main_window.py\n- gui/batch_window.py\n- core/image_processor.py\n- core/batch_processor.py\n- core/utils.py\n- config.py",
+            "fatal": "Uygulama başlatılamadı:\n\n{error}\n\nAyrıntılar için lütfen günlük dosyasına bakın."
+        },
+        "info": {
+            "saved": "Görsel başarıyla kaydedildi!",
+            "comparison_saved": "Karşılaştırma kaydedildi!",
+            "preset_saved": "'{name}' hazır ayarı kaydedildi!",
+            "update_ready": "Arka planda yeni bir güncelleme indirildi.\nDurum çubuğundaki düğmeyle istediğiniz zaman yeniden başlatabilirsiniz.",
+            "donate": "Geliştiriciyi Destekle",
+            "donate_text": "Bu projeyi desteklemeyi düşündüğünüz için teşekkürler!\nTercih ettiğiniz bağış platformunu seçin:",
+            "about": "DotScramble\nSürüm {version}\n\nDijital Çağ için Gizlilik Koruması\n\nGeliştiriciyi destekleyin:\n• PayPal: https://paypal.me/freerave1\n• Buy Me a Coffee: https://buymeacoffee.com/freerave\n• Ko-fi: https://ko-fi.com/freerave\n\nFreeRave tarafından ❤️ ile yapıldı",
+            "shortcuts": "Klavye Kısayolları",
+            "update_check": "Güncellemeler denetleniyor...",
+            "update_available": "Güncelleme mevcut: {version}\nİndirilip kurulsun mu?",
+            "dev_update_available": "Yeni bir sürüm ({version}) mevcut!\n\nNot: Geliştirme modunda otomatik güncelleme kapalıdır. Lütfen son değişiklikleri pull edin veya sürümü GitHub'dan indirin.",
+            "no_updates": "En son sürümü kullanıyorsunuz",
+            "update_failed": "Güncelleme denetimi başarısız: {error}",
+            "update_downloading": "Güncelleme arka planda indiriliyor...",
+            "update_complete": "Güncelleme başarıyla indirildi!",
+            "restart_required": "Güncellemeyi uygulamak için uygulama kapanacak. Devam edilsin mi?",
+            "update_manual": "{version} sürümü mevcut, ancak bu DotScramble kopyası kendini otomatik olarak güncelleyemiyor. İndirme sayfası açılsın mı?",
+            "update_installing": "Güncelleme kuruluyor...",
+            "update_install_failed": "Güncelleme kurulamadı: {error}"
+        },
+        "warning": {
+            "clear_history": "Son kullanılan dosyalar geçmişini temizlemek istediğinizden emin misiniz?",
+            "unsaved_changes": "Kaydedilmemiş değişiklikleriniz var. Devam edilsin mi?",
+            "large_image": "Görsel çok büyük ({width}x{height}). İşlem yavaş olabilir.",
+            "unsupported_format": "Dosya biçimi tam olarak desteklenmiyor olabilir. Bazı özellikler düzgün çalışmayabilir."
+        },
+        "confirm": {
+            "exit": "Çıkmadan önce değişiklikler kaydedilsin mi?",
+            "restart": "Güncellemeyi uygulamak için uygulama kapanacak. Devam edilsin mi?"
+        }
+    },
+    "presets": {
+        "save": "Hazır Ayarı Kaydet",
+        "save_prompt": "Hazır ayar adını girin:",
+        "load": "Hazır Ayar Yükle",
+        "manage": "Hazır Ayarları Yönet",
+        "no_presets": "Kayıtlı hazır ayar yok",
+        "light_privacy": "Hafif Gizlilik",
+        "medium_privacy": "Orta Gizlilik",
+        "maximum_privacy": "Maksimum Gizlilik",
+        "artistic_blur": "Sanatsal Bulanıklık",
+        "license_plate_blur": "Plaka Bulanıklaştırma",
+        "text_redaction": "Metin Karartma"
+    },
+    "batch": {
+        "title": "Toplu İşlem",
+        "select_folder": "Giriş Klasörünü Seç",
+        "select_output": "Çıkış Klasörünü Seç",
+        "start": "İşlemi Başlat",
+        "stop": "İşlemi Durdur",
+        "progress": "{count} dosyadan {current} tanesi işlendi",
+        "complete": "Toplu işlem tamamlandı!",
+        "error": "Toplu işlem başarısız: {error}",
+        "no_files": "Seçilen klasörde görsel dosyası bulunamadı",
+        "settings_saved": "Toplu işlem ayarları kaydedildi!",
+        "window_title": "📦 Toplu İşlem — DotScramble",
+        "header": "📦 Toplu Görsel İşleme",
+        "files_group": "📁 Seçilen Dosyalar",
+        "add_files": "➕ Dosya Ekle",
+        "add_folder": "📂 Klasör Ekle",
+        "remove": "➖ Seçilenleri Kaldır",
+        "clear_all": "🗑️ Tümünü Temizle",
+        "files_count": "Dosya: {count}",
+        "detect_group": "🎯 Algılama Modu",
+        "effect_group": "🎨 Efekt Türü",
+        "progress_group": "📊 İlerleme",
+        "ready": "İşlemeye hazır",
+        "processed": "İşlenen: {current}/{total}",
+        "failed": "Başarısız: {count}",
+        "time": "Süre: {seconds} sn",
+        "stop_btn": "⏹️ Durdur",
+        "close": "Kapat",
+        "free_limit_title": "Ücretsiz Plan Sınırı",
+        "free_limit_msg": "Ücretsiz plan, toplu işlem başına {count} görselle sınırlıdır.",
+        "free_limit_removed": "{count} dosya kaldırıldı.",
+        "free_limit_upgrade": "Sınırsız görsel işlemek için Max'e yükseltin.",
+        "select_images": "Görselleri Seç",
+        "image_filter": "Görseller",
+        "added": "{count} dosya eklendi",
+        "added_from_folder": "Klasörden {count} dosya eklendi",
+        "info_title": "Bilgi",
+        "select_to_remove": "Lütfen kaldırılacak dosyaları seçin",
+        "removed": "{count} dosya kaldırıldı",
+        "confirm_title": "Onayla",
+        "confirm_clear": "Tüm dosyalar listeden kaldırılsın mı?",
+        "cleared": "Tüm dosyalar kaldırıldı",
+        "warning_title": "Uyarı",
+        "no_selected": "Hiç dosya seçilmedi!",
+        "invalid_title": "Geçersiz Dosyalar",
+        "invalid_found": "{count} geçersiz dosya bulundu:",
+        "invalid_more": "... ve {count} tane daha",
+        "invalid_process": "{count} geçerli dosya işlensin mi?",
+        "stop_confirm": "İşlem durdurulsun mu?",
+        "stopped": "İşlem kullanıcı tarafından durduruldu",
+        "processing_file": "İşleniyor: {filename}",
+        "complete_title": "Tamamlandı",
+        "complete_summary": "✅ Başarılı: {success}\n❌ Başarısız: {failed}\n📊 Toplam: {total}",
+        "done": "İşlem tamamlandı!",
+        "close_confirm": "İşlem devam ediyor. Yine de kapatılsın mı?"
+    },
+    "themes": {
+        "midnight": "🌑 Gece Yarısı Koyu",
+        "ocean": "🌊 Okyanus Mavisi",
+        "cyberpunk": "🤖 Cyberpunk",
+        "dracula": "🧛 Drakula",
+        "forest": "🌲 Orman",
+        "light": "☀️ Açık Mod",
+        "nord": "❄️ Nord",
+        "monokai": "🔥 Monokai",
+        "solarized_dark": "🌗 Solarized Koyu",
+        "solarized_light": "☀️ Solarized Açık",
+        "tokyo_night": "🗼 Tokyo Gecesi",
+        "gruvbox_dark": "🍂 Gruvbox Koyu",
+        "one_dark": "⚫ One Dark",
+        "material": "🎨 Material",
+        "catppuccin_mocha": "☕ Catppuccin Mocha",
+        "rosepine": "🌹 Rosé Pine"
+    },
+    "donate": {
+        "paypal": "💳 PayPal",
+        "buy_coffee": "☕ Buy Me a Coffee",
+        "kofi": "🎨 Ko-fi",
+        "github": "⭐ GitHub Sponsors",
+        "url_error": "Tarayıcı açılamadı. Lütfen şu adresi ziyaret edin:\n{url}"
+    },
+    "shortcuts": {
+        "load": "Ctrl+O: Görsel Yükle",
+        "save": "Ctrl+S: Sonucu Kaydet",
+        "save_as": "Ctrl+Shift+S: Farklı Kaydet",
+        "undo": "Ctrl+Z: Geri Al",
+        "redo": "Ctrl+Y: Yinele",
+        "process": "Ctrl+P: Efekti Uygula",
+        "clear": "Ctrl+D: Seçimleri Temizle",
+        "batch": "Ctrl+B: Toplu İşlem",
+        "quit": "Ctrl+Q: Çıkış",
+        "export": "Ctrl+E: Dışa Aktar",
+        "preferences": "Ctrl+, : Tercihler"
+    },
+    "languages": {
+        "english": "İngilizce (English)",
+        "arabic": "Arapça (العربية)"
+    },
+    "image_picker": {
+        "title": "Görsel Seç",
+        "search_placeholder": "🔍  Dosyaları filtrele…",
+        "quick_access": "HIZLI ERİŞİM",
+        "cancel": "İptal",
+        "open": "Aç",
+        "empty_folder": "Bu klasörde görsel yok",
+        "bookmarks": {
+            "home": "Ev",
+            "pictures": "Resimler",
+            "downloads": "İndirilenler",
+            "desktop": "Masaüstü",
+            "documents": "Belgeler",
+            "music": "Müzik",
+            "volumes": "Sürücüler",
+            "root": "Kök"
+        },
+        "loading": "Yükleniyor…",
+        "no_matches": "Eşleşen dosya yok"
+    },
+    "metadata": {
+        "fields": {
+            "gps": "📍 GPS Konumu",
+            "make": "📷 Kamera Markası",
+            "model": "📷 Kamera Modeli",
+            "software": "💻 Yazılım",
+            "datetime": "🕐 Tarih / Saat",
+            "copyright": "©️  Telif Hakkı",
+            "exposure": "🔆 Pozlama Verileri"
+        },
+        "actions": {
+            "keep": "✅ Koru",
+            "strip": "🗑 Sil",
+            "spoof": "🎲 Sahtele",
+            "custom": "✏️ Özel"
+        },
+        "cancel": "İptal",
+        "customizer": {
+            "window_title": "DotScramble — Özel Meta Veri Kontrolü",
+            "title": "🛡️  Özel Meta Veri Kontrolü",
+            "plan": "Max Planı",
+            "preset": "Hazır ayar:",
+            "preset_placeholder": "Bir hazır ayar seçin...",
+            "save_as": "💾 Farklı Kaydet...",
+            "delete": "🗑 Sil",
+            "spoof_all": "🎲 Tümünü Sahtele",
+            "strip_all": "🗑 Tümünü Sil",
+            "apply": "✅  Uygula",
+            "lat": "Enlem:",
+            "lon": "Boylam:",
+            "lat_placeholder": "Enlem",
+            "lon_placeholder": "Boylam",
+            "custom_value": "Özel değer:",
+            "save_title": "Hazır Ayarı Kaydet",
+            "save_prompt": "Bu hazır ayar için bir ad girin:",
+            "error_title": "Hata",
+            "factory_error": "Fabrika hazır ayarının üzerine yazılamaz.",
+            "saved_title": "Kaydedildi",
+            "saved_msg": "'{name}' hazır ayarı başarıyla kaydedildi.",
+            "delete_title": "Hazır Ayarı Sil",
+            "delete_confirm": "'{name}' silinsin mi?"
+        },
+        "report": {
+            "window_title": "DotScramble — Kaydetmeyi Onayla",
+            "title": "📋  Meta Veri Özeti",
+            "strip_title": "🗑  Tüm meta veriler SİLİNECEK",
+            "strip_desc": "GPS, kamera modeli, zaman damgaları ve diğer tüm EXIF verileri kalıcı olarak silinecek.",
+            "keep_title": "✅  Orijinal meta veriler KORUNACAK",
+            "keep_desc": "Görselin orijinal EXIF verileri tam olarak eski haliyle geri yüklenecek.",
+            "spoof_title": "🎭  Meta veriler SAHTELENECEK  ({profile})",
+            "spoof_default": "🎲 Sahtele",
+            "field_actions": "Alan bazında işlemler:",
+            "strip_list_title": "Aşağıdaki veriler kalıcı olarak silinecek:",
+            "strip_items": {
+                "gps": "📍 GPS koordinatları",
+                "camera": "📷 Kamera markası ve modeli",
+                "software": "💻 Yazılım kimliği",
+                "timestamps": "🕐 Zaman damgaları",
+                "copyright": "©️  Telif hakkı",
+                "exposure": "🔆 Pozlama verileri",
+                "fingerprint": "🔒 Cihaz parmak izi"
+            },
+            "action_desc": {
+                "keep": "Olduğu gibi korunur",
+                "strip": "Silinir",
+                "spoof": "Sahte verilerle değiştirilir"
+            },
+            "custom_gps": "Özel GPS: {lat}, {lon}",
+            "custom_value": "Özel değer: '{value}'",
+            "custom_empty": "Özel (boş → sahtele)",
+            "save": "💾  Kaydet",
+            "profiles": {
+                "ghost": {
+                    "name": "👻 Hayalet Profili",
+                    "desc": "Nokia 3310 · Antarktika GPS · 2000 yılı zaman damgası"
+                },
+                "troll": {
+                    "name": "🌊 Trol Profili",
+                    "desc": "Rastgele eski kamera · Rastgele okyanus GPS'i · Yakın bir tarih"
+                },
+                "artist": {
+                    "name": "🎨 Sanatçı Profili",
+                    "desc": "GPS'i ve kamera cihazını gizler · Telif hakkı alanını korur"
+                },
+                "custom": {
+                    "name": "⚙️ Özel Profil",
+                    "desc": "Alan bazında kurallar (ayrıntılar aşağıda)"
+                }
+            }
+        },
+        "presets": {
+            "strip_all": "🔇 Her Şeyi Sil",
+            "strip_gps": "📍 Yalnızca GPS'i Sil",
+            "strip_camera_gps": "📷 Kamera + GPS'i Sil",
+            "photographer": "🎨 Fotoğrafçı (© korunur)",
+            "spoof_all": "🎲 Her Şeyi Sahtele"
+        }
+    }
+}

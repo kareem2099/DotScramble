@@ -213,10 +213,10 @@ src/managers/license_manager.c
 # Intermediate Cython build folder
 build/
 
-# Raw license source, compilation, and security testing scripts (untracked locally)
+# Raw license source (untracked locally). setup_license.py and tests/ are tracked: the
+# workflows compile the license with the former and run the latter; neither holds a secret.
+# The source itself comes from a CI secret.
 src/managers/license_manager.py
-setup_license.py
-tests/
 
 # Secure Build Staging and Release packages
 build_staging/

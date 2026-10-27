@@ -20,13 +20,14 @@ class HistoryManager:
         self.redo_stack = []
         self.max_history = max_history
     
-    def save_state(self, image):
-        """Save current state to history"""
+    def save_state(self, image, clear_redo=True):
+        """Save current state to history (a redo keeps the remaining redo stack)"""
         if image is not None:
             self.history.append(image.copy())
             if len(self.history) > self.max_history:
                 self.history.pop(0)
-            self.redo_stack = []
+            if clear_redo:
+                self.redo_stack = []
     
     def undo(self):
         """Undo last operation"""

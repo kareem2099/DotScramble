@@ -16,6 +16,74 @@ from src.managers.database_manager import get_db_manager
 # Setup logger
 logger = logging.getLogger(__name__)
 
+
+# ── Plurals ──────────────────────────────────────────────────────────────────
+# A translation can be a dict of CLDR plural forms instead of a string:
+#     "added": {"one": "Added {count} file", "other": "Added {count} files"}
+# get(key, count=n) then picks the form for n in the current language.
+PLURAL_FORMS = ("zero", "one", "two", "few", "many", "other")
+
+
+def _plural_ar(n: int) -> str:
+    if n == 0: return "zero"
+    if n == 1: return "one"
+    if n == 2: return "two"
+    if 3 <= n % 100 <= 10: return "few"
+    if 11 <= n % 100 <= 99: return "many"
+    return "other"
+
+
+def _plural_ru(n: int) -> str:
+    if n % 10 == 1 and n % 100 != 11: return "one"
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14: return "few"
+    return "many"
+
+
+def _plural_one_other(n: int) -> str:
+    return "one" if n == 1 else "other"
+
+
+def _plural_es(n: int) -> str:
+    # CLDR: "many" for exact millions ("1 000 000 de archivos")
+    if n == 1: return "one"
+    if n != 0 and n % 1_000_000 == 0: return "many"
+    return "other"
+
+
+def _plural_fa(n: int) -> str:
+    return "one" if n in (0, 1) else "other"
+
+
+# CLDR cardinal rules for whole numbers (counts are never fractional here)
+_PLURAL_RULES = {
+    "ar": _plural_ar,
+    "ru": _plural_ru,
+    "es": _plural_es,
+    "fa": _plural_fa,
+    "en": _plural_one_other,
+    "de": _plural_one_other,
+    "tr": _plural_one_other,
+}
+
+
+def plural_category(language: str, n) -> str:
+    """CLDR plural category of `n` in `language` ('other' for unknown languages)."""
+    try:
+        n = abs(int(n))
+    except (TypeError, ValueError):
+        return "other"
+    return _PLURAL_RULES.get(language, lambda _n: "other")(n)
+
+
+def _is_plural_entry(value) -> bool:
+    return isinstance(value, dict) and bool(value) and set(value) <= set(PLURAL_FORMS)
+
+
+def _pick_plural(forms: dict, language: str, count) -> str:
+    form = plural_category(language, count)
+    return forms.get(form) or forms.get("other") or next(iter(forms.values()))
+
+
 class LocalizationManager:
     def __init__(self, app_root: str = None, default_language: str = "en"):
         # Set correct path (src/assets/locales)
@@ -118,26 +186,34 @@ class LocalizationManager:
         return text  # Qt6 handles bidi + shaping internally
 
     def get(self, key: str, **kwargs) -> str:
-        """Get translated text handling nested keys and Arabic reshaping"""
+        """
+        Get translated text for a dotted key, formatted with kwargs.
+        Plural entries pick their form from kwargs['count'] (CLDR rules).
+        """
         # 1. Try current language
-        lang_data = self.translations.get(self.current_language, {})
-        text = self._get_nested_value(lang_data, key)
+        language = self.current_language
+        text = self._get_nested_value(self.translations.get(language, {}), key)
 
         # 2. Fallback to default (English)
         if text is None:
-            text = self._get_nested_value(self.translations.get(self.default_language, {}), key)
+            language = self.default_language
+            text = self._get_nested_value(self.translations.get(language, {}), key)
 
-        # 3. Return key if not found
-        if text is None:
+        # 3. Plural entry → the form for this count, in the language the text came from
+        if _is_plural_entry(text):
+            text = _pick_plural(text, language, kwargs.get("count"))
+
+        # 4. Return key if not found (or a namespace was requested)
+        if text is None or isinstance(text, dict):
             return key
 
-        # 4. Format string (Apply variables FIRST)
+        # 5. Format string (Apply variables FIRST)
         final_text = str(text)
         if kwargs:
             try: final_text = final_text.format(**kwargs)
             except: pass
-            
-        # 5. Fix Rendering (Reshape Arabic AFTER formatting)
+
+        # 6. Fix Rendering (Reshape Arabic AFTER formatting)
         return self._fix_text_rendering(final_text)
 
     def is_rtl(self) -> bool:

@@ -1,0 +1,584 @@
+{
+    "app": {
+        "title": "DotScramble",
+        "version": "Versión {version}",
+        "author": "Hecho con ❤️ por FreeRave"
+    },
+    "menu": {
+        "file": "Archivo",
+        "edit": "Editar",
+        "presets": "Ajustes predefinidos",
+        "view": "Ver",
+        "help": "Ayuda",
+        "file_items": {
+            "open_image": "Abrir imagen",
+            "open_recent": "Abrir reciente",
+            "no_recent": "No hay archivos recientes",
+            "clear_history": "Borrar historial",
+            "save_result": "Guardar resultado",
+            "save_comparison": "Guardar como comparación",
+            "open_exports": "Abrir carpeta de exportaciones",
+            "batch_process": "Procesamiento por lotes",
+            "exit": "Salir"
+        },
+        "edit_items": {
+            "undo": "Deshacer",
+            "redo": "Rehacer",
+            "clear_selections": "Borrar selecciones",
+            "reset_image": "Restablecer imagen"
+        },
+        "presets_items": {
+            "save_settings": "Guardar ajustes actuales",
+            "load_preset": "Cargar ajuste",
+            "manage_presets": "Administrar ajustes"
+        },
+        "view_items": {
+            "themes": "🎨 Temas",
+            "language": "🌐 Idioma"
+        },
+        "help_items": {
+            "check_updates": "Buscar actualizaciones",
+            "open_app_data": "Abrir carpeta de datos de la app",
+            "donate": "Donar",
+            "about": "Acerca de",
+            "shortcuts": "Atajos"
+        }
+    },
+    "ui": {
+        "header": {
+            "title": "DotScramble",
+            "preview": "🔴 Vista previa en tiempo real"
+        },
+        "tier": {
+            "pro_badge": "⭐ PRO",
+            "free_badge": "🔓 GRATIS",
+            "pro_desc": "Detección con IA activa",
+            "free_desc": "Haar Cascade · Mejora para usar IA",
+            "upgrade_btn": "⭐ Mejorar a Pro",
+            "upgrade_menu": "⭐️ Mejorar a Pro",
+            "pro_activated_menu": "⭐️ PRO activado"
+        },
+        "buttons": {
+            "load": "📁 Cargar imagen",
+            "apply": "✨ Aplicar efecto",
+            "reset": "🗑️ Borrar selecciones"
+        },
+        "controls": {
+            "title": "⚙️ Controles",
+            "load_image": "📁 Cargar imagen",
+            "effect_type": "🎨 Tipo de efecto:",
+            "detection_mode": "🎯 Modo de detección:",
+            "parameters": "🔧 Parámetros del efecto:",
+            "blur_strength": "Intensidad del desenfoque",
+            "pixel_size": "Tamaño del bloque de píxeles",
+            "opacity": "Opacidad del efecto (%)",
+            "target_text": "Escribe la palabra a desenfocar:",
+            "apply_effect": "✨ Aplicar efecto",
+            "undo": "↶ Deshacer",
+            "redo": "↷ Rehacer",
+            "clear_selections": "🗑️ Borrar selecciones",
+            "save_result": "💾 Guardar resultado",
+            "batch_process": "📦 Procesamiento por lotes",
+            "tip": "💡 Consejo: activa la vista previa en tiempo real\npara ver los resultados al instante."
+        },
+        "canvas": {
+            "title": "🖼️ Lienzo de imagen",
+            "views": {
+                "original": "Original",
+                "processed": "Procesada",
+                "compare": "Comparar"
+            },
+            "placeholder_title": "Arrastra y suelta una imagen aquí",
+            "placeholder_subtitle": "o pulsa Ctrl+O para buscar tus imágenes",
+            "before": "ANTES",
+            "after": "DESPUÉS"
+        },
+        "status": {
+            "ready": "Listo para cargar una imagen...",
+            "loaded": "Cargada: {filename}",
+            "processed": {
+                "one": "Se procesó {count} región",
+                "other": "Se procesaron {count} regiones"
+            },
+            "saved": "Guardada: {filename}",
+            "preview_enabled": "Vista previa en tiempo real activada",
+            "preview_disabled": "Vista previa en tiempo real desactivada",
+            "region_added": "Región añadida ({count} en total)",
+            "cleared": "Se borraron todas las selecciones",
+            "reset": "Imagen restablecida al original",
+            "failed_load": "No se pudo cargar la imagen",
+            "detected": {
+                "one": "Se ocultará {shown} de {count} región — haz clic en ella para omitirla",
+                "other": "Se ocultarán {shown} de {count} regiones — haz clic en una para omitirla"
+            },
+            "detected_none": "No se encontró nada con este modo de detección.",
+            "detect_unavailable": "La vista previa de detección funciona con los modos automáticos (no con Manual ni Imagen completa).",
+            "compare_on": "Comparar: arrastra el divisor para ver el antes / después",
+            "applied": "Efecto aplicado.",
+            "undo_done": "Deshecho",
+            "redo_done": "Rehecho",
+            "activating": "Activando…",
+            "activated": "¡DotScramble Pro activado!",
+            "activation_failed": "La activación falló.",
+            "restart_to_update": "Reiniciar para actualizar",
+            "ai_cancelled": "Evasión de IA cancelada.",
+            "ai_success": "✅ Evasión de IA completada — el rostro está oculto a los detectores de IA",
+            "ai_partial": "⚠️ Evasión de IA parcial — tasa de evasión del {percent}%",
+            "ai_failed": "❌ La evasión de IA falló — el rostro está desenfocado pero NO se verificó frente a la detección por IA",
+            "detection_unavailable": "⚠️ Detección no disponible — no se ocultó nada"
+        },
+        "info": {
+            "image_info": "{width}x{height} | {size_kb} KB"
+        },
+        "toolbar": {
+            "open": "Abrir",
+            "open_tip": "Abrir una imagen (Ctrl+O)",
+            "save": "Guardar",
+            "save_tip": "Guardar el resultado (Ctrl+S)",
+            "undo_tip": "Deshacer (Ctrl+Z)",
+            "redo_tip": "Rehacer (Ctrl+Y)",
+            "detect": "Detectar",
+            "detect_tip": "Previsualiza lo que se ocultará — haz clic en una región para omitirla (Ctrl+F)",
+            "compare": "Comparar",
+            "compare_tip": "Vista dividida antes / después — arrastra el divisor (Ctrl+Shift+C)",
+            "zoom_in_tip": "Acercar (Ctrl++)",
+            "zoom_out_tip": "Alejar (Ctrl+-)",
+            "zoom_label_tip": "Haz clic para alternar entre Ajustar y 100%",
+            "fit_tip": "Ajustar a la ventana (Ctrl+0)",
+            "live": "Vista en vivo",
+            "live_tip": "Vuelve a aplicar el efecto automáticamente cada vez que cambia un ajuste",
+            "upgrade": "Mejorar",
+            "upgrade_tip": "Desbloquea la detección con IA, la evasión de IA y las herramientas de metadatos",
+            "pro": "PRO"
+        },
+        "sidebar": {
+            "detect_title": "Qué ocultar",
+            "effect_title": "Cómo ocultarlo",
+            "settings_title": "Ajuste fino",
+            "metadata_title": "Metadatos al guardar",
+            "ai_heading": "Evasión de IA",
+            "ai_hybrid": "Híbrida — desenfoque + oculto a la IA",
+            "ai_hybrid_tip": "Oculta el rostro a los detectores de IA y lo desenfoca para las personas (solo rostros, ~30–90 s)",
+            "ai_invisible": "Invisible — oculto solo a la IA",
+            "ai_invisible_tip": "Oculta el rostro a los detectores de IA mientras sigue nítido para las personas (solo rostros, ~30–90 s)",
+            "free_hint": "Detección básica. Pro añade la precisión de la IA.",
+            "pro_hint": "La detección con IA está activa.",
+            "ai_face_only": "La evasión de IA solo funciona con rostros.",
+            "word_placeholder": "Palabra a desenfocar, p. ej. un nombre",
+            "manual_hint": "Arrastra sobre la imagen para dibujar las regiones a ocultar.",
+            "apply": "Aplicar efecto",
+            "apply_tip": "Aplicar el efecto (Ctrl+Enter)",
+            "clear": "Borrar selecciones",
+            "batch": "Por lotes",
+            "locked_title": "Función Pro",
+            "locked_msg": "«{name}» está disponible en DotScramble Pro.\n\n¿Mejorar ahora?"
+        },
+        "metadata": {
+            "keep": "Conservar",
+            "strip": "Quitar",
+            "spoof": "Señuelo",
+            "keep_desc": "Los metadatos originales se conservan tal cual.",
+            "strip_desc": "Elimina para siempre el GPS y los datos de la cámara y del dispositivo.",
+            "spoof_desc": "Sustituye los metadatos reales por señuelos verosímiles.",
+            "profiles": {
+                "ghost": "Fantasma — Nokia en la Antártida, año 2000",
+                "troll": "Troll — océano aleatorio, cámara antigua",
+                "artist": "Artista — oculta el GPS, conserva el copyright",
+                "custom": "Personalizado — control por campo"
+            },
+            "editor": "Abrir el editor de metadatos…",
+            "locked": "Disponible en Pro — mejorar",
+            "custom_saved": "Reglas de metadatos personalizadas guardadas."
+        },
+        "ai": {
+            "progress_title": "Evasión de IA — Procesando",
+            "progress_start": "Calculando la evasión de IA…\nPuede tardar entre 30 y 90 segundos.",
+            "progress_step": "Rostro {face}/{faces} — iteración {iter}/{iters} · puntuación {score}",
+            "no_oval": "La evasión de IA solo funciona sobre el óvalo del rostro.\nNo se detectó ningún rostro — prueba el modo de detección Rostro.",
+            "cancel": "Cancelar"
+        },
+        "faces": {
+            "title": "Evasión de IA — Seleccionar rostros",
+            "header": {
+                "one": "<b>Se detectó {count} rostro.</b> Elige si quieres protegerlo con la evasión de IA.",
+                "other": "<b>Se detectaron {count} rostros.</b> Elige cuáles proteger con la evasión de IA."
+            },
+            "face_n": "Rostro {n}",
+            "select": "Seleccionar",
+            "select_all": "Seleccionar todo",
+            "deselect_all": "Deseleccionar todo",
+            "note": "La intensidad de la evasión de IA se controla con el control de <b>Opacidad</b>.",
+            "apply": "Aplicar evasión de IA"
+        },
+        "activation": {
+            "title": "Activando DotScramble Pro",
+            "waiting": "Esperando la autenticación…",
+            "desc": "Completa la activación en tu navegador.\nEsta ventana se cerrará automáticamente.",
+            "manual_btn": "Introducir la clave manualmente",
+            "manual_title": "Activar Pro",
+            "manual_prompt": "Introduce tu clave API de DotSuite para desbloquear DotScramble Pro:",
+            "failed_title": "La activación falló"
+        },
+        "model": {
+            "title": "Se necesita un modelo de IA",
+            "prompt": "Esta función Pro necesita un archivo de modelo de IA (~8 MB).\n\n¿Descargarlo ahora?",
+            "downloading_title": "Descargando el modelo de IA",
+            "downloading": "Descargando face_landmarker.task…",
+            "success": "Modelo de IA descargado. Las funciones Pro ya están activas.",
+            "failed_title": "La descarga falló",
+            "failed": "No se pudo descargar el modelo de IA. Comprueba tu conexión a internet."
+        },
+        "messages": {
+            "title_error": "Error",
+            "title_info": "Información",
+            "title_success": "Listo",
+            "file_not_found": "¡No se encontró el archivo!",
+            "unsupported_title": "Archivo no compatible",
+            "unsupported_drop": "El tipo de archivo '{ext}' no es compatible.\n\nFormatos compatibles: JPG, PNG, BMP, TIFF, WebP, GIF",
+            "display_error": "No se pudo mostrar la imagen: {error}",
+            "open_folder_error": "No se pudo abrir la carpeta: {error}",
+            "save_dialog_title": "Guardar imagen procesada",
+            "comparison_dialog_title": "Guardar imagen de comparación",
+            "select_preset_prompt": "Selecciona un ajuste para cargar:",
+            "preset_loaded": "¡Ajuste '{name}' cargado!",
+            "delete_preset_title": "Eliminar ajuste",
+            "delete_preset_prompt": "Selecciona un ajuste para eliminar:",
+            "preset_deleted": "¡Ajuste '{name}' eliminado!",
+            "close": "Cerrar",
+            "update_ready_title": "Actualización lista",
+            "restart_title": "Reiniciar la aplicación",
+            "clear_history_title": "Borrar historial",
+            "zoom": "Acercar / alejar",
+            "zoom_fit_actual": "Ajustar a la ventana / tamaño real",
+            "cascades_missing": "La detección básica no puede funcionar: faltan los archivos cascade de OpenCV ({files}).\n\nNo se ocultó nada. Reinstala las dependencias con:\npip install -r requirements.txt"
+        },
+        "version_gate": {
+            "title": "Actualización necesaria",
+            "message": "DotScramble {current} ya no tiene soporte.\n\nDescarga la versión más reciente (al menos la {minimum}) para seguir usando la app. Tus ajustes se conservan.",
+            "download": "Descargar la última versión",
+            "quit": "Salir"
+        }
+    },
+    "effects": {
+        "blur": "🌫️ Desenfoque",
+        "pixelation": "🔲 Pixelado",
+        "black_bar": "⬛ Barra negra",
+        "gradient": "🎭 Degradado",
+        "mosaic": "🔳 Mosaico",
+        "glass": "❄️ Vidrio esmerilado",
+        "oil_paint": "🎨 Óleo",
+        "ai_evasion": "🛡️ Evasión de IA - Híbrida (PRO)",
+        "ai_evasion_invisible": "🛡️ Evasión de IA - Invisible (PRO)"
+    },
+    "detection": {
+        "face": "🎭 Rostro",
+        "eye": "👁️ Ojos",
+        "body": "🧍 Cuerpo",
+        "license_plate": "🚗 Matrícula",
+        "text": "📝 Texto",
+        "target_text": "✍️ Texto concreto",
+        "manual": "✏️ Manual",
+        "full": "🌍 Imagen completa"
+    },
+    "dialogs": {
+        "error": {
+            "loading": "Error",
+            "loading_image": "No se pudo cargar la imagen:\n{error}",
+            "processing": "El procesamiento falló: {error}",
+            "saving": "No se pudo guardar la imagen: {error}",
+            "no_image": "No hay ninguna imagen cargada",
+            "no_selections": "¡Primero dibuja regiones sobre la imagen!",
+            "no_word": "Escribe la palabra que quieres desenfocar.",
+            "word_not_found": "No se encontró la palabra '{word}' en esta imagen.",
+            "image_empty": "¡La imagen cargada está vacía!",
+            "image_corrupted": "¡No se pudo cargar la imagen!\n\nArchivo: {filename}\n\nPosibles causas:\n• El archivo está dañado\n• Formato no compatible\n• La ruta contiene caracteres especiales",
+            "dependencies": "Faltan dependencias necesarias:\n\n{deps}\n\nInstálalas con:\npip install {deps}",
+            "import": "Error de importación: {error}\n\nAsegúrate de que todos los módulos estén en su sitio:\n- gui/main_window.py\n- gui/batch_window.py\n- core/image_processor.py\n- core/batch_processor.py\n- core/utils.py\n- config.py",
+            "fatal": "No se pudo iniciar la aplicación:\n\n{error}\n\nConsulta el archivo de registro para más detalles."
+        },
+        "info": {
+            "saved": "¡Imagen guardada correctamente!",
+            "comparison_saved": "¡Comparación guardada!",
+            "preset_saved": "¡Ajuste '{name}' guardado!",
+            "update_ready": "Se ha descargado una nueva actualización en segundo plano.\nPuedes reiniciar cuando quieras con el botón de la barra de estado.",
+            "donate": "Apoya al desarrollador",
+            "donate_text": "¡Gracias por pensar en apoyar este proyecto!\nElige tu plataforma de donación preferida:",
+            "about": "DotScramble\nVersión {version}\n\nProtección de la privacidad para la era digital\n\nApoya al desarrollador:\n• PayPal: https://paypal.me/freerave1\n• Buy Me a Coffee: https://buymeacoffee.com/freerave\n• Ko-fi: https://ko-fi.com/freerave\n\nHecho con ❤️ por FreeRave",
+            "shortcuts": "Atajos de teclado",
+            "update_check": "Buscando actualizaciones...",
+            "update_available": "Actualización disponible: {version}\n¿Descargar e instalar?",
+            "dev_update_available": "¡Hay una nueva versión ({version}) disponible!\n\nNota: la actualización automática está desactivada en el modo de desarrollo. Haz pull de los últimos cambios o descarga la versión desde GitHub.",
+            "no_updates": "Ya tienes la última versión",
+            "update_failed": "La búsqueda de actualizaciones falló: {error}",
+            "update_downloading": "Descargando la actualización en segundo plano...",
+            "update_complete": "¡Actualización descargada correctamente!",
+            "restart_required": "La aplicación se cerrará para aplicar la actualización. ¿Continuar?",
+            "update_manual": "La versión {version} está disponible, pero esta copia de DotScramble no puede actualizarse automáticamente. ¿Abrir la página de descarga?",
+            "update_installing": "Instalando la actualización...",
+            "update_install_failed": "No se pudo instalar la actualización: {error}"
+        },
+        "warning": {
+            "clear_history": "¿Seguro que quieres borrar el historial de archivos recientes?",
+            "unsaved_changes": "Tienes cambios sin guardar. ¿Continuar?",
+            "large_image": "La imagen es muy grande ({width}x{height}). El procesamiento puede ser lento.",
+            "unsupported_format": "Es posible que el formato no sea totalmente compatible. Algunas funciones podrían no funcionar bien."
+        },
+        "confirm": {
+            "exit": "¿Guardar los cambios antes de salir?",
+            "restart": "La aplicación se cerrará para aplicar la actualización. ¿Continuar?"
+        }
+    },
+    "presets": {
+        "save": "Guardar ajuste",
+        "save_prompt": "Introduce un nombre para el ajuste:",
+        "load": "Cargar ajuste",
+        "manage": "Administrar ajustes",
+        "no_presets": "No hay ajustes guardados",
+        "light_privacy": "Privacidad ligera",
+        "medium_privacy": "Privacidad media",
+        "maximum_privacy": "Privacidad máxima",
+        "artistic_blur": "Desenfoque artístico",
+        "license_plate_blur": "Desenfoque de matrículas",
+        "text_redaction": "Censura de texto"
+    },
+    "batch": {
+        "title": "Procesamiento por lotes",
+        "select_folder": "Seleccionar carpeta de entrada",
+        "select_output": "Seleccionar carpeta de salida",
+        "start": "Iniciar procesamiento",
+        "stop": "Detener procesamiento",
+        "progress": {
+            "one": "Procesado {current} de {count} archivo",
+            "other": "Procesados {current} de {count} archivos"
+        },
+        "complete": "¡Procesamiento por lotes completado!",
+        "error": "El procesamiento por lotes falló: {error}",
+        "no_files": "No se encontraron imágenes en la carpeta seleccionada",
+        "settings_saved": "¡Ajustes del lote guardados!",
+        "window_title": "📦 Procesamiento por lotes — DotScramble",
+        "header": "📦 Procesamiento de imágenes por lotes",
+        "files_group": "📁 Archivos seleccionados",
+        "add_files": "➕ Añadir archivos",
+        "add_folder": "📂 Añadir carpeta",
+        "remove": "➖ Quitar seleccionados",
+        "clear_all": "🗑️ Borrar todo",
+        "files_count": "Archivos: {count}",
+        "detect_group": "🎯 Modo de detección",
+        "effect_group": "🎨 Tipo de efecto",
+        "progress_group": "📊 Progreso",
+        "ready": "Listo para procesar",
+        "processed": "Procesados: {current}/{total}",
+        "failed": "Fallidos: {count}",
+        "time": "Tiempo: {seconds} s",
+        "stop_btn": "⏹️ Detener",
+        "close": "Cerrar",
+        "free_limit_title": "Límite del plan gratuito",
+        "free_limit_msg": {
+            "one": "El plan gratuito está limitado a {count} imagen por lote.",
+            "other": "El plan gratuito está limitado a {count} imágenes por lote."
+        },
+        "free_limit_removed": {
+            "one": "Se quitó {count} archivo.",
+            "other": "Se quitaron {count} archivos."
+        },
+        "free_limit_upgrade": "Mejora a Max para procesar imágenes sin límite.",
+        "select_images": "Seleccionar imágenes",
+        "image_filter": "Imágenes",
+        "added": {
+            "one": "Se añadió {count} archivo",
+            "other": "Se añadieron {count} archivos"
+        },
+        "added_from_folder": {
+            "one": "Se añadió {count} archivo desde la carpeta",
+            "other": "Se añadieron {count} archivos desde la carpeta"
+        },
+        "info_title": "Información",
+        "select_to_remove": "Selecciona los archivos que quieres quitar",
+        "removed": {
+            "one": "Se quitó {count} archivo",
+            "other": "Se quitaron {count} archivos"
+        },
+        "confirm_title": "Confirmar",
+        "confirm_clear": "¿Quitar todos los archivos de la lista?",
+        "cleared": "Se quitaron todos los archivos",
+        "warning_title": "Advertencia",
+        "no_selected": "¡No hay archivos seleccionados!",
+        "invalid_title": "Archivos no válidos",
+        "invalid_found": {
+            "one": "Se encontró {count} archivo no válido:",
+            "other": "Se encontraron {count} archivos no válidos:"
+        },
+        "invalid_more": "... y {count} más",
+        "invalid_process": {
+            "one": "¿Procesar {count} archivo válido?",
+            "other": "¿Procesar {count} archivos válidos?"
+        },
+        "stop_confirm": "¿Detener el procesamiento?",
+        "stopped": "El usuario detuvo el procesamiento",
+        "processing_file": "Procesando: {filename}",
+        "complete_title": "Completado",
+        "complete_summary": "✅ Correctos: {success}\n❌ Fallidos: {failed}\n📊 Total: {total}",
+        "done": "¡Procesamiento completado!",
+        "close_confirm": "El procesamiento está en curso. ¿Cerrar de todos modos?"
+    },
+    "themes": {
+        "midnight": "🌑 Medianoche oscuro",
+        "ocean": "🌊 Azul océano",
+        "cyberpunk": "🤖 Cyberpunk",
+        "dracula": "🧛 Drácula",
+        "forest": "🌲 Bosque",
+        "light": "☀️ Modo claro",
+        "nord": "❄️ Nord",
+        "monokai": "🔥 Monokai",
+        "solarized_dark": "🌗 Solarized oscuro",
+        "solarized_light": "☀️ Solarized claro",
+        "tokyo_night": "🗼 Noche de Tokio",
+        "gruvbox_dark": "🍂 Gruvbox oscuro",
+        "one_dark": "⚫ One Dark",
+        "material": "🎨 Material",
+        "catppuccin_mocha": "☕ Catppuccin Mocha",
+        "rosepine": "🌹 Rosé Pine"
+    },
+    "donate": {
+        "paypal": "💳 PayPal",
+        "buy_coffee": "☕ Buy Me a Coffee",
+        "kofi": "🎨 Ko-fi",
+        "github": "⭐ GitHub Sponsors",
+        "url_error": "No se pudo abrir el navegador. Visita:\n{url}"
+    },
+    "shortcuts": {
+        "load": "Ctrl+O: Cargar imagen",
+        "save": "Ctrl+S: Guardar resultado",
+        "save_as": "Ctrl+Shift+S: Guardar como",
+        "undo": "Ctrl+Z: Deshacer",
+        "redo": "Ctrl+Y: Rehacer",
+        "process": "Ctrl+P: Aplicar efecto",
+        "clear": "Ctrl+D: Borrar selecciones",
+        "batch": "Ctrl+B: Procesamiento por lotes",
+        "quit": "Ctrl+Q: Salir",
+        "export": "Ctrl+E: Exportar",
+        "preferences": "Ctrl+, : Preferencias"
+    },
+    "languages": {
+        "english": "Inglés (English)",
+        "arabic": "Árabe (العربية)"
+    },
+    "image_picker": {
+        "title": "Seleccionar imagen",
+        "search_placeholder": "🔍  Filtrar archivos…",
+        "quick_access": "ACCESO RÁPIDO",
+        "cancel": "Cancelar",
+        "open": "Abrir",
+        "empty_folder": "No hay imágenes en esta carpeta",
+        "bookmarks": {
+            "home": "Inicio",
+            "pictures": "Imágenes",
+            "downloads": "Descargas",
+            "desktop": "Escritorio",
+            "documents": "Documentos",
+            "music": "Música",
+            "volumes": "Volúmenes",
+            "root": "Raíz"
+        },
+        "loading": "Cargando…",
+        "no_matches": "No hay archivos que coincidan"
+    },
+    "metadata": {
+        "fields": {
+            "gps": "📍 Ubicación GPS",
+            "make": "📷 Marca de la cámara",
+            "model": "📷 Modelo de la cámara",
+            "software": "💻 Software",
+            "datetime": "🕐 Fecha / hora",
+            "copyright": "©️  Copyright",
+            "exposure": "🔆 Datos de exposición"
+        },
+        "actions": {
+            "keep": "✅ Conservar",
+            "strip": "🗑 Quitar",
+            "spoof": "🎲 Falsear",
+            "custom": "✏️ Personalizar"
+        },
+        "cancel": "Cancelar",
+        "customizer": {
+            "window_title": "DotScramble — Control personalizado de metadatos",
+            "title": "🛡️  Control personalizado de metadatos",
+            "plan": "Plan Max",
+            "preset": "Ajuste:",
+            "preset_placeholder": "Selecciona un ajuste...",
+            "save_as": "💾 Guardar como...",
+            "delete": "🗑 Eliminar",
+            "spoof_all": "🎲 Falsear todo",
+            "strip_all": "🗑 Quitar todo",
+            "apply": "✅  Aplicar",
+            "lat": "Lat:",
+            "lon": "Lon:",
+            "lat_placeholder": "Latitud",
+            "lon_placeholder": "Longitud",
+            "custom_value": "Valor personalizado:",
+            "save_title": "Guardar ajuste",
+            "save_prompt": "Introduce un nombre para este ajuste:",
+            "error_title": "Error",
+            "factory_error": "No se puede sobrescribir un ajuste de fábrica.",
+            "saved_title": "Guardado",
+            "saved_msg": "Ajuste '{name}' guardado correctamente.",
+            "delete_title": "Eliminar ajuste",
+            "delete_confirm": "¿Seguro que quieres eliminar '{name}'?"
+        },
+        "report": {
+            "window_title": "DotScramble — Confirmar guardado",
+            "title": "📋  Resumen de metadatos",
+            "strip_title": "🗑  Se ELIMINARÁN todos los metadatos",
+            "strip_desc": "El GPS, el modelo de cámara, las fechas y todos los demás datos EXIF se eliminarán para siempre.",
+            "keep_title": "✅  Se CONSERVARÁN los metadatos originales",
+            "keep_desc": "Los datos EXIF originales de la imagen se restaurarán exactamente como estaban.",
+            "spoof_title": "🎭  Los metadatos se FALSEARÁN  ({profile})",
+            "spoof_default": "🎲 Falsear",
+            "field_actions": "Acción por campo:",
+            "strip_list_title": "Se eliminarán para siempre los siguientes datos:",
+            "strip_items": {
+                "gps": "📍 Coordenadas GPS",
+                "camera": "📷 Marca y modelo de la cámara",
+                "software": "💻 Identificador del software",
+                "timestamps": "🕐 Fechas y horas",
+                "copyright": "©️  Copyright",
+                "exposure": "🔆 Datos de exposición",
+                "fingerprint": "🔒 Huella del dispositivo"
+            },
+            "action_desc": {
+                "keep": "Se conserva tal cual",
+                "strip": "Se elimina",
+                "spoof": "Se sustituye por datos falsos"
+            },
+            "custom_gps": "GPS personalizado: {lat}, {lon}",
+            "custom_value": "Valor personalizado: '{value}'",
+            "custom_empty": "Personalizado (vacío → falsear)",
+            "save": "💾  Guardar",
+            "profiles": {
+                "ghost": {
+                    "name": "👻 Perfil Fantasma",
+                    "desc": "Nokia 3310 · GPS en la Antártida · Fecha del año 2000"
+                },
+                "troll": {
+                    "name": "🌊 Perfil Troll",
+                    "desc": "Cámara antigua aleatoria · GPS aleatorio en el océano · Fecha bastante reciente"
+                },
+                "artist": {
+                    "name": "🎨 Perfil Artista",
+                    "desc": "Oculta el GPS y la cámara · Conserva el campo de copyright"
+                },
+                "custom": {
+                    "name": "⚙️ Perfil personalizado",
+                    "desc": "Reglas por campo (ver detalles abajo)"
+                }
+            }
+        },
+        "presets": {
+            "strip_all": "🔇 Quitar todo",
+            "strip_gps": "📍 Quitar solo el GPS",
+            "strip_camera_gps": "📷 Quitar cámara + GPS",
+            "photographer": "🎨 Fotógrafo (conserva ©)",
+            "spoof_all": "🎲 Falsear todo"
+        }
+    }
+}

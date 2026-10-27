@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from typing import Dict, List, Tuple, Optional
 from PySide6.QtWidgets import QApplication, QDialog, QVBoxLayout, QLabel, QFrame, QGroupBox, QGridLayout, QPushButton
 from PySide6.QtCore import Qt
@@ -25,9 +26,36 @@ class ThemeManager:
         'success_color', 'error_color', 'warning_color'
     ]
     
+    # Template tokens:
+    #   {key}       → the theme color as-is
+    #   {key@NN}    → the theme color at NN % opacity, e.g. {accent_cyan@15}
+    #   {on:key}    → black or white, whichever reads best on top of that color
+    _TOKEN_RE = re.compile(r"\{(on:)?([a-z_]+)(?:@(\d{1,3}))?\}")
+
+    @staticmethod
+    def _hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:
+        h = hex_color.lstrip('#')
+        if len(h) == 3:
+            h = ''.join(c * 2 for c in h)
+        return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+
+    def _resolve_token(self, colors: Dict[str, str], match: "re.Match") -> str:
+        on, key, alpha = match.groups()
+        if key not in colors:
+            return match.group(0)
+        value = colors[key]
+        if on:
+            white = self._calculate_contrast_ratio(value, '#ffffff')
+            black = self._calculate_contrast_ratio(value, '#000000')
+            return '#ffffff' if white >= black else '#111111'
+        if alpha is not None:
+            r, g, b = self._hex_to_rgb(value)
+            return f"rgba({r}, {g}, {b}, {min(int(alpha), 100) / 100:.2f})"
+        return value
+
     def get_styled_qss(self, colors: Dict[str, str]) -> str:
         """
-        Loads the QSS stylesheet template and replaces all color variables.
+        Loads the QSS stylesheet template and replaces all color tokens.
         """
         template = ""
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -52,10 +80,7 @@ class ThemeManager:
             QMainWindow { background-color: {bg_dark}; }
             """
             
-        qss_code = template
-        for key, value in colors.items():
-            qss_code = qss_code.replace(f"{{{key}}}", value)
-        return qss_code
+        return self._TOKEN_RE.sub(lambda m: self._resolve_token(colors, m), template)
     
     def __init__(self, app_instance=None, theme_file="src/assets/themes.json", default_theme="midnight"):
         """
@@ -254,12 +279,10 @@ class ThemeManager:
         # Dynamically generate QSS stylesheet
         qss_code = self.get_styled_qss(colors)
         
-        # Apply stylesheet globally
+        # Apply stylesheet once, application-wide, so every dialog shares it
         if app:
             app.setStyleSheet(qss_code)
-            
-        # If applied to a QWidget / QMainWindow specifically, apply stylesheet there too
-        if hasattr(ui_view_or_app, 'setStyleSheet'):
+        elif hasattr(ui_view_or_app, 'setStyleSheet'):
             ui_view_or_app.setStyleSheet(qss_code)
             
         # Trigger specific theme changed callback

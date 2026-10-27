@@ -3,11 +3,31 @@ DotScramble - Main Entry Point (PySide6 version)
 """
 import sys
 import os
+import shutil
 import logging
 from pathlib import Path
 
+# `python src/main.py` puts src/ (not the project root) on the import path, so the
+# `src.*` imports would fail. Add the project root so it works like `python -m src.main`.
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+def show_fatal_error(title: str, message: str) -> None:
+    """
+    Show an error dialog even before the GUI exists. Qt aborts the whole process
+    (no Python exception) if a widget is made without a QApplication, so make one first.
+    """
+    try:
+        from PySide6.QtWidgets import QApplication, QMessageBox
+        app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841 — must stay alive
+        QMessageBox.critical(None, title, message)
+    except Exception:
+        print(message, file=sys.stderr)
 
 def setup_logging():
     """Setup application logging"""
@@ -56,15 +76,7 @@ def check_dependencies():
         
         # Log to console first — GUI may not be ready yet
         logging.error(error_msg)
-        
-        try:
-            from PySide6.QtWidgets import QApplication, QMessageBox
-            # QApplication MUST exist before any QWidget (including QMessageBox)
-            app = QApplication.instance() or QApplication(sys.argv)
-            QMessageBox.critical(None, "Missing Dependencies", error_msg)
-        except Exception:
-            pass  # If Qt is unavailable, console log above is enough
-        
+        show_fatal_error("Missing Dependencies", error_msg)
         return False
     
     return True
@@ -111,15 +123,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     
     error_msg = f"An unexpected error occurred:\n\n{exc_value}\n\n"
     error_msg += "Please check the log file for details."
-    
-    try:
-        from PySide6.QtWidgets import QApplication, QMessageBox
-        app = QApplication.instance()
-        if not app:
-            app = QApplication(sys.argv)
-        QMessageBox.critical(None, "Error", error_msg)
-    except Exception:
-        print(error_msg, file=sys.stderr)
+    show_fatal_error("Error", error_msg)
 
 
 def setup_tesseract_configuration():
@@ -149,11 +153,26 @@ def setup_tesseract_configuration():
         if os.path.exists(tesseract_path):
             pytesseract.pytesseract.tesseract_cmd = tesseract_path
             logging.info(f"✅ Bundled Tesseract found and configured at: {tesseract_path}")
+        elif shutil.which(tesseract_bin):
+            # No bundled copy (normal when running from source) — pytesseract uses the system one
+            logging.info(f"Using system Tesseract: {shutil.which(tesseract_bin)}")
         else:
-            logging.warning(f"⚠️ Tesseract executable not found at: {tesseract_path}")
+            logging.warning("⚠️ Tesseract not found (neither bundled nor on PATH) — text detection is unavailable")
             
     except Exception as e:
         logging.error(f"Error configuring Tesseract: {e}")
+
+
+def configure_qt_logging():
+    """
+    Silence known-harmless Qt warnings. Keep every rule here: setFilterRules()
+    replaces all rules, so a second call anywhere else would undo these.
+    """
+    from PySide6.QtCore import QLoggingCategory
+    QLoggingCategory.setFilterRules("\n".join([
+        "qt.gui.imageio.jpeg=false",         # libjpeg chatter while thumbnailing
+        "qt.qpa.wayland.textinput=false",    # Qt/GNOME text-input-v3 focus bug, floods the terminal
+    ]))
 
 
 def setup_linux_desktop_entry():
@@ -188,10 +207,10 @@ def setup_linux_desktop_entry():
         icon_dest = SYSTEM_DIR / "icon.png"
         
         # Copy the icon from the frozen bundle to the persistent app data directory
-        icon_src = os.path.join(base_dir, 'assets', 'icons', 'Square150x150Logo.png')
+        icon_src = os.path.join(base_dir, 'assets', 'icons', 'png', 'dotscramble-256.png')
         if not os.path.exists(icon_src):
-            icon_src = os.path.join(base_dir, 'assets', 'icons', 'icon.png')
-            
+            icon_src = os.path.join(base_dir, 'assets', 'icons', 'Square150x150Logo.png')
+
         if os.path.exists(icon_src):
             shutil.copy2(icon_src, icon_dest)
             
@@ -258,7 +277,9 @@ def main():
         from PySide6.QtWidgets import QApplication
         from PySide6.QtGui import QIcon
         from src.views.main_window import AdvancedPrivacyStudioPro
-        
+
+        configure_qt_logging()
+
         # Create QApplication
         app = QApplication(sys.argv)
         logger.info("Initializing GUI...")
@@ -269,12 +290,19 @@ def main():
         # Set application icon
         try:
             base_dir = getattr(sys, '_MEIPASS', os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            png_path = os.path.join(base_dir, 'assets', 'icons', 'Square150x150Logo.png')
-            if not os.path.exists(png_path):
-                png_path = os.path.join(base_dir, 'assets', 'icons', 'icon.png')
-            
-            if os.path.exists(png_path):
-                app_icon = QIcon(png_path)
+            icons_dir = os.path.join(base_dir, 'assets', 'icons')
+            # Every rendered size, so 16–32px (title bar, taskbar) use the simplified cut
+            app_icon = QIcon()
+            for size in (16, 24, 32, 48, 64, 128, 256, 512):
+                png_path = os.path.join(icons_dir, 'png', f'dotscramble-{size}.png')
+                if os.path.exists(png_path):
+                    app_icon.addFile(png_path)
+            if app_icon.isNull():
+                png_path = os.path.join(icons_dir, 'Square150x150Logo.png')
+                if os.path.exists(png_path):
+                    app_icon = QIcon(png_path)
+
+            if not app_icon.isNull():
                 app.setWindowIcon(app_icon)
                 main_window.setWindowIcon(app_icon)
         except Exception as e:
@@ -298,22 +326,13 @@ def main():
         error_msg += "- config.py"
         
         logger.error(error_msg)
-        try:
-            from PySide6.QtWidgets import QMessageBox
-            QMessageBox.critical(None, "Import Error", error_msg)
-        except Exception:
-            print(error_msg, file=sys.stderr)
+        show_fatal_error("Import Error", error_msg)
         sys.exit(1)
-        
+
     except Exception as e:
         logger.error(f"Fatal error during initialization: {str(e)}", exc_info=True)
-        try:
-            from PySide6.QtWidgets import QMessageBox
-            QMessageBox.critical(None, "Fatal Error", 
-                                 f"Failed to start application:\n\n{str(e)}\n\n"
-                                 "Please check the log file for details.")
-        except Exception:
-            print(f"Fatal Error: {e}", file=sys.stderr)
+        show_fatal_error("Fatal Error", f"Failed to start application:\n\n{str(e)}\n\n"
+                                        "Please check the log file for details.")
         sys.exit(1)
     
     finally:

@@ -350,6 +350,7 @@ class ImageProcessor:
         max_eps=110,
         iters=40,
         block_size=32,
+        jpeg_quality=None,
         progress_callback=None,
         should_cancel=None,
         **effect_kwargs,
@@ -385,6 +386,11 @@ class ImageProcessor:
         region    = image[y0:y1, x0:x1].copy()
         local_pts = [(px - x0, py - y0) for (px, py) in points]
 
+        # Calculate dynamic epsilon based on opacity setting
+        opacity = effect_kwargs.get("opacity", 100)
+        alpha = opacity / 100.0
+        dynamic_eps = max(1, int(max_eps * alpha))
+
         # ── Step 1: Base visual effect — applied unconditionally (fail-closed floor) ──
         effected_region = ImageProcessor._make_effect_layer(region, effect_type, **effect_kwargs)
         final = image.copy()
@@ -400,9 +406,10 @@ class ImageProcessor:
             delta, score = adversarial_perturb(
                 effected_region,
                 face_oval_points_local=local_pts,
-                max_eps=max_eps,
+                max_eps=dynamic_eps,
                 iters=iters,
                 block_size=block_size,
+                jpeg_quality=jpeg_quality,
                 progress_callback=progress_callback,
                 should_cancel=should_cancel,
             )

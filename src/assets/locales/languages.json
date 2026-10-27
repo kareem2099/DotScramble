@@ -8,5 +8,30 @@
         "name": "Arabic",
         "native": "العربية",
         "rtl": true
+    },
+    "fa": {
+        "name": "Persian",
+        "native": "فارسی",
+        "rtl": true
+    },
+    "es": {
+        "name": "Spanish",
+        "native": "Español",
+        "rtl": false
+    },
+    "ru": {
+        "name": "Russian",
+        "native": "Русский",
+        "rtl": false
+    },
+    "de": {
+        "name": "German",
+        "native": "Deutsch",
+        "rtl": false
+    },
+    "tr": {
+        "name": "Turkish",
+        "native": "Türkçe",
+        "rtl": false
     }
 }

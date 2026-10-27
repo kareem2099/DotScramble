@@ -183,6 +183,12 @@ class BatchProcessor:
             'error': None
         }
 
+    def _require_cascades(self, detection_mode: str) -> None:
+        """Fail the file instead of saving it untouched as if nothing was found."""
+        missing = self.detection_engine.missing_cascades(detection_mode)
+        if missing:
+            raise RuntimeError(f"Detection unavailable — missing OpenCV cascade file(s): {', '.join(missing)}")
+
     def _detect_regions(self, image, detection_mode: str, is_pro: bool = False) -> List:
         """Detect regions based on the specified mode"""
         if detection_mode == 'face':
@@ -190,14 +196,17 @@ class BatchProcessor:
                 res = self.detection_engine.detect_faces_pro(image)
                 if res:
                     return res
+            self._require_cascades(detection_mode)
             return self.detection_engine.detect_faces(image)
         elif detection_mode == 'eye':
             if is_pro:
                 res = self.detection_engine.detect_eyes_pro(image)
                 if res:
                     return res
+            self._require_cascades(detection_mode)
             return self.detection_engine.detect_eyes(image)
         elif detection_mode == 'body':
+            self._require_cascades(detection_mode)
             return self.detection_engine.detect_full_body(image)
         elif detection_mode == 'license_plate':
             return self.detection_engine.detect_license_plates(image)

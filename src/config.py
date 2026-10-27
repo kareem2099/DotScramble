@@ -12,11 +12,12 @@ from pathlib import Path
 APP_NAME = "DotScramble"  # Keep the name matching the repository name
 APP_AUTHOR = "FreeRave"
 
-# The magical attempt to read version from GitHub Action
+# version_info.py is the source of truth; this fallback must match it
+# (the release workflow checks both against the tag)
 try:
     from version_info import VERSION as APP_VERSION
 except ImportError:
-    APP_VERSION = "1.4.1"  # Will be replaced by GitHub Actions
+    APP_VERSION = "1.5.0"
 
 # ============================================================================
 # DIRECTORIES (Enterprise Standard - AppData)
@@ -489,8 +490,9 @@ if os.getenv('DOTSUITE_GPU'):
     ADVANCED['enable_gpu'] = True
 
 # Used for OAuth-like desktop authentication. 
-# Defaults to https://dotsuite.vercel.app in production, can be overridden via ENV.
-AUTH_BASE_URL = os.getenv('DOTSUITE_BASE_URL', 'https://dotsuite.vercel.app')
+# Defaults to the production dashboard (https://dotsuite.dev), can be overridden via ENV.
+# Its origin must also be in ALLOWED_ORIGINS (src/managers/auth_server.py).
+AUTH_BASE_URL = os.getenv('DOTSUITE_BASE_URL', 'https://dotsuite.dev')
 
 # ============================================================================
 # EXPORT CONFIGURATION

@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QObject, Signal
 
-from src.config import COLORS, SUPPORTED_FORMATS, BLUR_RANGE, PIXEL_RANGE, OPACITY_RANGE
+from src.config import SUPPORTED_FORMATS, BLUR_RANGE, PIXEL_RANGE, OPACITY_RANGE
 from core.batch_processor import BatchProcessor
 from src.managers.localization_manager import get_locale_manager
 
@@ -40,14 +40,9 @@ class BatchWindow(QDialog):
         self.processing = False
         self.logger = logging.getLogger(__name__)
         self.locale_manager = get_locale_manager()
-        
-        # Get active colors from parent or default
-        if parent and hasattr(parent, 'colors'):
-            self.colors = parent.colors
-        else:
-            self.colors = COLORS
-        
-        self.setWindowTitle("📦 Batch Processing - Privacy Studio Pro")
+        self._t = self.locale_manager.get
+
+        self.setWindowTitle(self._t("batch.window_title"))
         self.setMinimumSize(900, 650)
         self.resize(900, 650)
 
@@ -80,7 +75,7 @@ class BatchWindow(QDialog):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(20, 15, 20, 15)
         
-        title_lbl = QLabel("📦 Batch Image Processing")
+        title_lbl = QLabel(self._t("batch.header"))
         title_lbl.setObjectName("DialogTitle")
         header_layout.addWidget(title_lbl)
         main_layout.addWidget(header)
@@ -92,7 +87,7 @@ class BatchWindow(QDialog):
         content_layout.setSpacing(10)
 
         # File List Section
-        file_group = QGroupBox("📁 Selected Files")
+        file_group = QGroupBox(self._t("batch.files_group"))
         file_layout = QVBoxLayout(file_group)
         file_layout.setContentsMargins(10, 10, 10, 10)
         
@@ -101,26 +96,26 @@ class BatchWindow(QDialog):
 
         # File list buttons row
         fl_buttons = QHBoxLayout()
-        self.add_btn = QPushButton("➕ Add Files")
+        self.add_btn = QPushButton(self._t("batch.add_files"))
         self.add_btn.clicked.connect(self.add_files)
         fl_buttons.addWidget(self.add_btn)
 
-        self.add_folder_btn = QPushButton("📂 Add Folder")
+        self.add_folder_btn = QPushButton(self._t("batch.add_folder"))
         self.add_folder_btn.clicked.connect(self.add_folder)
         fl_buttons.addWidget(self.add_folder_btn)
 
-        self.remove_btn = QPushButton("➖ Remove Selected")
+        self.remove_btn = QPushButton(self._t("batch.remove"))
         self.remove_btn.clicked.connect(self.remove_selected)
         fl_buttons.addWidget(self.remove_btn)
 
-        self.clear_btn = QPushButton("🗑️ Clear All")
+        self.clear_btn = QPushButton(self._t("batch.clear_all"))
         self.clear_btn.setObjectName("del_preset_btn")
         self.clear_btn.clicked.connect(self.clear_all)
         fl_buttons.addWidget(self.clear_btn)
 
         fl_buttons.addStretch(1)
 
-        self.file_count_label = QLabel("Files: 0")
+        self.file_count_label = QLabel(self._t("batch.files_count", count=0))
         self.file_count_label.setObjectName("FileCountLabel")
         fl_buttons.addWidget(self.file_count_label)
         file_layout.addLayout(fl_buttons)
@@ -131,7 +126,7 @@ class BatchWindow(QDialog):
         settings_row = QHBoxLayout()
         
         # Left side: Detection Modes
-        detect_group = QGroupBox("🎯 Detection Mode")
+        detect_group = QGroupBox(self._t("batch.detect_group"))
         detect_layout = QVBoxLayout(detect_group)
         self.detect_button_group = QButtonGroup(self)
         
@@ -145,8 +140,7 @@ class BatchWindow(QDialog):
         ]
         
         for i, (val, key) in enumerate(detection_modes):
-            lbl_text = self.locale_manager.get(key)
-            rb = QRadioButton(lbl_text)
+            rb = QRadioButton(self._t(key))
             rb.setProperty("mode_val", val)
             self.detect_button_group.addButton(rb, i)
             detect_layout.addWidget(rb)
@@ -156,22 +150,14 @@ class BatchWindow(QDialog):
         settings_row.addWidget(detect_group, 1)
 
         # Right side: Effect Types
-        effects_group = QGroupBox("🎨 Effect Type")
+        effects_group = QGroupBox(self._t("batch.effect_group"))
         effects_layout = QVBoxLayout(effects_group)
         self.effects_button_group = QButtonGroup(self)
         
-        effects = [
-            ("blur", "🌫️ Gaussian Blur"),
-            ("pixelation", "🔲 Pixelation"),
-            ("black_bar", "⬛ Black Bar"),
-            ("gradient", "🎭 Gradient Fade"),
-            ("mosaic", "🔳 Mosaic"),
-            ("glass", "❄️ Frosted Glass"),
-            ("oil_paint", "🎨 Oil Paint")
-        ]
-        
-        for i, (val, label) in enumerate(effects):
-            rb = QRadioButton(label)
+        effects = ["blur", "pixelation", "black_bar", "gradient", "mosaic", "glass", "oil_paint"]
+
+        for i, val in enumerate(effects):
+            rb = QRadioButton(self._t(f"effects.{val}"))
             rb.setProperty("effect_val", val)
             self.effects_button_group.addButton(rb, i)
             effects_layout.addWidget(rb)
@@ -182,29 +168,29 @@ class BatchWindow(QDialog):
         content_layout.addLayout(settings_row)
 
         # Progress Section
-        progress_group = QGroupBox("📊 Progress")
+        progress_group = QGroupBox(self._t("batch.progress_group"))
         progress_layout = QVBoxLayout(progress_group)
         
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
         progress_layout.addWidget(self.progress_bar)
 
-        self.status_label = QLabel("Ready to process")
+        self.status_label = QLabel(self._t("batch.ready"))
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         progress_layout.addWidget(self.status_label)
 
         stats_row = QHBoxLayout()
-        self.processed_label = QLabel("Processed: 0/0")
+        self.processed_label = QLabel(self._t("batch.processed", current=0, total=0))
         self.processed_label.setObjectName("SuccessLabel")
         stats_row.addWidget(self.processed_label)
 
-        self.failed_label = QLabel("Failed: 0")
+        self.failed_label = QLabel(self._t("batch.failed", count=0))
         self.failed_label.setObjectName("FailedLabel")
         stats_row.addWidget(self.failed_label)
         
         stats_row.addStretch(1)
 
-        self.time_label = QLabel("Time: 0s")
+        self.time_label = QLabel(self._t("batch.time", seconds=0))
         self.time_label.setObjectName("TimeLabel")
         stats_row.addWidget(self.time_label)
         progress_layout.addLayout(stats_row)
@@ -213,19 +199,21 @@ class BatchWindow(QDialog):
 
         # Action Buttons
         actions_row = QHBoxLayout()
-        self.start_btn = QPushButton("▶️ Start Processing")
+        self.start_btn = QPushButton(self._t("batch.start"))
         self.start_btn.setObjectName("primary_action")
         self.start_btn.clicked.connect(self.start_processing)
         actions_row.addWidget(self.start_btn)
 
-        self.stop_btn = QPushButton("⏹️ Stop")
+        self.stop_btn = QPushButton(self._t("batch.stop_btn"))
+        self.stop_btn.setProperty("variant", "danger")
         self.stop_btn.setEnabled(False)
         self.stop_btn.clicked.connect(self.stop_processing)
         actions_row.addWidget(self.stop_btn)
 
         actions_row.addStretch(1)
 
-        self.close_btn = QPushButton("❌ Close")
+        self.close_btn = QPushButton(self._t("batch.close"))
+        self.close_btn.setProperty("variant", "ghost")
         self.close_btn.clicked.connect(self.close)
         actions_row.addWidget(self.close_btn)
         
@@ -253,19 +241,22 @@ class BatchWindow(QDialog):
         
         QMessageBox.warning(
             self,
-            "Free Plan Limit",
-            f"Free plan is limited to {self.FREE_FILE_LIMIT} images per batch.\n\n"
-            f"{excess} file(s) were removed.\n\n"
-            "Upgrade to Max to process unlimited images."
+            self._t("batch.free_limit_title"),
+            # Two counted nouns, so two strings, each with its own plural form
+            "\n\n".join((
+                self._t("batch.free_limit_msg", count=self.FREE_FILE_LIMIT),
+                self._t("batch.free_limit_removed", count=excess),
+                self._t("batch.free_limit_upgrade"),
+            )),
         )
         return excess
 
     def add_files(self):
         files, _ = QFileDialog.getOpenFileNames(
             self,
-            "Select Images",
+            self._t("batch.select_images"),
             os.path.expanduser("~"),
-            "Images (*.png *.jpg *.jpeg *.bmp *.webp *.tiff *.tif)"
+            self._t("batch.image_filter") + " (*.png *.jpg *.jpeg *.bmp *.webp *.tiff *.tif)"
         )
         
         if files:
@@ -280,10 +271,10 @@ class BatchWindow(QDialog):
             added_count = max(0, added_count - removed)
             self.update_file_count()
             if added_count > 0:
-                self.status_label.setText(f"Added {added_count} file(s)")
+                self.status_label.setText(self._t("batch.added", count=added_count))
 
     def add_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
+        folder = QFileDialog.getExistingDirectory(self, self._t("batch.select_folder"))
         if folder:
             supported_exts = ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp']
             added_count = 0
@@ -300,14 +291,14 @@ class BatchWindow(QDialog):
             added_count = max(0, added_count - removed)
             self.update_file_count()
             if added_count > 0:
-                self.status_label.setText(f"Added {added_count} file(s) from folder")
+                self.status_label.setText(self._t("batch.added_from_folder", count=added_count))
             else:
-                QMessageBox.information(self, "Info", "No valid images found in folder")
+                QMessageBox.information(self, self._t("batch.info_title"), self._t("batch.no_files"))
 
     def remove_selected(self):
         selected_items = self.file_listbox.selectedItems()
         if not selected_items:
-            QMessageBox.information(self, "Info", "Please select files to remove")
+            QMessageBox.information(self, self._t("batch.info_title"), self._t("batch.select_to_remove"))
             return
             
         for item in selected_items:
@@ -317,45 +308,45 @@ class BatchWindow(QDialog):
                 del self.selected_files[row]
                 
         self.update_file_count()
-        self.status_label.setText(f"Removed {len(selected_items)} file(s)")
+        self.status_label.setText(self._t("batch.removed", count=len(selected_items)))
 
     def clear_all(self):
         if not self.selected_files:
             return
         reply = QMessageBox.question(
-            self, "Confirm", "Clear all files from list?",
+            self, self._t("batch.confirm_title"), self._t("batch.confirm_clear"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.selected_files = []
             self.file_listbox.clear()
             self.update_file_count()
-            self.status_label.setText("Cleared all files")
+            self.status_label.setText(self._t("batch.cleared"))
 
     def update_file_count(self):
         count = len(self.selected_files)
-        self.file_count_label.setText(f"Files: {count}")
+        self.file_count_label.setText(self._t("batch.files_count", count=count))
 
     def start_processing(self):
         if not self.selected_files:
-            QMessageBox.warning(self, "Warning", "No files selected!")
+            QMessageBox.warning(self, self._t("batch.warning_title"), self._t("batch.no_selected"))
             return
             
-        output_dir = QFileDialog.getExistingDirectory(self, "Select Output Folder")
+        output_dir = QFileDialog.getExistingDirectory(self, self._t("batch.select_output"))
         if not output_dir:
             return
             
         valid_files, invalid_files = self.batch_processor.validate_input_files(self.selected_files)
         
         if invalid_files:
-            msg = f"Found {len(invalid_files)} invalid file(s):\n\n"
+            msg = self._t("batch.invalid_found", count=len(invalid_files)) + "\n\n"
             msg += "\n".join(invalid_files[:5])
             if len(invalid_files) > 5:
-                msg += f"\n... and {len(invalid_files) - 5} more"
-            msg += f"\n\nProcess {len(valid_files)} valid file(s)?"
-            
+                msg += "\n" + self._t("batch.invalid_more", count=len(invalid_files) - 5)
+            msg += "\n\n" + self._t("batch.invalid_process", count=len(valid_files))
+
             reply = QMessageBox.question(
-                self, "Invalid Files", msg,
+                self, self._t("batch.invalid_title"), msg,
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply != QMessageBox.StandardButton.Yes:
@@ -387,8 +378,8 @@ class BatchWindow(QDialog):
         
         self.update_ui_state(processing=True)
         self.progress_bar.setValue(0)
-        self.processed_label.setText(f"Processed: 0/{self.total_files}")
-        self.failed_label.setText("Failed: 0")
+        self.processed_label.setText(self._t("batch.processed", current=0, total=self.total_files))
+        self.failed_label.setText(self._t("batch.failed", count=0))
 
         def process_worker():
             def progress_cb(current, total, result):
@@ -413,12 +404,12 @@ class BatchWindow(QDialog):
 
     def stop_processing(self):
         reply = QMessageBox.question(
-            self, "Confirm", "Stop processing?",
+            self, self._t("batch.confirm_title"), self._t("batch.stop_confirm"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
             self.processing = False
-            self.status_label.setText("Processing stopped by user")
+            self.status_label.setText(self._t("batch.stopped"))
             self.update_ui_state(processing=False)
 
     def on_progress(self, current, total, result):
@@ -427,15 +418,15 @@ class BatchWindow(QDialog):
         self.current_progress = current
         progress = int((current / total) * 100)
         self.progress_bar.setValue(progress)
-        self.processed_label.setText(f"Processed: {current}/{total}")
-        self.status_label.setText(f"Processing: {os.path.basename(result['input_path'])}")
+        self.processed_label.setText(self._t("batch.processed", current=current, total=total))
+        self.status_label.setText(self._t("batch.processing_file", filename=os.path.basename(result['input_path'])))
         if self.start_time:
             elapsed = int(time.time() - self.start_time)
-            self.time_label.setText(f"Time: {elapsed}s")
+            self.time_label.setText(self._t("batch.time", seconds=elapsed))
 
     def on_error(self, file_path, error_msg):
         self.failed_count += 1
-        self.failed_label.setText(f"Failed: {self.failed_count}")
+        self.failed_label.setText(self._t("batch.failed", count=self.failed_count))
         self.logger.error(f"Failed to process {file_path}: {error_msg}")
 
     def on_complete(self):
@@ -444,13 +435,11 @@ class BatchWindow(QDialog):
         
         success_count = self.current_progress - self.failed_count
         
-        msg = f"Batch processing complete!\n\n"
-        msg += f"✅ Successful: {success_count}\n"
-        msg += f"❌ Failed: {self.failed_count}\n"
-        msg += f"📊 Total: {self.total_files}"
-        
-        QMessageBox.information(self, "Complete", msg)
-        self.status_label.setText("Processing complete!")
+        msg = self._t("batch.complete") + "\n\n" + self._t(
+            "batch.complete_summary", success=success_count, failed=self.failed_count, total=self.total_files)
+
+        QMessageBox.information(self, self._t("batch.complete_title"), msg)
+        self.status_label.setText(self._t("batch.done"))
 
     def update_ui_state(self, processing):
         self.add_btn.setEnabled(not processing)
@@ -464,7 +453,7 @@ class BatchWindow(QDialog):
     def closeEvent(self, event):
         if self.processing:
             reply = QMessageBox.question(
-                self, "Confirm", "Processing in progress. Close anyway?",
+                self, self._t("batch.confirm_title"), self._t("batch.close_confirm"),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply == QMessageBox.StandardButton.Yes:

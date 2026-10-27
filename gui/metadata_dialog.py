@@ -14,27 +14,28 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from src.config import COLORS
 from gui import metadata_presets as presets
+from src.managers.localization_manager import get_locale_manager
 
-# ── Field definitions ─────────────────────────────────────────────────────────
+
+def _t(key: str, **kwargs) -> str:
+    return get_locale_manager().get(key, **kwargs)
+
+
+# ── Field definitions (key, input type, default action) ──────────────────────
+# Display names live in the locale files under metadata.fields.<key>
 EXIF_FIELDS = [
-    ("gps",       "📍 GPS Location",  "gps",      "spoof"),
-    ("make",      "📷 Camera Make",   "text",     "spoof"),
-    ("model",     "📷 Camera Model",  "text",     "spoof"),
-    ("software",  "💻 Software",      "text",     "spoof"),
-    ("datetime",  "🕐 Date / Time",   "datetime", "spoof"),
-    ("copyright", "©️  Copyright",     "text",     "keep"),
-    ("exposure",  "🔆 Exposure Data", "exposure", "spoof"),
+    ("gps",       "gps",      "spoof"),
+    ("make",      "text",     "spoof"),
+    ("model",     "text",     "spoof"),
+    ("software",  "text",     "spoof"),
+    ("datetime",  "datetime", "spoof"),
+    ("copyright", "text",     "keep"),
+    ("exposure",  "exposure", "spoof"),
 ]
 
+# Labels: metadata.actions.<action>
 ACTIONS = ["keep", "strip", "spoof", "custom"]
-ACTION_LABELS = {
-    "keep":   "✅ Keep",
-    "strip":  "🗑 Strip",
-    "spoof":  "🎲 Spoof",
-    "custom": "✏️ Custom",
-}
 
 
 class MetadataCustomizerDialog(QDialog):
@@ -47,20 +48,7 @@ class MetadataCustomizerDialog(QDialog):
         self.result: dict | None = None
         self._current = current_exif or {}
 
-        # Get active colors from parent or default
-        if parent and hasattr(parent, 'colors'):
-            self.colors = parent.colors
-        else:
-            self.colors = COLORS
-
-        self.action_colors = {
-            "keep":   self.colors.get('accent_green', '#4CAF50'),
-            "strip":  self.colors.get('accent_red', '#F44336'),
-            "spoof":  self.colors.get('accent_cyan', '#2196F3'),
-            "custom": self.colors.get('accent_orange', '#FF9800'),
-        }
-        
-        self.setWindowTitle("DotScramble — Custom Metadata Control")
+        self.setWindowTitle(_t("metadata.customizer.window_title"))
         self.setMinimumSize(620, 650)
         self.resize(620, 650)
         
@@ -75,7 +63,6 @@ class MetadataCustomizerDialog(QDialog):
         self._load_current_values()
 
     def _build_ui(self):
-        from PySide6.QtGui import QFont
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
@@ -86,12 +73,11 @@ class MetadataCustomizerDialog(QDialog):
         hdr_layout = QHBoxLayout(hdr)
         hdr_layout.setContentsMargins(20, 10, 20, 10)
 
-        title_lbl = QLabel("🛡️  Custom Metadata Control")
+        title_lbl = QLabel(_t("metadata.customizer.title"))
         title_lbl.setObjectName("DialogTitle")
-        title_lbl.setFont(QFont("Helvetica", 14, QFont.Weight.Bold))
         hdr_layout.addWidget(title_lbl)
 
-        plan_lbl = QLabel("Max Plan")
+        plan_lbl = QLabel(_t("metadata.customizer.plan"))
         plan_lbl.setObjectName("plan_lbl")
         hdr_layout.addWidget(plan_lbl, alignment=Qt.AlignmentFlag.AlignRight)
 
@@ -102,22 +88,23 @@ class MetadataCustomizerDialog(QDialog):
         preset_layout = QHBoxLayout(preset_frame)
         preset_layout.setContentsMargins(20, 10, 20, 5)
         
-        preset_lbl = QLabel("Preset:")
+        preset_lbl = QLabel(_t("metadata.customizer.preset"))
         preset_lbl.setObjectName("preset_lbl")
         preset_layout.addWidget(preset_lbl)
 
         self.preset_combo = QComboBox()
-        self.preset_combo.addItems(presets.all_preset_names())
-        self.preset_combo.setPlaceholderText("Select a preset...")
+        self._fill_preset_combo()
+        self.preset_combo.setPlaceholderText(_t("metadata.customizer.preset_placeholder"))
         self.preset_combo.currentIndexChanged.connect(self._on_preset_selected)
         preset_layout.addWidget(self.preset_combo, 1)
 
-        save_btn = QPushButton("💾 Save As...")
+        save_btn = QPushButton(_t("metadata.customizer.save_as"))
         save_btn.clicked.connect(self._save_current_as_preset)
         preset_layout.addWidget(save_btn)
 
-        self.del_preset_btn = QPushButton("🗑 Delete")
+        self.del_preset_btn = QPushButton(_t("metadata.customizer.delete"))
         self.del_preset_btn.setObjectName("del_preset_btn")
+        self.del_preset_btn.setEnabled(False)  # only user presets can be deleted
         self.del_preset_btn.clicked.connect(self._delete_selected_preset)
         preset_layout.addWidget(self.del_preset_btn)
 
@@ -130,7 +117,7 @@ class MetadataCustomizerDialog(QDialog):
         legend_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
         for action in ACTIONS:
-            lbl = QLabel(ACTION_LABELS[action])
+            lbl = QLabel(_t(f"metadata.actions.{action}"))
             lbl.setObjectName(f"legend_{action}")
             legend_layout.addWidget(lbl)
 
@@ -146,8 +133,8 @@ class MetadataCustomizerDialog(QDialog):
         scroll_layout.setContentsMargins(20, 5, 20, 5)
         scroll_layout.setSpacing(8)
 
-        for key, label, ftype, default in EXIF_FIELDS:
-            card = self._build_field_row(key, label, ftype, default)
+        for key, ftype, default in EXIF_FIELDS:
+            card = self._build_field_row(key, ftype, default)
             scroll_layout.addWidget(card)
 
         scroll.setWidget(scroll_content)
@@ -159,30 +146,30 @@ class MetadataCustomizerDialog(QDialog):
         btn_layout = QHBoxLayout(btn_frame)
         btn_layout.setContentsMargins(20, 10, 20, 10)
 
-        spoof_all_btn = QPushButton("🎲 Spoof All")
+        spoof_all_btn = QPushButton(_t("metadata.customizer.spoof_all"))
         spoof_all_btn.clicked.connect(lambda: self._set_all("spoof"))
         btn_layout.addWidget(spoof_all_btn)
 
-        strip_all_btn = QPushButton("🗑 Strip All")
+        strip_all_btn = QPushButton(_t("metadata.customizer.strip_all"))
         strip_all_btn.setObjectName("strip_all_btn")
         strip_all_btn.clicked.connect(lambda: self._set_all("strip"))
         btn_layout.addWidget(strip_all_btn)
 
         btn_layout.addStretch(1)
 
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton(_t("metadata.cancel"))
+        cancel_btn.setProperty("variant", "ghost")
         cancel_btn.clicked.connect(self._cancel)
         btn_layout.addWidget(cancel_btn)
 
-        apply_btn = QPushButton("✅  Apply")
+        apply_btn = QPushButton(_t("metadata.customizer.apply"))
         apply_btn.setObjectName("primary_action")
         apply_btn.clicked.connect(self._apply)
         btn_layout.addWidget(apply_btn)
 
         main_layout.addWidget(btn_frame)
 
-    def _build_field_row(self, key: str, label: str, ftype: str, default: str) -> QFrame:
-        from PySide6.QtGui import QFont
+    def _build_field_row(self, key: str, ftype: str, default: str) -> QFrame:
         card = QFrame()
         card.setObjectName("card_frame")
         card_layout = QVBoxLayout(card)
@@ -191,8 +178,8 @@ class MetadataCustomizerDialog(QDialog):
 
         # Top row: Label & current value
         top_row = QHBoxLayout()
-        name_lbl = QLabel(label)
-        name_lbl.setFont(QFont("Helvetica", 10, QFont.Weight.Bold))
+        name_lbl = QLabel(_t(f"metadata.fields.{key}"))
+        name_lbl.setProperty("role", "field-label")
         top_row.addWidget(name_lbl)
 
         current_val = self._get_current_value(key)
@@ -212,8 +199,10 @@ class MetadataCustomizerDialog(QDialog):
 
         valid_actions = ACTIONS if ftype != "exposure" else ["keep", "strip", "spoof"]
         for act in valid_actions:
-            rb = QRadioButton(ACTION_LABELS[act])
-            rb.setStyleSheet(f"QRadioButton::indicator {{ width: 0px; height: 0px; }} QRadioButton {{ padding: 3px 8px; background-color: {self.colors['bg_dark']}; border: 1px solid {self.colors['border_color']}; border-radius: 4px; }} QRadioButton:checked {{ background-color: {self.action_colors[act]}; color: white; border: none; }}")
+            rb = QRadioButton(_t(f"metadata.actions.{act}"))
+            rb.setProperty("variant", "action")   # styled as a pill in the QSS
+            rb.setProperty("action", act)
+            rb.setCursor(Qt.CursorShape.PointingHandCursor)
             group.addButton(rb, valid_actions.index(act))
             
             # Map action value to button text/data
@@ -227,23 +216,24 @@ class MetadataCustomizerDialog(QDialog):
 
         # Custom input frame
         custom_input_widget = QWidget()
+        custom_input_widget.setObjectName("card_row")
         custom_layout = QHBoxLayout(custom_input_widget)
         custom_layout.setContentsMargins(0, 5, 0, 0)
         self._custom_fields[key] = custom_input_widget
 
         if ftype == "gps":
-            custom_layout.addWidget(QLabel("Lat:"))
-            self._lat_input.setPlaceholderText("Latitude")
+            custom_layout.addWidget(QLabel(_t("metadata.customizer.lat")))
+            self._lat_input.setPlaceholderText(_t("metadata.customizer.lat_placeholder"))
             self._lat_input.setFixedWidth(100)
             custom_layout.addWidget(self._lat_input)
             
-            custom_layout.addWidget(QLabel("Lon:"))
-            self._lon_input.setPlaceholderText("Longitude")
+            custom_layout.addWidget(QLabel(_t("metadata.customizer.lon")))
+            self._lon_input.setPlaceholderText(_t("metadata.customizer.lon_placeholder"))
             self._lon_input.setFixedWidth(100)
             custom_layout.addWidget(self._lon_input)
             custom_layout.addStretch(1)
         elif ftype in ("text", "datetime", "copyright"):
-            custom_layout.addWidget(QLabel("Custom value:"))
+            custom_layout.addWidget(QLabel(_t("metadata.customizer.custom_value")))
             inp = QLineEdit()
             inp.setPlaceholderText(current_val)
             custom_layout.addWidget(inp, 1)
@@ -328,55 +318,66 @@ class MetadataCustomizerDialog(QDialog):
                                 inp.setText(act.get("value", ""))
                     break
 
+    def _fill_preset_combo(self, select_user: str | None = None):
+        """(Re)fill the combo; each item carries its Preset so labels can be translated."""
+        self.preset_combo.blockSignals(True)
+        self.preset_combo.clear()
+        for preset in presets.list_presets():
+            self.preset_combo.addItem(preset.label, preset)
+        index = -1
+        if select_user is not None:
+            for i in range(self.preset_combo.count()):
+                preset = self.preset_combo.itemData(i)
+                if not preset.factory and preset.key == select_user:
+                    index = i
+                    break
+        self.preset_combo.setCurrentIndex(index)
+        self.preset_combo.blockSignals(False)
+
+    def _selected_preset(self):
+        return self.preset_combo.currentData()
+
     def _on_preset_selected(self, idx: int):
-        name = self.preset_combo.currentText()
-        if not name:
+        preset = self._selected_preset()
+        if preset is None:
             return
-        data = presets.load_preset(name)
+        data = presets.load_preset(preset)
         if data:
             self._load_actions_into_ui(data)
-        
-        self.del_preset_btn.setEnabled(not presets.is_factory(name))
+
+        self.del_preset_btn.setEnabled(not preset.factory)
 
     def _save_current_as_preset(self):
-        name, ok = QInputDialog.getText(self, "Save Preset", "Enter a name for this preset:")
+        name, ok = QInputDialog.getText(self, _t("metadata.customizer.save_title"), _t("metadata.customizer.save_prompt"))
         if not ok or not name:
             return
         name = name.strip()
         if not name:
             return
-        if presets.is_factory(name):
-            QMessageBox.critical(self, "Error", "Cannot overwrite a factory preset.")
+        if presets.is_reserved_name(name):
+            QMessageBox.critical(self, _t("metadata.customizer.error_title"), _t("metadata.customizer.factory_error"))
             return
         
         actions = self._get_current_actions()
         presets.save_preset(name, actions)
         
-        # Refresh combo
-        self.preset_combo.blockSignals(True)
-        self.preset_combo.clear()
-        self.preset_combo.addItems(presets.all_preset_names())
-        self.preset_combo.setCurrentText(name)
-        self.preset_combo.blockSignals(False)
+        self._fill_preset_combo(select_user=name)
         self.del_preset_btn.setEnabled(True)
         
-        QMessageBox.information(self, "Saved", f"Preset '{name}' saved successfully.")
+        QMessageBox.information(self, _t("metadata.customizer.saved_title"), _t("metadata.customizer.saved_msg", name=name))
 
     def _delete_selected_preset(self):
-        name = self.preset_combo.currentText()
-        if not name or presets.is_factory(name):
+        preset = self._selected_preset()
+        if preset is None or preset.factory:
             return
+        name = preset.key
         reply = QMessageBox.question(
-            self, "Delete Preset", f"Are you sure you want to delete '{name}'?",
+            self, _t("metadata.customizer.delete_title"), _t("metadata.customizer.delete_confirm", name=name),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
             if presets.delete_preset(name):
-                self.preset_combo.blockSignals(True)
-                self.preset_combo.clear()
-                self.preset_combo.addItems(presets.all_preset_names())
-                self.preset_combo.setCurrentIndex(-1)
-                self.preset_combo.blockSignals(False)
+                self._fill_preset_combo()
                 self.del_preset_btn.setEnabled(False)
 
     def _apply(self):

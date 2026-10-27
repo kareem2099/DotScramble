@@ -50,11 +50,17 @@ MODEL_URL  = ("https://storage.googleapis.com/mediapipe-models/"
               "face_landmarker/face_landmarker/float16/latest/face_landmarker.task")
 
 
+_model_verified_path: str | None = None
+
+
 def _ensure_model() -> str | None:
     """Return model path if file exists and is complete, otherwise None (no automatic blocking download)."""
+    global _model_verified_path
+    if _model_verified_path is not None:
+        return _model_verified_path
     if os.path.isfile(MODEL_PATH) and os.path.getsize(MODEL_PATH) > 1024 * 1024:
-        return MODEL_PATH
-    return None
+        _model_verified_path = MODEL_PATH
+    return _model_verified_path
 
 
 def is_model_downloaded() -> bool:
@@ -82,6 +88,8 @@ def download_model_file(progress_callback=None) -> bool:
                     progress_callback((dl / total) * 100)
         # Atomically replace to avoid partial/corrupt files on disk
         os.replace(temp_path, MODEL_PATH)
+        global _model_verified_path
+        _model_verified_path = MODEL_PATH
         return True
     except Exception as e:
         print(f"[DotScramble PRO] Model download failed: {e}")
@@ -160,6 +168,13 @@ def _landmark_to_px(lm, img_w: int, img_h: int) -> tuple[int, int]:
 # ── Haar Cascade lazy loader & cache ──────────────────────────────────────────
 _cascade_cache: dict[str, cv2.CascadeClassifier] = {}
 
+# Cascade files each free-tier mode needs (shipped with opencv-contrib-python 4.x)
+HAAR_CASCADES: dict[str, list[str]] = {
+    "face": ["haarcascade_frontalface_default.xml"],
+    "eye":  ["haarcascade_frontalface_default.xml", "haarcascade_eye.xml"],
+    "body": ["haarcascade_fullbody.xml"],
+}
+
 
 def _get_cascade(filename: str) -> cv2.CascadeClassifier | None:
     """Lazily load and cache Haar Cascade Classifiers to avoid disk I/O bottlenecks."""
@@ -226,6 +241,15 @@ class DetectionEngine:
     """
 
     # ── FREE tier — Haar Cascades ─────────────────────────────────────────────
+
+    @staticmethod
+    def missing_cascades(mode: str) -> list[str]:
+        """
+        Cascade files `mode` needs but that can't be loaded. The detect_* methods
+        return [] in that case, which is indistinguishable from "nothing found" —
+        callers must check this first so a face is never left visible silently.
+        """
+        return [f for f in HAAR_CASCADES.get(mode, []) if _get_cascade(f) is None]
 
     @staticmethod
     def detect_faces(image) -> list:

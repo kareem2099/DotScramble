@@ -44,6 +44,44 @@ import cv2
 
 # ── Thread safety: the FaceLandmarker singleton is NOT thread-safe ─────────────
 _landmarker_lock = threading.Lock()
+_adversarial_landmarker = None
+
+
+def _get_adversarial_landmarker():
+    """Lazily initialize a dedicated FaceLandmarker with num_faces=1 for speed."""
+    global _adversarial_landmarker
+    if _adversarial_landmarker is None:
+        try:
+            from src.models.detection_engine import _ensure_model
+        except ImportError:
+            from models.detection_engine import _ensure_model
+
+        model_path = _ensure_model()
+        if model_path is None:
+            return None
+
+        try:
+            from mediapipe.tasks import python as mp_python
+            from mediapipe.tasks.python import vision as mp_vision
+
+            base_opts = mp_python.BaseOptions(model_asset_path=model_path)
+            opts = mp_vision.FaceLandmarkerOptions(
+                base_options=base_opts,
+                running_mode=mp_vision.RunningMode.IMAGE,
+                num_faces=1,  # Only detect 1 face for adversarial speed
+                min_face_detection_confidence=0.5,
+            )
+            _adversarial_landmarker = mp_vision.FaceLandmarker.create_from_options(opts)
+        except Exception as e:
+            print(f"[DotScramble PRO] Failed to initialize Adversarial Landmarker: {e}")
+            return None
+    return _adversarial_landmarker
+
+
+def _simulate_jpeg(img: np.ndarray, quality: int = 85) -> np.ndarray:
+    """Simulate JPEG compression artifacts on an image in-memory."""
+    _, enc = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    return cv2.imdecode(enc, cv2.IMREAD_COLOR)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -55,6 +93,7 @@ def eot_face_score(
     delta: np.ndarray | None = None,
     n_aug: int = 8,
     jitter_px: int = 3,
+    jpeg_quality: int | None = None,
 ) -> float:
     """
     Continuous proxy score in [0, 1]: fraction of jitter-augmented views
@@ -64,35 +103,49 @@ def eot_face_score(
     1.0 = face detected in all jittered views (unperturbed / weak perturbation)
 
     Args:
-        image_bgr: Source image or face crop (BGR numpy uint8).
-        delta:     Float32 perturbation to add before scoring. None = no perturbation.
-        n_aug:     Number of jitter augmentations. Higher = less noise, more queries.
-        jitter_px: Max translation jitter in pixels (±jitter_px in x and y).
+        image_bgr:    Source image or face crop (BGR numpy uint8).
+        delta:        Float32 perturbation to add before scoring. None = no perturbation.
+        n_aug:        Number of jitter augmentations. Higher = less noise, more queries.
+        jitter_px:    Max translation jitter in pixels (±jitter_px in x and y).
+        jpeg_quality: Quality factor in [1, 100] for JPEG simulation (None to disable).
 
     Returns:
         float in [0, 1]
     """
-    try:
-        from src.models.detection_engine import DetectionEngine
-    except ImportError:
-        from models.detection_engine import DetectionEngine  # fallback for standalone script execution
-
     if delta is not None:
         query_img = np.clip(image_bgr.astype(np.float32) + delta, 0, 255).astype(np.uint8)
     else:
         query_img = image_bgr
 
+    if jpeg_quality is not None:
+        query_img = _simulate_jpeg(query_img, quality=jpeg_quality)
+
+    landmarker = _get_adversarial_landmarker()
+    if landmarker is None:
+        return 1.0
+
     h, w = query_img.shape[:2]
     hits = 0
-    for _ in range(n_aug):
-        dx = np.random.randint(-jitter_px, jitter_px + 1)
-        dy = np.random.randint(-jitter_px, jitter_px + 1)
-        M = np.float32([[1, 0, dx], [0, 1, dy]])
-        jittered = cv2.warpAffine(query_img, M, (w, h), borderMode=cv2.BORDER_REFLECT)
-        with _landmarker_lock:
-            detected = bool(DetectionEngine.detect_faces_pro(jittered))
-        if detected:
-            hits += 1
+    try:
+        import mediapipe as mp_core
+        for _ in range(n_aug):
+            dx = np.random.randint(-jitter_px, jitter_px + 1)
+            dy = np.random.randint(-jitter_px, jitter_px + 1)
+            M = np.float32([[1, 0, dx], [0, 1, dy]])
+            jittered = cv2.warpAffine(query_img, M, (w, h), borderMode=cv2.BORDER_REFLECT)
+            
+            rgb = cv2.cvtColor(jittered, cv2.COLOR_BGR2RGB)
+            mp_image = mp_core.Image(
+                image_format=mp_core.ImageFormat.SRGB, data=rgb
+            )
+            with _landmarker_lock:
+                result = landmarker.detect(mp_image)
+            if result.face_landmarks:
+                hits += 1
+    except Exception as e:
+        print(f"[DotScramble PRO] Adversarial FaceLandmarker error: {e}")
+        return 1.0
+
     return hits / n_aug
 
 
@@ -161,6 +214,8 @@ def adversarial_perturb(
     block_size: int = 32,
     # Verification
     verify_n_aug: int = 50,
+    # JPEG simulation
+    jpeg_quality: int | None = None,
     # Progress callback
     progress_callback=None,
     # Cooperative cancellation: callable returning True means "stop now"
@@ -193,6 +248,7 @@ def adversarial_perturb(
         block_size:              Spatial block size in pixels. Larger = fewer
                                  dimensions = faster but coarser perturbation.
         verify_n_aug:            n_aug used for final robust verification score.
+        jpeg_quality:            Quality factor in [1, 100] for JPEG simulation (None to disable).
         progress_callback:       Optional callable(iter: int, total: int,
                                  score: float) called after each iteration.
                                  Useful for progress dialogs.
@@ -225,7 +281,7 @@ def adversarial_perturb(
         mask_3d = np.ones((h, w, 1), dtype=np.float32)
 
     # Initial score sanity check
-    initial_score = eot_face_score(region_bgr, None, n_aug=n_aug)
+    initial_score = eot_face_score(region_bgr, None, n_aug=n_aug, jpeg_quality=jpeg_quality)
     if initial_score == 0.0:
         # Already not detected — no perturbation needed
         return np.zeros_like(region_bgr, dtype=np.float32), 0.0
@@ -236,14 +292,17 @@ def adversarial_perturb(
         a_i = alpha_start / ((i + 1) ** 0.2)
         ghat_small = np.zeros_like(delta_small)
 
+        # Adaptive n_aug: Use fewer queries when in the flat initial plateau (score >= 0.8)
+        effective_n_aug = n_aug if final_score < 0.8 else max(2, n_aug // 2)
+
         for _ in range(k):
             v_small = np.random.choice([-1.0, 1.0], size=delta_small.shape).astype(np.float32)
 
             d_pos = _upsample_delta(delta_small + c_i * v_small, region_bgr.shape) * mask_3d
             d_neg = _upsample_delta(delta_small - c_i * v_small, region_bgr.shape) * mask_3d
 
-            score_pos = eot_face_score(region_bgr, d_pos, n_aug=n_aug)
-            score_neg = eot_face_score(region_bgr, d_neg, n_aug=n_aug)
+            score_pos = eot_face_score(region_bgr, d_pos, n_aug=effective_n_aug, jpeg_quality=jpeg_quality)
+            score_neg = eot_face_score(region_bgr, d_neg, n_aug=effective_n_aug, jpeg_quality=jpeg_quality)
 
             ghat_small += ((score_pos - score_neg) / (2.0 * c_i)) * v_small
 
@@ -256,7 +315,7 @@ def adversarial_perturb(
         c_i = max(c_floor, c_i * c_decay)
 
         full_delta = _upsample_delta(delta_small, region_bgr.shape) * mask_3d
-        cur_score = eot_face_score(region_bgr, full_delta, n_aug=n_aug)
+        cur_score = eot_face_score(region_bgr, full_delta, n_aug=effective_n_aug, jpeg_quality=jpeg_quality)
         final_score = cur_score
 
         if progress_callback is not None:
@@ -270,7 +329,7 @@ def adversarial_perturb(
 
     # Robust final verification
     full_delta = _upsample_delta(delta_small, region_bgr.shape) * mask_3d
-    final_score = eot_face_score(region_bgr, full_delta, n_aug=verify_n_aug)
+    final_score = eot_face_score(region_bgr, full_delta, n_aug=verify_n_aug, jpeg_quality=jpeg_quality)
 
     return full_delta, final_score
 

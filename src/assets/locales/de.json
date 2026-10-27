@@ -1,0 +1,584 @@
+{
+    "app": {
+        "title": "DotScramble",
+        "version": "Version {version}",
+        "author": "Mit ❤️ gemacht von FreeRave"
+    },
+    "menu": {
+        "file": "Datei",
+        "edit": "Bearbeiten",
+        "presets": "Vorlagen",
+        "view": "Ansicht",
+        "help": "Hilfe",
+        "file_items": {
+            "open_image": "Bild öffnen",
+            "open_recent": "Zuletzt geöffnet",
+            "no_recent": "Keine zuletzt geöffneten Dateien",
+            "clear_history": "Verlauf löschen",
+            "save_result": "Ergebnis speichern",
+            "save_comparison": "Als Vergleich speichern",
+            "open_exports": "Exportordner öffnen",
+            "batch_process": "Stapelverarbeitung",
+            "exit": "Beenden"
+        },
+        "edit_items": {
+            "undo": "Rückgängig",
+            "redo": "Wiederholen",
+            "clear_selections": "Auswahl aufheben",
+            "reset_image": "Bild zurücksetzen"
+        },
+        "presets_items": {
+            "save_settings": "Aktuelle Einstellungen speichern",
+            "load_preset": "Vorlage laden",
+            "manage_presets": "Vorlagen verwalten"
+        },
+        "view_items": {
+            "themes": "🎨 Designs",
+            "language": "🌐 Sprache"
+        },
+        "help_items": {
+            "check_updates": "Nach Updates suchen",
+            "open_app_data": "App-Datenordner öffnen",
+            "donate": "Spenden",
+            "about": "Über",
+            "shortcuts": "Tastenkürzel"
+        }
+    },
+    "ui": {
+        "header": {
+            "title": "DotScramble",
+            "preview": "🔴 Echtzeit-Vorschau"
+        },
+        "tier": {
+            "pro_badge": "⭐ PRO",
+            "free_badge": "🔓 GRATIS",
+            "pro_desc": "KI-Erkennung aktiv",
+            "free_desc": "Haar Cascade · Upgrade für KI",
+            "upgrade_btn": "⭐ Auf Pro upgraden",
+            "upgrade_menu": "⭐️ Auf Pro upgraden",
+            "pro_activated_menu": "⭐️ PRO aktiviert"
+        },
+        "buttons": {
+            "load": "📁 Bild laden",
+            "apply": "✨ Effekt anwenden",
+            "reset": "🗑️ Auswahl aufheben"
+        },
+        "controls": {
+            "title": "⚙️ Steuerung",
+            "load_image": "📁 Bild laden",
+            "effect_type": "🎨 Effekttyp:",
+            "detection_mode": "🎯 Erkennungsmodus:",
+            "parameters": "🔧 Effektparameter:",
+            "blur_strength": "Unschärfe-Stärke",
+            "pixel_size": "Pixelblock-Größe",
+            "opacity": "Deckkraft (%)",
+            "target_text": "Wort zum Verwischen eingeben:",
+            "apply_effect": "✨ Effekt anwenden",
+            "undo": "↶ Rückgängig",
+            "redo": "↷ Wiederholen",
+            "clear_selections": "🗑️ Auswahl aufheben",
+            "save_result": "💾 Ergebnis speichern",
+            "batch_process": "📦 Stapelverarbeitung",
+            "tip": "💡 Tipp: Echtzeit-Vorschau aktivieren\nfür sofortige Ergebnisse!"
+        },
+        "canvas": {
+            "title": "🖼️ Bildfläche",
+            "views": {
+                "original": "Original",
+                "processed": "Bearbeitet",
+                "compare": "Vergleich"
+            },
+            "placeholder_title": "Bild hierher ziehen",
+            "placeholder_subtitle": "oder Ctrl+O drücken, um Bilder zu durchsuchen",
+            "before": "VORHER",
+            "after": "NACHHER"
+        },
+        "status": {
+            "ready": "Bereit zum Laden eines Bildes...",
+            "loaded": "Geladen: {filename}",
+            "processed": {
+                "one": "{count} Bereich bearbeitet",
+                "other": "{count} Bereiche bearbeitet"
+            },
+            "saved": "Gespeichert: {filename}",
+            "preview_enabled": "Echtzeit-Vorschau aktiviert",
+            "preview_disabled": "Echtzeit-Vorschau deaktiviert",
+            "region_added": "Bereich hinzugefügt (insgesamt {count})",
+            "cleared": "Alle Auswahlen aufgehoben",
+            "reset": "Bild auf Original zurückgesetzt",
+            "failed_load": "Bild konnte nicht geladen werden",
+            "detected": {
+                "one": "{shown} von {count} Bereich wird ausgeblendet — klicke darauf, um ihn auszulassen",
+                "other": "{shown} von {count} Bereichen werden ausgeblendet — klicke auf einen, um ihn auszulassen"
+            },
+            "detected_none": "In diesem Erkennungsmodus wurde nichts gefunden.",
+            "detect_unavailable": "Die Erkennungsvorschau funktioniert nur in automatischen Modi (nicht Manuell oder Ganzes Bild).",
+            "compare_on": "Vergleich: Trennlinie ziehen, um Vorher / Nachher zu sehen",
+            "applied": "Effekt angewendet.",
+            "undo_done": "Rückgängig gemacht",
+            "redo_done": "Wiederholt",
+            "activating": "Wird aktiviert…",
+            "activated": "DotScramble Pro aktiviert!",
+            "activation_failed": "Aktivierung fehlgeschlagen.",
+            "restart_to_update": "Neu starten zum Aktualisieren",
+            "ai_cancelled": "KI-Tarnung abgebrochen.",
+            "ai_success": "✅ KI-Tarnung abgeschlossen — das Gesicht ist vor KI-Detektoren verborgen",
+            "ai_partial": "⚠️ KI-Tarnung teilweise — Tarnrate {percent}%",
+            "ai_failed": "❌ KI-Tarnung fehlgeschlagen — das Gesicht ist verwischt, aber NICHT gegen KI-Erkennung geprüft",
+            "detection_unavailable": "⚠️ Erkennung nicht verfügbar — nichts wurde ausgeblendet"
+        },
+        "info": {
+            "image_info": "{width}x{height} | {size_kb} KB"
+        },
+        "toolbar": {
+            "open": "Öffnen",
+            "open_tip": "Bild öffnen (Ctrl+O)",
+            "save": "Speichern",
+            "save_tip": "Ergebnis speichern (Ctrl+S)",
+            "undo_tip": "Rückgängig (Ctrl+Z)",
+            "redo_tip": "Wiederholen (Ctrl+Y)",
+            "detect": "Erkennen",
+            "detect_tip": "Vorschau, was ausgeblendet wird — auf einen Bereich klicken, um ihn auszulassen (Ctrl+F)",
+            "compare": "Vergleichen",
+            "compare_tip": "Vorher / Nachher geteilt — Trennlinie ziehen (Ctrl+Shift+C)",
+            "zoom_in_tip": "Vergrößern (Ctrl++)",
+            "zoom_out_tip": "Verkleinern (Ctrl+-)",
+            "zoom_label_tip": "Klicken, um zwischen Einpassen und 100% zu wechseln",
+            "fit_tip": "An Fenster anpassen (Ctrl+0)",
+            "live": "Live-Vorschau",
+            "live_tip": "Effekt bei jeder Einstellungsänderung automatisch neu anwenden",
+            "upgrade": "Upgrade",
+            "upgrade_tip": "KI-Erkennung, KI-Tarnung und Metadaten-Werkzeuge freischalten",
+            "pro": "PRO"
+        },
+        "sidebar": {
+            "detect_title": "Was ausblenden",
+            "effect_title": "Wie ausblenden",
+            "settings_title": "Feinabstimmung",
+            "metadata_title": "Metadaten beim Speichern",
+            "ai_heading": "KI-Tarnung",
+            "ai_hybrid": "Hybrid — Unschärfe + vor KI verbergen",
+            "ai_hybrid_tip": "Verbirgt das Gesicht vor KI-Detektoren und verwischt es für Menschen (nur Gesichter, ~30–90 s)",
+            "ai_invisible": "Unsichtbar — nur vor KI verbergen",
+            "ai_invisible_tip": "Verbirgt das Gesicht vor KI-Detektoren, für Menschen bleibt es klar (nur Gesichter, ~30–90 s)",
+            "free_hint": "Einfache Erkennung. Pro ergänzt KI-Genauigkeit.",
+            "pro_hint": "KI-Erkennung ist aktiv.",
+            "ai_face_only": "KI-Tarnung funktioniert nur bei Gesichtern.",
+            "word_placeholder": "Wort zum Verwischen, z. B. ein Name",
+            "manual_hint": "Auf dem Bild ziehen, um auszublendende Bereiche zu zeichnen.",
+            "apply": "Effekt anwenden",
+            "apply_tip": "Effekt anwenden (Ctrl+Enter)",
+            "clear": "Auswahl löschen",
+            "batch": "Stapel",
+            "locked_title": "Pro-Funktion",
+            "locked_msg": "„{name}“ ist in DotScramble Pro verfügbar.\n\nJetzt upgraden?"
+        },
+        "metadata": {
+            "keep": "Behalten",
+            "strip": "Entfernen",
+            "spoof": "Täuschen",
+            "keep_desc": "Die ursprünglichen Metadaten bleiben unverändert.",
+            "strip_desc": "Entfernt GPS-, Kamera- und Gerätedaten dauerhaft.",
+            "spoof_desc": "Ersetzt die echten Metadaten durch glaubwürdige Täuschungen.",
+            "profiles": {
+                "ghost": "Geist — Nokia in der Antarktis, Jahr 2000",
+                "troll": "Troll — zufälliger Ozean, alte Kamera",
+                "artist": "Künstler — verbirgt GPS, behält Copyright",
+                "custom": "Eigene — Steuerung pro Feld"
+            },
+            "editor": "Metadaten-Editor öffnen…",
+            "locked": "In Pro verfügbar — upgraden",
+            "custom_saved": "Eigene Metadaten-Regeln gespeichert."
+        },
+        "ai": {
+            "progress_title": "KI-Tarnung — Verarbeitung",
+            "progress_start": "KI-Tarnung wird berechnet…\nDas kann 30–90 Sekunden dauern.",
+            "progress_step": "Gesicht {face}/{faces} — Durchlauf {iter}/{iters} · Wert {score}",
+            "no_oval": "KI-Tarnung funktioniert nur im Gesichtsoval.\nKein Gesicht erkannt — versuche den Erkennungsmodus Gesicht.",
+            "cancel": "Abbrechen"
+        },
+        "faces": {
+            "title": "KI-Tarnung — Gesichter auswählen",
+            "header": {
+                "one": "<b>{count} Gesicht erkannt.</b> Wähle, ob es mit KI-Tarnung geschützt werden soll.",
+                "other": "<b>{count} Gesichter erkannt.</b> Wähle, welche mit KI-Tarnung geschützt werden sollen."
+            },
+            "face_n": "Gesicht {n}",
+            "select": "Auswählen",
+            "select_all": "Alle auswählen",
+            "deselect_all": "Auswahl aufheben",
+            "note": "Die Stärke der KI-Tarnung wird mit dem Regler <b>Deckkraft</b> eingestellt.",
+            "apply": "KI-Tarnung anwenden"
+        },
+        "activation": {
+            "title": "DotScramble Pro wird aktiviert",
+            "waiting": "Warte auf Anmeldung…",
+            "desc": "Bitte schließe die Aktivierung im Browser ab.\nDieses Fenster schließt sich automatisch.",
+            "manual_btn": "Schlüssel manuell eingeben",
+            "manual_title": "Pro aktivieren",
+            "manual_prompt": "Gib deinen DotSuite-API-Schlüssel ein, um DotScramble Pro freizuschalten:",
+            "failed_title": "Aktivierung fehlgeschlagen"
+        },
+        "model": {
+            "title": "KI-Modell erforderlich",
+            "prompt": "Diese Pro-Funktion benötigt eine KI-Modelldatei (~8 MB).\n\nJetzt herunterladen?",
+            "downloading_title": "KI-Modell wird heruntergeladen",
+            "downloading": "face_landmarker.task wird heruntergeladen…",
+            "success": "KI-Modell heruntergeladen. Pro-Funktionen sind jetzt aktiv.",
+            "failed_title": "Download fehlgeschlagen",
+            "failed": "Das KI-Modell konnte nicht heruntergeladen werden. Bitte prüfe deine Internetverbindung."
+        },
+        "messages": {
+            "title_error": "Fehler",
+            "title_info": "Info",
+            "title_success": "Erfolg",
+            "file_not_found": "Datei nicht gefunden!",
+            "unsupported_title": "Nicht unterstützte Datei",
+            "unsupported_drop": "Der Dateityp '{ext}' wird nicht unterstützt.\n\nUnterstützte Formate: JPG, PNG, BMP, TIFF, WebP, GIF",
+            "display_error": "Das Bild konnte nicht angezeigt werden: {error}",
+            "open_folder_error": "Der Ordner konnte nicht geöffnet werden: {error}",
+            "save_dialog_title": "Bearbeitetes Bild speichern",
+            "comparison_dialog_title": "Vergleichsbild speichern",
+            "select_preset_prompt": "Vorlage zum Laden auswählen:",
+            "preset_loaded": "Vorlage '{name}' geladen!",
+            "delete_preset_title": "Vorlage löschen",
+            "delete_preset_prompt": "Vorlage zum Löschen auswählen:",
+            "preset_deleted": "Vorlage '{name}' gelöscht!",
+            "close": "Schließen",
+            "update_ready_title": "Update bereit",
+            "restart_title": "Anwendung neu starten",
+            "clear_history_title": "Verlauf löschen",
+            "zoom": "Vergrößern / Verkleinern",
+            "zoom_fit_actual": "An Fenster anpassen / Originalgröße",
+            "cascades_missing": "Die einfache Erkennung kann nicht laufen: Die Cascade-Dateien von OpenCV fehlen ({files}).\n\nNichts wurde ausgeblendet. Installiere die Abhängigkeiten neu mit:\npip install -r requirements.txt"
+        },
+        "version_gate": {
+            "title": "Update erforderlich",
+            "message": "DotScramble {current} wird nicht mehr unterstützt.\n\nBitte lade die neueste Version (mindestens {minimum}) herunter, um die App weiter zu nutzen. Deine Einstellungen bleiben erhalten.",
+            "download": "Neueste Version herunterladen",
+            "quit": "Beenden"
+        }
+    },
+    "effects": {
+        "blur": "🌫️ Unschärfe",
+        "pixelation": "🔲 Verpixeln",
+        "black_bar": "⬛ Schwarzer Balken",
+        "gradient": "🎭 Verlauf",
+        "mosaic": "🔳 Mosaik",
+        "glass": "❄️ Milchglas",
+        "oil_paint": "🎨 Ölgemälde",
+        "ai_evasion": "🛡️ KI-Tarnung - Hybrid (PRO)",
+        "ai_evasion_invisible": "🛡️ KI-Tarnung - Unsichtbar (PRO)"
+    },
+    "detection": {
+        "face": "🎭 Gesicht",
+        "eye": "👁️ Augen",
+        "body": "🧍 Ganzer Körper",
+        "license_plate": "🚗 Kennzeichen",
+        "text": "📝 Text",
+        "target_text": "✍️ Bestimmter Text",
+        "manual": "✏️ Manuell",
+        "full": "🌍 Ganzes Bild"
+    },
+    "dialogs": {
+        "error": {
+            "loading": "Fehler",
+            "loading_image": "Bild konnte nicht geladen werden:\n{error}",
+            "processing": "Verarbeitung fehlgeschlagen: {error}",
+            "saving": "Bild konnte nicht gespeichert werden: {error}",
+            "no_image": "Kein Bild geladen",
+            "no_selections": "Zeichne zuerst Bereiche auf das Bild!",
+            "no_word": "Bitte gib das Wort ein, das verwischt werden soll.",
+            "word_not_found": "Das Wort '{word}' wurde in diesem Bild nicht gefunden.",
+            "image_empty": "Das geladene Bild ist leer!",
+            "image_corrupted": "Bild konnte nicht geladen werden!\n\nDatei: {filename}\n\nMögliche Gründe:\n• Datei ist beschädigt\n• Format wird nicht unterstützt\n• Dateipfad enthält Sonderzeichen",
+            "dependencies": "Erforderliche Abhängigkeiten fehlen:\n\n{deps}\n\nBitte installiere sie mit:\npip install {deps}",
+            "import": "Importfehler: {error}\n\nBitte stelle sicher, dass alle Module am richtigen Ort sind:\n- gui/main_window.py\n- gui/batch_window.py\n- core/image_processor.py\n- core/batch_processor.py\n- core/utils.py\n- config.py",
+            "fatal": "Anwendung konnte nicht gestartet werden:\n\n{error}\n\nDetails findest du in der Logdatei."
+        },
+        "info": {
+            "saved": "Bild erfolgreich gespeichert!",
+            "comparison_saved": "Vergleich gespeichert!",
+            "preset_saved": "Vorlage '{name}' gespeichert!",
+            "update_ready": "Ein neues Update wurde im Hintergrund heruntergeladen.\nDu kannst jederzeit über die Schaltfläche in der Statusleiste neu starten.",
+            "donate": "Den Entwickler unterstützen",
+            "donate_text": "Danke, dass du überlegst, dieses Projekt zu unterstützen!\nWähle deine bevorzugte Spendenplattform:",
+            "about": "DotScramble\nVersion {version}\n\nDatenschutz für das digitale Zeitalter\n\nDen Entwickler unterstützen:\n• PayPal: https://paypal.me/freerave1\n• Buy Me a Coffee: https://buymeacoffee.com/freerave\n• Ko-fi: https://ko-fi.com/freerave\n\nMit ❤️ gemacht von FreeRave",
+            "shortcuts": "Tastenkürzel",
+            "update_check": "Suche nach Updates...",
+            "update_available": "Update verfügbar: {version}\nHerunterladen und installieren?",
+            "dev_update_available": "Eine neue Version ({version}) ist verfügbar!\n\nHinweis: Automatische Updates sind im Entwicklungsmodus deaktiviert. Bitte hole die neuesten Änderungen per pull oder lade das Release von GitHub herunter.",
+            "no_updates": "Du verwendest die neueste Version",
+            "update_failed": "Update-Prüfung fehlgeschlagen: {error}",
+            "update_downloading": "Update wird im Hintergrund heruntergeladen...",
+            "update_complete": "Update erfolgreich heruntergeladen!",
+            "restart_required": "Die Anwendung wird geschlossen, um das Update anzuwenden. Fortfahren?",
+            "update_manual": "Version {version} ist verfügbar, aber diese DotScramble-Installation kann sich nicht automatisch aktualisieren. Download-Seite öffnen?",
+            "update_installing": "Update wird installiert...",
+            "update_install_failed": "Das Update konnte nicht installiert werden: {error}"
+        },
+        "warning": {
+            "clear_history": "Möchtest du den Verlauf der zuletzt geöffneten Dateien wirklich löschen?",
+            "unsaved_changes": "Es gibt ungespeicherte Änderungen. Fortfahren?",
+            "large_image": "Das Bild ist sehr groß ({width}x{height}). Die Verarbeitung kann langsam sein.",
+            "unsupported_format": "Das Dateiformat wird möglicherweise nicht vollständig unterstützt. Einige Funktionen funktionieren eventuell nicht richtig."
+        },
+        "confirm": {
+            "exit": "Änderungen vor dem Beenden speichern?",
+            "restart": "Die Anwendung wird geschlossen, um das Update anzuwenden. Fortfahren?"
+        }
+    },
+    "presets": {
+        "save": "Vorlage speichern",
+        "save_prompt": "Name der Vorlage eingeben:",
+        "load": "Vorlage laden",
+        "manage": "Vorlagen verwalten",
+        "no_presets": "Keine Vorlagen vorhanden",
+        "light_privacy": "Leichter Datenschutz",
+        "medium_privacy": "Mittlerer Datenschutz",
+        "maximum_privacy": "Maximaler Datenschutz",
+        "artistic_blur": "Künstlerische Unschärfe",
+        "license_plate_blur": "Kennzeichen verwischen",
+        "text_redaction": "Text schwärzen"
+    },
+    "batch": {
+        "title": "Stapelverarbeitung",
+        "select_folder": "Eingabeordner wählen",
+        "select_output": "Ausgabeordner wählen",
+        "start": "Verarbeitung starten",
+        "stop": "Verarbeitung stoppen",
+        "progress": {
+            "one": "{current} von {count} Datei verarbeitet",
+            "other": "{current} von {count} Dateien verarbeitet"
+        },
+        "complete": "Stapelverarbeitung abgeschlossen!",
+        "error": "Stapelverarbeitung fehlgeschlagen: {error}",
+        "no_files": "Im gewählten Ordner wurden keine Bilddateien gefunden",
+        "settings_saved": "Stapel-Einstellungen gespeichert!",
+        "window_title": "📦 Stapelverarbeitung — DotScramble",
+        "header": "📦 Bilder stapelweise verarbeiten",
+        "files_group": "📁 Ausgewählte Dateien",
+        "add_files": "➕ Dateien hinzufügen",
+        "add_folder": "📂 Ordner hinzufügen",
+        "remove": "➖ Auswahl entfernen",
+        "clear_all": "🗑️ Alle entfernen",
+        "files_count": "Dateien: {count}",
+        "detect_group": "🎯 Erkennungsmodus",
+        "effect_group": "🎨 Effekttyp",
+        "progress_group": "📊 Fortschritt",
+        "ready": "Bereit zur Verarbeitung",
+        "processed": "Verarbeitet: {current}/{total}",
+        "failed": "Fehlgeschlagen: {count}",
+        "time": "Zeit: {seconds} s",
+        "stop_btn": "⏹️ Stopp",
+        "close": "Schließen",
+        "free_limit_title": "Limit des Gratis-Plans",
+        "free_limit_msg": {
+            "one": "Der Gratis-Plan ist auf {count} Bild pro Stapel begrenzt.",
+            "other": "Der Gratis-Plan ist auf {count} Bilder pro Stapel begrenzt."
+        },
+        "free_limit_removed": {
+            "one": "{count} Datei wurde entfernt.",
+            "other": "{count} Dateien wurden entfernt."
+        },
+        "free_limit_upgrade": "Upgrade auf Max, um unbegrenzt viele Bilder zu verarbeiten.",
+        "select_images": "Bilder auswählen",
+        "image_filter": "Bilder",
+        "added": {
+            "one": "{count} Datei hinzugefügt",
+            "other": "{count} Dateien hinzugefügt"
+        },
+        "added_from_folder": {
+            "one": "{count} Datei aus dem Ordner hinzugefügt",
+            "other": "{count} Dateien aus dem Ordner hinzugefügt"
+        },
+        "info_title": "Info",
+        "select_to_remove": "Bitte wähle die Dateien aus, die entfernt werden sollen",
+        "removed": {
+            "one": "{count} Datei entfernt",
+            "other": "{count} Dateien entfernt"
+        },
+        "confirm_title": "Bestätigen",
+        "confirm_clear": "Alle Dateien aus der Liste entfernen?",
+        "cleared": "Alle Dateien entfernt",
+        "warning_title": "Warnung",
+        "no_selected": "Keine Dateien ausgewählt!",
+        "invalid_title": "Ungültige Dateien",
+        "invalid_found": {
+            "one": "{count} ungültige Datei gefunden:",
+            "other": "{count} ungültige Dateien gefunden:"
+        },
+        "invalid_more": "... und {count} weitere",
+        "invalid_process": {
+            "one": "{count} gültige Datei verarbeiten?",
+            "other": "{count} gültige Dateien verarbeiten?"
+        },
+        "stop_confirm": "Verarbeitung stoppen?",
+        "stopped": "Verarbeitung vom Benutzer gestoppt",
+        "processing_file": "Verarbeite: {filename}",
+        "complete_title": "Abgeschlossen",
+        "complete_summary": "✅ Erfolgreich: {success}\n❌ Fehlgeschlagen: {failed}\n📊 Gesamt: {total}",
+        "done": "Verarbeitung abgeschlossen!",
+        "close_confirm": "Die Verarbeitung läuft noch. Trotzdem schließen?"
+    },
+    "themes": {
+        "midnight": "🌑 Mitternacht dunkel",
+        "ocean": "🌊 Ozeanblau",
+        "cyberpunk": "🤖 Cyberpunk",
+        "dracula": "🧛 Dracula",
+        "forest": "🌲 Wald",
+        "light": "☀️ Hell",
+        "nord": "❄️ Nord",
+        "monokai": "🔥 Monokai",
+        "solarized_dark": "🌗 Solarized dunkel",
+        "solarized_light": "☀️ Solarized hell",
+        "tokyo_night": "🗼 Tokio bei Nacht",
+        "gruvbox_dark": "🍂 Gruvbox dunkel",
+        "one_dark": "⚫ One Dark",
+        "material": "🎨 Material",
+        "catppuccin_mocha": "☕ Catppuccin Mocha",
+        "rosepine": "🌹 Rosé Pine"
+    },
+    "donate": {
+        "paypal": "💳 PayPal",
+        "buy_coffee": "☕ Buy Me a Coffee",
+        "kofi": "🎨 Ko-fi",
+        "github": "⭐ GitHub Sponsors",
+        "url_error": "Browser konnte nicht geöffnet werden. Bitte besuche:\n{url}"
+    },
+    "shortcuts": {
+        "load": "Ctrl+O: Bild laden",
+        "save": "Ctrl+S: Ergebnis speichern",
+        "save_as": "Ctrl+Shift+S: Speichern unter",
+        "undo": "Ctrl+Z: Rückgängig",
+        "redo": "Ctrl+Y: Wiederholen",
+        "process": "Ctrl+P: Effekt anwenden",
+        "clear": "Ctrl+D: Auswahl aufheben",
+        "batch": "Ctrl+B: Stapelverarbeitung",
+        "quit": "Ctrl+Q: Beenden",
+        "export": "Ctrl+E: Exportieren",
+        "preferences": "Ctrl+, : Einstellungen"
+    },
+    "languages": {
+        "english": "Englisch (English)",
+        "arabic": "Arabisch (العربية)"
+    },
+    "image_picker": {
+        "title": "Bild auswählen",
+        "search_placeholder": "🔍  Dateien filtern…",
+        "quick_access": "SCHNELLZUGRIFF",
+        "cancel": "Abbrechen",
+        "open": "Öffnen",
+        "empty_folder": "Keine Bilder in diesem Ordner",
+        "bookmarks": {
+            "home": "Persönlicher Ordner",
+            "pictures": "Bilder",
+            "downloads": "Downloads",
+            "desktop": "Schreibtisch",
+            "documents": "Dokumente",
+            "music": "Musik",
+            "volumes": "Laufwerke",
+            "root": "Wurzelverzeichnis"
+        },
+        "loading": "Wird geladen…",
+        "no_matches": "Keine passenden Dateien"
+    },
+    "metadata": {
+        "fields": {
+            "gps": "📍 GPS-Standort",
+            "make": "📷 Kamerahersteller",
+            "model": "📷 Kameramodell",
+            "software": "💻 Software",
+            "datetime": "🕐 Datum / Uhrzeit",
+            "copyright": "©️  Copyright",
+            "exposure": "🔆 Belichtungsdaten"
+        },
+        "actions": {
+            "keep": "✅ Behalten",
+            "strip": "🗑 Entfernen",
+            "spoof": "🎲 Fälschen",
+            "custom": "✏️ Eigene"
+        },
+        "cancel": "Abbrechen",
+        "customizer": {
+            "window_title": "DotScramble — Eigene Metadaten-Steuerung",
+            "title": "🛡️  Eigene Metadaten-Steuerung",
+            "plan": "Max-Plan",
+            "preset": "Vorlage:",
+            "preset_placeholder": "Vorlage auswählen...",
+            "save_as": "💾 Speichern unter...",
+            "delete": "🗑 Löschen",
+            "spoof_all": "🎲 Alle fälschen",
+            "strip_all": "🗑 Alle entfernen",
+            "apply": "✅  Anwenden",
+            "lat": "Breite:",
+            "lon": "Länge:",
+            "lat_placeholder": "Breitengrad",
+            "lon_placeholder": "Längengrad",
+            "custom_value": "Eigener Wert:",
+            "save_title": "Vorlage speichern",
+            "save_prompt": "Gib einen Namen für diese Vorlage ein:",
+            "error_title": "Fehler",
+            "factory_error": "Eine Standardvorlage kann nicht überschrieben werden.",
+            "saved_title": "Gespeichert",
+            "saved_msg": "Vorlage '{name}' erfolgreich gespeichert.",
+            "delete_title": "Vorlage löschen",
+            "delete_confirm": "Möchtest du '{name}' wirklich löschen?"
+        },
+        "report": {
+            "window_title": "DotScramble — Speichern bestätigen",
+            "title": "📋  Metadaten-Übersicht",
+            "strip_title": "🗑  Alle Metadaten werden ENTFERNT",
+            "strip_desc": "GPS, Kameramodell, Zeitstempel und alle anderen EXIF-Daten werden dauerhaft entfernt.",
+            "keep_title": "✅  Ursprüngliche Metadaten werden BEHALTEN",
+            "keep_desc": "Die ursprünglichen EXIF-Daten des Bildes werden genau so wiederhergestellt, wie sie waren.",
+            "spoof_title": "🎭  Metadaten werden GEFÄLSCHT  ({profile})",
+            "spoof_default": "🎲 Fälschen",
+            "field_actions": "Aktionen pro Feld:",
+            "strip_list_title": "Folgende Daten werden dauerhaft entfernt:",
+            "strip_items": {
+                "gps": "📍 GPS-Koordinaten",
+                "camera": "📷 Kamerahersteller und -modell",
+                "software": "💻 Software-Kennung",
+                "timestamps": "🕐 Zeitstempel",
+                "copyright": "©️  Copyright",
+                "exposure": "🔆 Belichtungsdaten",
+                "fingerprint": "🔒 Geräte-Fingerabdruck"
+            },
+            "action_desc": {
+                "keep": "Bleibt unverändert",
+                "strip": "Wird entfernt",
+                "spoof": "Wird durch falsche Daten ersetzt"
+            },
+            "custom_gps": "Eigenes GPS: {lat}, {lon}",
+            "custom_value": "Eigener Wert: '{value}'",
+            "custom_empty": "Eigene (leer → fälschen)",
+            "save": "💾  Speichern",
+            "profiles": {
+                "ghost": {
+                    "name": "👻 Profil Geist",
+                    "desc": "Nokia 3310 · GPS in der Antarktis · Zeitstempel aus dem Jahr 2000"
+                },
+                "troll": {
+                    "name": "🌊 Profil Troll",
+                    "desc": "Zufällige alte Kamera · Zufälliges GPS im Ozean · Ziemlich aktuelles Datum"
+                },
+                "artist": {
+                    "name": "🎨 Profil Künstler",
+                    "desc": "Verbirgt GPS und Kamera · Behält das Copyright-Feld"
+                },
+                "custom": {
+                    "name": "⚙️ Eigenes Profil",
+                    "desc": "Regeln pro Feld (Details unten)"
+                }
+            }
+        },
+        "presets": {
+            "strip_all": "🔇 Alles entfernen",
+            "strip_gps": "📍 Nur GPS entfernen",
+            "strip_camera_gps": "📷 Kamera + GPS entfernen",
+            "photographer": "🎨 Fotograf (© behalten)",
+            "spoof_all": "🎲 Alles fälschen"
+        }
+    }
+}

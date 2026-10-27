@@ -13,44 +13,31 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from src.config import COLORS
+from src.managers.localization_manager import get_locale_manager
+from src.views.widgets import caption
 
-# ── Human-readable summaries ──────────────────────────────────────────────────
-_PROFILE_SUMMARY = {
-    "ghost":  ("👻 Ghost Profile",  "Nokia 3310 · Antarctica GPS · Year 2000 timestamp"),
-    "troll":  ("🌊 Troll Profile",  "Random vintage camera · Random ocean GPS · Recent-ish date"),
-    "artist": ("🎨 Artist Profile", "Hides GPS & camera device · Keeps copyright field"),
-    "custom": ("⚙️ Custom Profile", "Per-field rules (see details below)"),
-}
-
-_ACTION_ICONS = {
-    "keep":  ("✅", "#4CAF50", "Kept as-is"),
-    "strip": ("🗑", "#F44336", "Stripped / removed"),
-    "spoof": ("🎲", "#2196F3", "Replaced with fake data"),
-}
-
-_FIELD_LABELS = {
-    "gps":       "📍 GPS Location",
-    "make":      "📷 Camera Make",
-    "model":     "📷 Camera Model",
-    "software":  "💻 Software",
-    "datetime":  "🕐 Date / Time",
-    "copyright": "©️  Copyright",
-    "exposure":  "🔆 Exposure Data",
-}
+# Text lives in the locale files under metadata.report.* / metadata.fields.*
+_PROFILES = ("ghost", "troll", "artist", "custom")
+_ACTION_ICONS = {"keep": "✅", "strip": "🗑", "spoof": "🎲"}
+_STRIP_ITEMS = ("gps", "camera", "software", "timestamps", "copyright", "exposure", "fingerprint")
 
 
-def _describe_action(key: str, action, action_colors) -> tuple[str, str, str]:
-    """Return (icon, color, description) for a field action."""
+def _t(key: str, **kwargs) -> str:
+    return get_locale_manager().get(key, **kwargs)
+
+
+def _describe_action(key: str, action) -> tuple[str, str, str]:
+    """Return (icon, action kind, description); the kind picks the pill color in the QSS."""
     if isinstance(action, dict):
         if key == "gps":
-            lat = action.get("lat", "?")
-            lon = action.get("lon", "?")
-            return ("✏️", action_colors.get("custom", "#FF9800"), f"Custom GPS: {lat}, {lon}")
+            return ("✏️", "custom", _t("metadata.report.custom_gps",
+                                       lat=action.get("lat", "?"), lon=action.get("lon", "?")))
         val = action.get("value", "")
-        return ("✏️", action_colors.get("custom", "#FF9800"), f"Custom value: '{val[:30]}'" if val else "Custom (empty → spoof)")
-    icon, _, desc = _ACTION_ICONS.get(action, ("❓", "#888", action))
-    return icon, action_colors.get(action, "#888888"), desc
+        desc = _t("metadata.report.custom_value", value=val[:30]) if val else _t("metadata.report.custom_empty")
+        return ("✏️", "custom", desc)
+    if action in _ACTION_ICONS:
+        return _ACTION_ICONS[action], action, _t(f"metadata.report.action_desc.{action}")
+    return "❓", action, action
 
 
 class MetadataReportDialog(QDialog):
@@ -70,20 +57,7 @@ class MetadataReportDialog(QDialog):
         super().__init__(parent)
         self.confirmed = False
 
-        # Get active colors from parent or default
-        if parent and hasattr(parent, 'colors'):
-            self.colors = parent.colors
-        else:
-            self.colors = COLORS
-
-        self.action_colors = {
-            "keep":   self.colors.get('accent_green', '#4CAF50'),
-            "strip":  self.colors.get('accent_red', '#F44336'),
-            "spoof":  self.colors.get('accent_cyan', '#2196F3'),
-            "custom": self.colors.get('accent_orange', '#FF9800'),
-        }
-        
-        self.setWindowTitle("DotScramble — Confirm Save")
+        self.setWindowTitle(_t("metadata.report.window_title"))
         self.setMinimumSize(520, 460)
         self.resize(520, 460)
 
@@ -100,57 +74,57 @@ class MetadataReportDialog(QDialog):
         hdr_layout = QHBoxLayout(hdr)
         hdr_layout.setContentsMargins(20, 10, 20, 10)
 
-        title_lbl = QLabel("📋  Metadata Summary")
+        title_lbl = QLabel(_t("metadata.report.title"))
         title_lbl.setObjectName("DialogTitle")
-        title_lbl_font = title_lbl.font()
-        title_lbl_font.setPointSize(14)
-        title_lbl_font.setBold(True)
-        title_lbl.setFont(title_lbl_font)
         hdr_layout.addWidget(title_lbl)
 
         if filename:
             short = filename if len(filename) <= 32 else "…" + filename[-29:]
-            fn_lbl = QLabel(short)
-            fn_lbl.setObjectName("preset_lbl")
-            fn_lbl_font = fn_lbl.font()
-            fn_lbl_font.setPointSize(10)
-            fn_lbl_font.setItalic(True)
-            fn_lbl.setFont(fn_lbl_font)
+            fn_lbl = caption(short)
             hdr_layout.addWidget(fn_lbl, alignment=Qt.AlignmentFlag.AlignRight)
 
         main_layout.addWidget(hdr)
 
         # ── Mode banner ───────────────────────────────────────────────────────
         if mode == "scrub":
-            banner_text  = "🗑  All metadata will be STRIPPED"
-            banner_color = self.action_colors["strip"]
-            banner_desc  = "GPS, camera model, timestamps and all other EXIF data will be permanently removed."
+            banner_text  = _t("metadata.report.strip_title")
+            banner_kind  = "strip"
+            banner_desc  = _t("metadata.report.strip_desc")
         elif mode == "restore":
-            banner_text  = "✅  Original metadata will be PRESERVED"
-            banner_color = self.action_colors["keep"]
-            banner_desc  = "The image's original EXIF data will be restored exactly as it was."
+            banner_text  = _t("metadata.report.keep_title")
+            banner_kind  = "keep"
+            banner_desc  = _t("metadata.report.keep_desc")
         else:   # spoof
-            pname, pdesc = _PROFILE_SUMMARY.get(profile or "ghost", ("🎲 Spoof", ""))
-            banner_text  = f"🎭  Metadata will be SPOOFED  ({pname})"
-            banner_color = self.action_colors["spoof"]
+            shown = profile or "ghost"
+            if shown in _PROFILES:
+                pname = _t(f"metadata.report.profiles.{shown}.name")
+                pdesc = _t(f"metadata.report.profiles.{shown}.desc")
+            else:
+                pname, pdesc = _t("metadata.report.spoof_default"), ""
+            banner_text  = _t("metadata.report.spoof_title", profile=pname)
+            banner_kind  = "spoof"
             banner_desc  = pdesc
 
         banner = QFrame()
-        banner.setStyleSheet(f"background-color: {banner_color}; border-radius: 6px; border: none; margin: 10px;")
+        banner.setObjectName("ReportBanner")
+        banner.setProperty("action", banner_kind)
         banner_layout = QVBoxLayout(banner)
         banner_layout.setContentsMargins(20, 10, 20, 10)
         banner_layout.setSpacing(4)
 
         b_title = QLabel(banner_text)
-        b_title.setStyleSheet("color: white; font-weight: bold; font-size: 14px;")
+        b_title.setObjectName("ReportBannerTitle")
         banner_layout.addWidget(b_title)
 
         b_desc = QLabel(banner_desc)
-        b_desc.setStyleSheet("color: white; font-style: italic; font-size: 11px;")
+        b_desc.setObjectName("ReportBannerText")
         b_desc.setWordWrap(True)
         banner_layout.addWidget(b_desc)
 
-        main_layout.addWidget(banner)
+        banner_wrap = QVBoxLayout()
+        banner_wrap.setContentsMargins(16, 14, 16, 0)
+        banner_wrap.addWidget(banner)
+        main_layout.addLayout(banner_wrap)
 
         # ── Detail area ───────────────────────────────────────────────────────
         detail_widget = QWidget()
@@ -158,17 +132,11 @@ class MetadataReportDialog(QDialog):
         detail_layout.setContentsMargins(20, 15, 20, 15)
 
         if mode == "spoof" and field_actions:
-            lbl = QLabel("Field-by-field actions:")
-            lbl.setObjectName("preset_lbl")
-            lbl_font = lbl.font()
-            lbl_font.setBold(True)
-            lbl_font.setPointSize(11)
-            lbl.setFont(lbl_font)
-            detail_layout.addWidget(lbl)
+            detail_layout.addWidget(caption(_t("metadata.report.field_actions"), role="heading"))
 
             for key, action in field_actions.items():
-                label = _FIELD_LABELS.get(key, key)
-                icon, color, desc = _describe_action(key, action, self.action_colors)
+                label = _t(f"metadata.fields.{key}")
+                icon, kind, desc = _describe_action(key, action)
 
                 row = QFrame()
                 row.setObjectName("card_frame")
@@ -176,45 +144,27 @@ class MetadataReportDialog(QDialog):
                 row_layout.setContentsMargins(10, 6, 10, 6)
 
                 field_lbl = QLabel(label)
-                field_lbl_font = field_lbl.font()
-                field_lbl_font.setBold(True)
-                field_lbl.setFont(field_lbl_font)
+                field_lbl.setProperty("role", "field-label")
                 row_layout.addWidget(field_lbl, 1)
 
                 act_lbl = QLabel(f"{icon} {desc}")
-                act_lbl.setStyleSheet(f"background-color: {color}; color: white; border-radius: 3px; padding: 2px 8px; font-size: 11px;")
+                act_lbl.setProperty("role", "action-pill")
+                act_lbl.setProperty("action", kind)
                 row_layout.addWidget(act_lbl)
 
                 detail_layout.addWidget(row)
 
         elif mode == "scrub":
-            lbl = QLabel("The following data will be permanently removed:")
-            lbl.setObjectName("preset_lbl")
-            lbl_font = lbl.font()
-            lbl_font.setBold(True)
-            lbl_font.setPointSize(11)
-            lbl.setFont(lbl_font)
-            detail_layout.addWidget(lbl)
+            detail_layout.addWidget(caption(_t("metadata.report.strip_list_title"), role="heading"))
 
-            items = ["📍 GPS coordinates", "📷 Camera make & model",
-                     "💻 Software identifier", "🕐 Timestamps",
-                     "©️  Copyright", "🔆 Exposure data", "🔒 Device fingerprint"]
-            for item in items:
-                item_lbl = QLabel(f"  🗑  {item}")
-                item_lbl.setStyleSheet(f"color: {self.colors.get('accent_red', '#ef9a9a')}; font-weight: bold; font-size: 12px; padding: 2px 0;")
+            for item in _STRIP_ITEMS:
+                item_lbl = QLabel(f"  🗑  {_t(f'metadata.report.strip_items.{item}')}")
+                item_lbl.setProperty("role", "danger-item")
                 detail_layout.addWidget(item_lbl)
         else:
             # restore or simple spoof without custom fields
-            if mode == "spoof" and profile in _PROFILE_SUMMARY:
-                _, pdesc = _PROFILE_SUMMARY[profile]
-                desc_lbl = QLabel(pdesc)
-                desc_lbl.setObjectName("preset_lbl")
-                desc_lbl_font = desc_lbl.font()
-                desc_lbl_font.setItalic(True)
-                desc_lbl_font.setPointSize(11)
-                desc_lbl.setFont(desc_lbl_font)
-                desc_lbl.setWordWrap(True)
-                detail_layout.addWidget(desc_lbl)
+            if mode == "spoof" and profile in _PROFILES:
+                detail_layout.addWidget(caption(_t(f"metadata.report.profiles.{profile}.desc")))
             else:
                 detail_layout.addStretch(1)
 
@@ -229,11 +179,12 @@ class MetadataReportDialog(QDialog):
 
         btn_layout.addStretch(1)
 
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton(_t("metadata.cancel"))
+        cancel_btn.setProperty("variant", "ghost")
         cancel_btn.clicked.connect(self._cancel)
         btn_layout.addWidget(cancel_btn)
 
-        save_btn = QPushButton("💾  Save")
+        save_btn = QPushButton(_t("metadata.report.save"))
         save_btn.setObjectName("primary_action")
         save_btn.clicked.connect(self._confirm)
         btn_layout.addWidget(save_btn)

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- DotScramble app icon, simplified for 16–32px (fewer, larger pixels, full-bleed tile).
+       See dotscramble.svg; regenerate rasters with: python build_icons.py -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c2631"/>
+      <stop offset="1" stop-color="#0b1015"/>
+    </linearGradient>
+    <linearGradient id="dot" gradientUnits="userSpaceOnUse" x1="20" y1="88" x2="356" y2="424">
+      <stop offset="0" stop-color="#5ce1f2"/>
+      <stop offset="1" stop-color="#00a5bf"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="8" width="496" height="496" rx="96" fill="url(#bg)"/>
+  <!-- left half: the intact dot -->
+  <path d="M188 88A168 168 0 0 0 188 424Z" fill="url(#dot)"/>
+  <!-- right half: the same dot, pixelated and scattering away -->
+  <rect x="197" y="97" width="94" height="94" rx="12" fill="url(#dot)"/>
+  <rect x="197" y="209" width="94" height="94" rx="12" fill="url(#dot)"/>
+  <rect x="197" y="321" width="94" height="94" rx="12" fill="url(#dot)"/>
+  <rect x="309" y="209" width="94" height="94" rx="12" fill="url(#dot)"/>
+  <rect x="438.86" y="170.86" width="58.28" height="58.28" rx="7.44" fill="#22cde4" fill-opacity="0.6"/>
+</svg>

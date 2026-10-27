@@ -5,6 +5,83 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-10-27
+
+The biggest DotScramble update yet: a redesigned interface, a canvas you can preview, compare
+and zoom on, five new languages, a safer updater, and releases built and signed by GitHub
+Actions.
+
+### Added
+- **Redesigned interface.** One toolbar instead of a header, a toolbar and duplicate buttons; a
+  sidebar in four numbered, collapsible steps (What to hide → How to hide it → Fine-tune →
+  Metadata on save); effect tiles and detection chips instead of long radio lists; a single
+  primary **Apply effect** button; crisp SVG icons that follow the theme instead of emoji.
+- **Detect preview** (`Ctrl+F`): see every region that will be hidden before applying, and click
+  one to skip it. With several faces, the faces you pick on the canvas are the ones protected.
+- **Compare** (`Ctrl+Shift+C`): a before / after split view with a draggable divider.
+- **Zoom and pan**: mouse-wheel zoom around the cursor, `Ctrl++` / `Ctrl+-`, `Ctrl+0` fit,
+  `Ctrl+1` actual size, a Fit ↔ 100% toggle, and drag to pan. Zoom is kept after applying.
+- **Five new languages**: فارسی (Persian, right to left), Español, Русский, Deutsch and Türkçe,
+  for seven in total. The app starts in your system language when it is one of them.
+- **Real plural forms** (CLDR rules for every language): "1 file / 3 files", Arabic's six forms
+  ("ملف واحد / ملفين / 3 ملفات / 11 ملفًا"), Russian's three ("1 файл / 3 файла / 5 файлов").
+- **Every screen translated**: the image picker, the metadata editor and save report, the
+  batch window, and the factory metadata presets. User presets keep their names.
+- **New app icon**: a dot dissolving into pixels, with an SVG source and every size.
+- **Update-required screen**: `version_policy.json` in this repository sets the oldest supported
+  version. An older copy shows a screen with a **Download the latest version** button. It never
+  blocks offline use.
+- **Continuous integration**: the test suite runs on every push (188 tests).
+
+### Changed
+- **Auto-updater rewritten.** It checks GitHub off the UI thread, picks the right file for how
+  you installed DotScramble (AppImage, .deb, Arch package or portable tar.gz), and installs
+  only after both `SHA256SUMS` and the GPG signature check out against the pinned FreeRave
+  release key.
+- **Releases are built by GitHub Actions** on Ubuntu 22.04, so the packages run on Ubuntu 22.04+,
+  Debian 12+, Fedora 36+ and other distributions with glibc 2.35 or newer (earlier builds needed
+  a much newer system). Every package is smoke-tested and signed before it is published.
+- **Metadata on save** is now one clear choice: Keep / Strip / Decoy, with the Ghost, Troll,
+  Artist and Custom decoy profiles.
+- **Image picker** follows the active theme, and its grid adapts to the window width.
+- **All styling lives in one stylesheet** (`assets/themes/theme_template.qss`), so every theme
+  restyles the whole app, dialogs included.
+- The window can be snapped to half the screen: the toolbar switches to icons when space is tight.
+- Pro activation opens `dotsuite.dev` directly and verifies licences with `core.dotsuite.dev`.
+- **Dependencies**: Python 3.14 support; PySide6 6.12, NumPy 2.5, Pillow 13, MediaPipe 1.1.
+  OpenCV is pinned to the 4.x contrib build (`opencv-contrib-python<5`), because OpenCV 5 no
+  longer ships the Haar cascade files that free-tier detection needs.
+- `python src/main.py` now works from the project root, as well as `python -m src.main`.
+
+### Fixed
+- **Pro activation** failed with "Failed to fetch" after the dashboard moved to `dotsuite.dev`,
+  then with "HTTP 404" from the old licence server. Both are fixed, and a rejected activation
+  now shows the server's reason instead of a bare status code.
+- A Pro licence is no longer removed when the licence server can't be reached; only an explicit
+  rejection revokes it.
+- Missing OpenCV cascade files no longer fail silently with "0 regions processed" while the face
+  stays visible: the app shows an error, and batch processing marks the file as failed.
+- Mouse-wheel zoom was reset on every redraw.
+- Live preview stacked the effect on top of itself with every slider move.
+- Redo worked only once in a row.
+- Restored settings and presets didn't move the sliders; the live-preview preference wasn't saved.
+- A Pro-only effect or mode restored from an earlier Pro session stayed selected while locked.
+- A startup error crashed the app (core dump) instead of showing its message.
+- The image picker cut off tiles on the right; the batch window and dialogs ignored the theme.
+- A false "Tesseract not found" warning when the system Tesseract was in use, and a flood of
+  harmless Qt Wayland text-input messages in the terminal.
+
+### Security
+- Packaged builds now contain only the compiled licence module. Earlier builds also carried its
+  bytecode (`.pyc`) and generated C source; the build now refuses to package them, and the
+  release workflow inspects every binary before publishing.
+- Releases are now signed with the FreeRave ed25519 key
+  `0F04 6781 3146 DE68 272E DC82 145D 3459 56DE 18D2` (replacing the RSA key that signed 1.4.1),
+  and the updater checks every signature against that pinned fingerprint, so a different key
+  can't sign an update. `public_key.asc` holds the new public key.
+
+---
+
 ## [1.4.1] - 2026-07-10
 
 ### Added

@@ -13,6 +13,10 @@ from pathlib import Path
 
 STAGING_DIR = Path("build_staging")
 
+# `--no-sign`: build the packages only. CI writes SHA256SUMS and the GPG signatures
+# in a separate job, so the build job never sees the signing key.
+SIGN = "--no-sign" not in sys.argv
+
 def run_command(cmd, cwd=None):
     """Run a command and return success status"""
     try:
@@ -34,21 +38,24 @@ def prepare_staging():
 
     STAGING_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Copy src, assets, presets.json, core, and gui to staging
-    shutil.copytree("src", STAGING_DIR / "src")
-    shutil.copytree("core", STAGING_DIR / "core")
-    shutil.copytree("gui", STAGING_DIR / "gui")
+    # Copy src, assets, presets.json, core, and gui to staging. Never copy the license
+    # module's readable forms: its source, the Cython C file (which repeats the source
+    # in comments) and any cached bytecode (__pycache__/*.pyc decompiles straight back).
+    skip = shutil.ignore_patterns("__pycache__", "*.pyc", "license_manager.py", "license_manager.c")
+    shutil.copytree("src", STAGING_DIR / "src", ignore=skip)
+    shutil.copytree("core", STAGING_DIR / "core", ignore=skip)
+    shutil.copytree("gui", STAGING_DIR / "gui", ignore=skip)
     shutil.copytree("assets", STAGING_DIR / "assets")
     shutil.copy2("presets.json", STAGING_DIR / "presets.json")
 
     if os.path.exists("config.py"):
         shutil.copy2("config.py", STAGING_DIR / "config.py")
 
-    # Remove raw license_manager.py from staging
-    raw_license = STAGING_DIR / "src" / "managers" / "license_manager.py"
-    if raw_license.exists():
-        raw_license.unlink()
-        print("   ✅ Removed raw license_manager.py from staging.")
+    leaked = [p for p in STAGING_DIR.rglob("license_manager*") if p.suffix in (".py", ".c", ".pyc")]
+    if leaked:
+        print(f"   ❌ CRITICAL ERROR: readable license code in staging: {[str(p) for p in leaked]}")
+        return False
+    print("   ✅ No license source, C file or bytecode in staging.")
 
     # Verification check for the compiled binary (.so or .pyd file)
     compiled_exts = list((STAGING_DIR / "src" / "managers").glob("license_manager.*"))
@@ -268,7 +275,7 @@ StartupWMClass=DotScramble
         try:
             from src.config import APP_VERSION
         except ImportError:
-            APP_VERSION = "1.4.1"
+            from version_info import VERSION as APP_VERSION
             
         control_file = deb_staging / "DEBIAN/control"
         control_content = f"""Package: dotscramble
@@ -347,7 +354,8 @@ StartupWMClass=DotScramble
         if not appimagetool.exists():
             print("Downloading appimagetool...")
             import urllib.request
-            url = "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+            # AppImageKit's copy is frozen; appimagetool now lives in its own repo
+            url = "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
             try:
                 urllib.request.urlretrieve(url, appimagetool)
                 appimagetool.chmod(appimagetool.stat().st_mode | 0o111) # make executable
@@ -390,7 +398,7 @@ def sign_and_checksum_files(files, release_dir):
                 asc_path.unlink()
             
             # Detached armor signature
-            cmd = f"gpg --batch --yes --local-user 0D9B71AF1791DA36 --detach-sign --armor --output {asc_path} {file_path}"
+            cmd = f"gpg --batch --yes --local-user 0F0467813146DE68272EDC82145D345956DE18D2 --detach-sign --armor --output {asc_path} {file_path}"
             print(f"Signing {file_path.name} with GPG...")
             if run_command(cmd):
                 print(f"   ✅ Detached signature created: {asc_path.name}")
@@ -452,7 +460,7 @@ StartupWMClass=DotScramble
         try:
             from src.config import APP_VERSION
         except ImportError:
-            APP_VERSION = "1.4.0"
+            from version_info import VERSION as APP_VERSION
 
         import time
         build_date = int(time.time())
@@ -566,9 +574,11 @@ def create_release_package():
         except Exception as e:
             print(f"   ❌ Failed to create tar.gz package: {e}")
             
-        # 4. Create signatures & sha.txt
-        if built_files:
+        # 5. Create signatures & SHA256SUMS (skipped with --no-sign)
+        if built_files and SIGN:
             sign_and_checksum_files(built_files, release_dir)
+        elif built_files:
+            print("Skipping SHA256SUMS and signatures (--no-sign)")
     else:
         # Standard .tar.gz fallback for Windows/macOS
         release_name = f"DotScramble-{system.capitalize()}-{machine}"

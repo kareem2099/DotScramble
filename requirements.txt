@@ -1,6 +1,9 @@
 # --- Core Dependencies ---
 numpy
-opencv-python
+# contrib build: Oil Paint needs cv2.xphoto, and mediapipe depends on it anyway.
+# Stay on 4.x — OpenCV 5 no longer ships the Haar cascade files the free-tier
+# face / eye / body detection (and the packaged build) rely on.
+opencv-contrib-python>=4.10,<5
 Pillow
 piexif
 cryptography

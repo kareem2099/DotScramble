@@ -1,26 +1,40 @@
 """
-Main GUI Window for Advanced Privacy Studio Pro (PySide6 version)
+Main GUI Window for DotScramble (PySide6 version)
+
+Layout
+    ┌ Toolbar ── brand │ open save │ undo redo │ detect compare │ zoom ── live · tier ┐
+    ├ Sidebar ─────────────┬ Canvas ─────────────────────────────────────────────────┤
+    │ 1 What to hide       │                                                         │
+    │ 2 How to hide it     │                    ImageCanvas                          │
+    │ 3 Fine-tune          │                                                         │
+    │ 4 Metadata on save   │                                                         │
+    │ [ Apply effect ]     │                                                         │
+    └ Status bar ──────────┴─────────────────────────────────────────────────────────┘
+
+All styling lives in assets/themes/theme_template.qss; this module only sets
+objectNames and `variant` / `role` properties.
 """
-import cv2
-import numpy as np
 import os
-import logging
-from PIL import Image
+import re
 import sys
+import logging
 import webbrowser
 
+import cv2
+import numpy as np
+from PIL import Image
+
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QRadioButton, QButtonGroup, QFrame, QScrollArea, QSlider,
-    QCheckBox, QLineEdit, QStatusBar, QMessageBox, QFileDialog, QSplitter,
-    QMenuBar, QMenu, QDialog, QProgressBar, QProgressDialog, QInputDialog, QApplication
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QToolButton,
+    QRadioButton, QButtonGroup, QFrame, QScrollArea, QLineEdit, QStatusBar, QMessageBox,
+    QFileDialog, QSplitter, QDialog, QProgressBar, QProgressDialog, QInputDialog, QApplication,
+    QSizePolicy,
 )
-from PySide6.QtCore import Qt, QSize, QTimer, Signal, QObject, QThread
-from PySide6.QtGui import QIcon, QImage, QPixmap, QPainter, QPen, QColor, QFont, QActionGroup
+from PySide6.QtCore import Qt, QTimer, Signal, QThread, QEvent
+from PySide6.QtGui import QImage, QPixmap, QActionGroup, QKeySequence, QShortcut, QCursor
 
 logger = logging.getLogger(__name__)
 
-# Import custom modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.config import *
@@ -31,23 +45,53 @@ from src.managers.localization_manager import get_locale_manager
 from src.managers.rtl_manager import get_rtl_manager
 
 from core.batch_processor import BatchProcessor
-from core.utils import HistoryManager, PresetManager, ImageUtils, ExportManager, format_timestamp
+from core.utils import HistoryManager, PresetManager, ImageUtils, ExportManager
 from core.image_picker import ImagePicker
 from gui.batch_window import BatchWindow
 from core.text_detector import TextDetector
 from core.auto_updater import AutoUpdater
+from core.version_gate import VersionGate
 from src.managers.auth_server import LocalAuthManager
 
-from src.managers.database_manager import init_database_manager, get_db_manager
+from src.managers.database_manager import init_database_manager
 from src.managers.license_manager import LicenseManager
 from core.metadata_spoofer import (
     spoof as _spoof_metadata,
     spoof_custom as _spoof_custom,
     read_exif_fields,
-    PROFILES as SPOOF_PROFILES,
 )
 from gui.metadata_dialog import MetadataCustomizerDialog
 from gui.metadata_report import MetadataReportDialog
+from src.views.face_selection_dialog import FaceSelectionDialog
+from src.views.image_canvas import ImageCanvas
+from src.views.icons import IconProvider, bind_icon
+from src.views.widgets import (
+    CollapsibleSection, OptionGrid, SegmentedControl, SliderRow, caption,
+)
+
+
+# ── Option catalogues (value, icon) ──────────────────────────────────────────
+
+DETECTION_MODES = ["face", "eye", "body", "license_plate", "text", "target_text", "manual", "full"]
+PRO_ONLY_MODES = {"body", "license_plate", "text", "target_text"}
+PREVIEWABLE_MODES = {"face", "eye", "body", "license_plate", "text", "target_text"}
+
+STANDARD_EFFECTS = ["blur", "pixelation", "black_bar", "gradient", "mosaic", "glass", "oil_paint"]
+AI_EFFECTS = ["ai_evasion", "ai_evasion_invisible"]
+BLUR_STRENGTH_EFFECTS = {"blur", "glass", "ai_evasion"}
+
+METADATA_MODES = ["keep", "strip", "spoof"]
+SPOOF_PROFILE_KEYS = ["ghost", "troll", "artist", "custom"]
+
+SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp"}
+
+# Leading emoji / symbols, a trailing "(PRO)" and trailing colons in legacy locale strings
+_DECORATION_RE = re.compile(r"^[^\w(]+|\s*\((?:PRO|برو)\)\s*$|\s*[:：]\s*$")
+
+
+def plain(text: str) -> str:
+    """'🎭 Face' → 'Face'. Icons now come from icons.py, not from the strings."""
+    return _DECORATION_RE.sub("", text).strip()
 
 
 class AdversarialWorker(QThread):
@@ -59,10 +103,13 @@ class AdversarialWorker(QThread):
     progress = Signal(int, int, float)      # (iter, total, score)
     finished_result = Signal(object, float)  # (result_image_or_None, final_score)
 
-    def __init__(self, image, pro_regions, effect_kwargs, parent=None):
+    ITERS_PER_FACE = 60
+
+    def __init__(self, image, pro_regions, effect_type, effect_kwargs, parent=None):
         super().__init__(parent)
         self._image = image
         self._pro_regions = pro_regions
+        self._effect_type = effect_type
         self._effect_kwargs = effect_kwargs
         self._cancelled = False
 
@@ -74,7 +121,7 @@ class AdversarialWorker(QThread):
             from src.models.image_processor import ImageProcessor as _IP
             result = self._image.copy()
             scores = []
-            iters_per_face = 40
+            iters_per_face = self.ITERS_PER_FACE
             face_idx = 0
 
             for det in self._pro_regions:
@@ -84,24 +131,31 @@ class AdversarialWorker(QThread):
                 if det["type"] != "polygon":
                     continue
                 strength = self._effect_kwargs.get("strength", 21)
+                opacity = self._effect_kwargs.get("opacity", 100)
                 face_offset = face_idx * iters_per_face
 
                 def _cb(i, total, score, off=face_offset):
                     self.progress.emit(off + i, total, score)
 
-                # Primary visual effect applied under adversarial noise. "blur" is the recommended architecture baseline.
-                hybrid_effect = "blur"
+                # Set parameters based on the chosen evasion mode
+                if self._effect_type == "ai_evasion_invisible":
+                    hybrid_effect = "none"
+                    max_eps_val = 40
+                else:
+                    hybrid_effect = "blur"
+                    max_eps_val = 110
 
                 result, score = _IP.apply_adversarial_hybrid(
                     result,
                     det["points"],
                     hybrid_effect,
-                    max_eps=110,
+                    max_eps=max_eps_val,
                     iters=iters_per_face,
                     block_size=32,
                     progress_callback=_cb,
                     should_cancel=lambda: self._cancelled,
                     strength=strength,
+                    opacity=opacity,
                 )
                 scores.append(score)
                 face_idx += 1
@@ -113,13 +167,12 @@ class AdversarialWorker(QThread):
             worst_score = max(scores) if scores else 1.0
             self.finished_result.emit(result, worst_score)
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"AdversarialWorker error: {e}")
+            logger.error(f"AdversarialWorker error: {e}")
             self.finished_result.emit(None, 1.0)
 
 
 class Var:
-    """A helper class to emulate Tkinter variables with setter/getter and listeners."""
+    """A small observable value: set() notifies every listener."""
     def __init__(self, value=None):
         self._value = value
         self._listeners = []
@@ -139,198 +192,9 @@ class Var:
         self._listeners.append(callback)
 
 
-class ImageCanvas(QWidget):
-    """Custom canvas widget for drawing image, selection rects, and handling drag & drop."""
-    def __init__(self, main_window):
-        super().__init__(main_window)
-        self.main_window = main_window
-        self.setAcceptDrops(True)
-        self.pixmap = None
-        self.image_pos = (0, 0)
-        self.drag_start = None
-        self.drag_end = None
-        self.drawing = False
-        self._drag_active = False
-
-    def set_image(self, pixmap, x, y):
-        self.pixmap = pixmap
-        self.image_pos = (x, y)
-        self.update()
-
-    def clear_canvas(self):
-        self.pixmap = None
-        self.update()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        colors = getattr(self.main_window, 'colors', COLORS)
-
-        # Fill background
-        bg_color = QColor(colors.get('canvas_bg', '#121212'))
-        painter.fillRect(self.rect(), bg_color)
-
-        # Draw border
-        if self._drag_active:
-            border_color = QColor(colors.get('accent_green', '#26a69a'))
-            pen = QPen(border_color, 4)
-        else:
-            border_color = QColor(colors.get('accent_cyan', '#00fff5'))
-            pen = QPen(border_color, 2)
-        painter.setPen(pen)
-        painter.drawRect(self.rect().adjusted(1, 1, -1, -1))
-
-        if self.pixmap:
-            # Draw the image
-            painter.drawPixmap(self.image_pos[0], self.image_pos[1], self.pixmap)
-
-            # Draw saved drawing regions
-            pen_region = QPen(QColor(colors.get('accent_cyan', '#00fff5')), 2, Qt.PenStyle.DashLine)
-            painter.setPen(pen_region)
-            for (rx, ry, rw, rh) in self.main_window.drawing_regions:
-                cx = int(rx * self.main_window.display_scale) + self.image_pos[0]
-                cy = int(ry * self.main_window.display_scale) + self.image_pos[1]
-                cw = int(rw * self.main_window.display_scale)
-                ch = int(rh * self.main_window.display_scale)
-                painter.drawRect(cx, cy, cw, ch)
-
-            # Draw currently drawing rectangle
-            if self.drawing and self.drag_start and self.drag_end:
-                pen_current = QPen(QColor(colors.get('accent_cyan', '#00fff5')), 3)
-                painter.setPen(pen_current)
-                x = min(self.drag_start.x(), self.drag_end.x())
-                y = min(self.drag_start.y(), self.drag_end.y())
-                w = abs(self.drag_start.x() - self.drag_end.x())
-                h = abs(self.drag_start.y() - self.drag_end.y())
-                painter.drawRect(x, y, w, h)
-        else:
-            # Draw placeholder
-            self.draw_placeholder(painter, colors)
-
-    def draw_placeholder(self, painter, colors):
-        w = self.width()
-        h = self.height()
-        if w <= 1 or h <= 1:
-            w = 900
-            h = 700
-
-        # Draw dashed rectangle
-        pen = QPen(QColor(colors.get('bg_light', '#1a2332')), 2, Qt.PenStyle.DashLine)
-        painter.setPen(pen)
-        painter.drawRect(30, 30, w - 60, h - 60)
-
-        # Draw text & icon
-        font_icon = QFont("Helvetica", 48)
-        painter.setFont(font_icon)
-        painter.setPen(QColor(colors.get('accent_cyan', '#00fff5')))
-        painter.drawText(self.rect().adjusted(0, -40, 0, -40), Qt.AlignmentFlag.AlignCenter, "📥")
-
-        # Load strings with fallbacks
-        locale_manager = self.main_window.locale_manager
-        title_text = locale_manager.get("ui.canvas.placeholder_title")
-        if title_text == "ui.canvas.placeholder_title":
-            title_text = "Drag & Drop Image Here"
-
-        sub_text = locale_manager.get("ui.canvas.placeholder_subtitle")
-        if sub_text == "ui.canvas.placeholder_subtitle":
-            sub_text = "or click 'Load Image' to start"
-
-        font_title = QFont("Helvetica", 16, QFont.Weight.Bold)
-        painter.setFont(font_title)
-        painter.drawText(self.rect().adjusted(0, 50, 0, 50), Qt.AlignmentFlag.AlignCenter, title_text)
-
-        font_sub = QFont("Helvetica", 11)
-        painter.setFont(font_sub)
-        painter.setPen(QColor(colors.get('text_gray', '#888888')))
-        painter.drawText(self.rect().adjusted(0, 120, 0, 120), Qt.AlignmentFlag.AlignCenter, sub_text)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            mode = self.main_window.detection_mode.get()
-            if mode == "manual" and self.main_window.original_image is not None:
-                self.drawing = True
-                self.drag_start = event.position().toPoint()
-                self.drag_end = event.position().toPoint()
-                self.update()
-
-    def mouseMoveEvent(self, event):
-        if self.drawing:
-            self.drag_end = event.position().toPoint()
-            self.update()
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and self.drawing:
-            self.drawing = False
-            self.drag_end = event.position().toPoint()
-
-            x1 = int((self.drag_start.x() - self.image_pos[0]) / self.main_window.display_scale)
-            y1 = int((self.drag_start.y() - self.image_pos[1]) / self.main_window.display_scale)
-            x2 = int((self.drag_end.x() - self.image_pos[0]) / self.main_window.display_scale)
-            y2 = int((self.drag_end.y() - self.image_pos[1]) / self.main_window.display_scale)
-
-            x, w = (x1, x2 - x1) if x2 > x1 else (x2, x1 - x2)
-            y, h = (y1, y2 - y1) if y2 > y1 else (y2, y1 - y2)
-
-            if self.main_window.original_image is not None:
-                img_h, img_w = self.main_window.original_image.shape[:2]
-                x = max(0, min(x, img_w - 1))
-                y = max(0, min(y, img_h - 1))
-                w = min(w, img_w - x)
-                h = min(h, img_h - y)
-
-            if w > 10 and h > 10:
-                self.main_window.drawing_regions.append((x, y, w, h))
-                self.main_window.status_label.setText(
-                    f"Added region ({len(self.main_window.drawing_regions)} total)"
-                )
-            self.drag_start = None
-            self.drag_end = None
-            self.update()
-
-    def wheelEvent(self, event):
-        if self.main_window.original_image is None:
-            return
-        delta = event.angleDelta().y()
-        scale_multiplier = 1.0
-        if delta > 0:
-            scale_multiplier = 1.1
-        elif delta < 0:
-            scale_multiplier = 0.9
-
-        new_scale = self.main_window.display_scale * scale_multiplier
-        if 0.1 < new_scale < 5.0:
-            self.main_window.display_scale = new_scale
-            if self.main_window.processed_image is not None:
-                self.main_window.display_image(self.main_window.processed_image)
-            else:
-                self.main_window.display_image(self.main_window.original_image)
-            self.main_window.status_label.setText(f"Zoom: {int(self.main_window.display_scale * 100)}%")
-
-    def resizeEvent(self, event):
-        self.main_window.on_canvas_resize()
-
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-            self._drag_active = True
-            self.update()
-
-    def dragLeaveEvent(self, event):
-        self._drag_active = False
-        self.update()
-
-    def dropEvent(self, event):
-        self._drag_active = False
-        self.update()
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                file_path = url.toLocalFile()
-                if file_path:
-                    self.main_window.handle_dropped_file(file_path)
-
-
 class AdvancedPrivacyStudioPro(QMainWindow):
-    """Main window class for the PyQt6 version of DotScramble."""
-    
+    """DotScramble main window."""
+
     auth_success_signal = Signal(object, str)
 
     def __init__(self, parent=None):
@@ -338,7 +202,7 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         self.auth_success_signal.connect(self._handle_auth_callback)
         self.colors = COLORS.copy()
 
-        # Initialize Managers
+        # Managers
         self.locale_manager = get_locale_manager()
         self.theme_manager = ThemeManager(self)
         self.rtl_manager = get_rtl_manager(self)
@@ -353,66 +217,49 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         self.history_manager = HistoryManager(MAX_HISTORY)
         self.preset_manager = PresetManager()
         self.image_utils = ImageUtils()
+        self.auto_updater = AutoUpdater(self)
+        self.auto_updater.updateReady.connect(self.on_update_ready)
+        self.version_gate = VersionGate(self, APP_VERSION)  # blocks retired versions
 
-        # Variables
+        # Image state
         self.original_image = None
         self.processed_image = None
-        self.preview_image = None
         self.image_path = None
         self.original_exif_bytes = None
+        self.drawing_regions = []
+        self._original_pixmap = None
+        self._detection_preview = None   # {"mode", "rects", "pro"} while Detect is on
+        self._live_applied = False       # last change came from live preview (replace, don't stack)
+        self._adv_worker = None
 
-        # State Variables
-        self.target_word_var = Var(value="")
-        self.detection_mode = Var(value="face")
-        self.effect_type = Var(value="blur")
-        self.blur_strength = Var(value=BLUR_RANGE['default'])
-        self.pixel_size = Var(value=PIXEL_RANGE['default'])
-        self.opacity = Var(value=OPACITY_RANGE['default'])
-        self.edge_blur = Var(value=EDGE_BLUR_RANGE['default'])
-        self.real_time_preview = Var(value=False)
-        self.language_var = Var(value="en")
-        self.scrub_exif = Var(value=False)
-        self.spoof_metadata = Var(value=False)
-        self.spoof_profile = Var(value="troll")
+        # Settings state
+        self.target_word_var = Var("")
+        self.detection_mode = Var("face")
+        self.effect_type = Var("blur")
+        self.blur_strength = Var(BLUR_RANGE['default'])
+        self.pixel_size = Var(PIXEL_RANGE['default'])
+        self.opacity = Var(OPACITY_RANGE['default'])
+        self.real_time_preview = Var(False)
+        self.language_var = Var("en")
+        self.scrub_exif = Var(False)
+        self.spoof_metadata = Var(False)
+        self.spoof_profile = Var("troll")
         self.custom_field_actions = None
 
-        self.init_ui_strings()
-
-        # Drawing variables
-        self.drawing_regions = []
-        self.display_scale = 1.0
-        self.display_offset = (0, 0)
-
-        # Debounce timer for canvas resize
-        self._resize_timer = QTimer()
-        self._resize_timer.setSingleShot(True)
-        self._resize_timer.timeout.connect(self._do_canvas_resize)
-
-        # Auto-updater
-        self.auto_updater = AutoUpdater(self)
-
-        # Setup main UI structure
-        self.update_window_title()
         self.resize(1400, 900)
-        self.setMinimumSize(800, 600)
+        # Small enough to tile to half of a 1366px laptop screen
+        self.setMinimumSize(640, 480)
 
-        self.create_widgets()
-        self.create_menu_bar()
-
-        # Bind settings changed variables to sync layout controls
-        self.real_time_preview.add_listener(lambda val: self.preview_check.setChecked(val))
-        self.scrub_exif.add_listener(lambda val: self.cb_scrub.setChecked(val))
-        self.spoof_metadata.add_listener(lambda val: self.cb_spoof.setChecked(val))
-        self.detection_mode.add_listener(self._update_detection_mode_radios)
-        self.effect_type.add_listener(self._update_effect_type_radios)
-        self.spoof_profile.add_listener(self._update_spoof_profile_radios)
-        self.target_word_var.add_listener(lambda val: self.word_entry.setText(val) if hasattr(self, 'word_entry') else None)
+        self._build_ui()
+        self._bind_state()
+        self.update_ui_text()
+        self._update_action_states()
 
         self.db_manager.increment_stat('app_launches')
 
-        # Silent update check
+        QTimer.singleShot(1000, self.version_gate.start)
         if UPDATE_CONFIG['auto_check']:
-            QTimer.singleShot(3000, lambda: self.auto_updater.check_for_updates_silently(self.on_update_ready))
+            QTimer.singleShot(3000, self.auto_updater.check_for_updates_silently)
 
         # Enable snap layouts on Windows 11
         if sys.platform == 'win32':
@@ -425,135 +272,423 @@ class AdvancedPrivacyStudioPro(QMainWindow):
             except Exception:
                 pass
 
-    def update_window_title(self):
-        title = self.locale_manager.get("app.title")
-        if self.license_manager.is_max_activated:
-            title += " (PRO)"
-        self.setWindowTitle(title)
+    def _t(self, key, **kwargs):
+        return self.locale_manager.get(key, **kwargs)
 
-    def init_ui_strings(self):
-        _ = self.locale_manager.get
-        self.ui_strings = {
-            "ui.header.title": Var(value=_("ui.header.title")),
-            "ui.header.preview": Var(value=_("ui.header.preview")),
-            "ui.controls.title": Var(value=_("ui.controls.title")),
-            "ui.controls.load_image": Var(value=_("ui.controls.load_image")),
-            "ui.controls.effect_type": Var(value=_("ui.controls.effect_type")),
-            "ui.controls.detection_mode": Var(value=_("ui.controls.detection_mode")),
-            "ui.controls.target_text": Var(value=_("ui.controls.target_text")),
-            "ui.controls.blur_strength": Var(value=_("ui.controls.blur_strength")),
-            "ui.controls.pixel_size": Var(value=_("ui.controls.pixel_size")),
-            "ui.controls.opacity": Var(value=_("ui.controls.opacity")),
-            "ui.controls.apply_effect": Var(value=_("ui.controls.apply_effect")),
-            "ui.controls.undo": Var(value=_("ui.controls.undo")),
-            "ui.controls.redo": Var(value=_("ui.controls.redo")),
-            "ui.controls.clear_selections": Var(value=_("ui.controls.clear_selections")),
-            "ui.controls.save_result": Var(value=_("ui.controls.save_result")),
-            "ui.controls.batch_process": Var(value=_("ui.controls.batch_process")),
-            "ui.controls.tip": Var(value=_("ui.controls.tip")),
-            "ui.buttons.load": Var(value=_("ui.buttons.load")),
-            "ui.buttons.apply": Var(value=_("ui.buttons.apply")),
-            "ui.buttons.save": Var(value=_("ui.buttons.save")),
-            "ui.buttons.reset": Var(value=_("ui.buttons.reset"))
-        }
+    # ═════════════════════════════════════════════════════════════════════════
+    # UI construction
+    # ═════════════════════════════════════════════════════════════════════════
 
-        self.effect_keys = [
-            "effects.blur", "effects.pixelation", "effects.black_bar",
-            "effects.gradient", "effects.mosaic", "effects.glass", "effects.oil_paint",
-            "effects.ai_evasion"
-        ]
-        self.effect_strings = [Var(value=_(k)) for k in self.effect_keys]
+    def _build_ui(self):
+        central = QWidget(self)
+        self.setCentralWidget(central)
+        root = QVBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
-        self.detection_keys = [
-            "detection.face", "detection.eye", "detection.body",
-            "detection.license_plate", "detection.text", "detection.manual", "detection.full"
-        ]
-        self.detection_strings = [Var(value=_(k)) for k in self.detection_keys]
+        root.addWidget(self._build_toolbar())
+
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.splitter.setChildrenCollapsible(False)
+        self.splitter.addWidget(self._build_sidebar())
+
+        self.canvas = ImageCanvas()
+        self.canvas.fileDropped.connect(self.handle_dropped_file)
+        self.canvas.regionDrawn.connect(self._on_region_drawn)
+        self.canvas.detectionsChanged.connect(self._on_detections_changed)
+        self.canvas.zoomChanged.connect(self._on_zoom_changed)
+        self.splitter.addWidget(self.canvas)
+
+        self.splitter.setSizes([340, 1060])
+        self.splitter.setStretchFactor(0, 0)
+        self.splitter.setStretchFactor(1, 1)
+        root.addWidget(self.splitter, 1)
+
+        self._build_status_bar()
+
+    # ── Toolbar ──────────────────────────────────────────────────────────────
+
+    def _tool_button(self, icon, slot=None, checkable=False, text_beside=True):
+        button = QToolButton()
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon if text_beside else Qt.ToolButtonStyle.ToolButtonIconOnly
+        )
+        button.setCheckable(checkable)
+        bind_icon(button, icon, 18)
+        if slot is not None:
+            (button.toggled if checkable else button.clicked).connect(slot)
+        return button
+
+    @staticmethod
+    def _toolbar_separator():
+        line = QFrame()
+        line.setObjectName("ToolbarSeparator")
+        line.setFrameShape(QFrame.Shape.VLine)
+        return line
+
+    def _build_toolbar(self):
+        self.toolbar = QFrame()
+        self.toolbar.setObjectName("Toolbar")
+        layout = QHBoxLayout(self.toolbar)
+        layout.setContentsMargins(12, 6, 12, 6)
+        layout.setSpacing(4)
+
+        self.brand_label = QLabel()
+        self.brand_label.setObjectName("BrandLabel")
+        layout.addWidget(self.brand_label)
+        layout.addWidget(self._toolbar_separator())
+
+        self.open_btn = self._tool_button("open", self.load_image)
+        self.save_btn = self._tool_button("save", self.save_image)
+        layout.addWidget(self.open_btn)
+        layout.addWidget(self.save_btn)
+        layout.addWidget(self._toolbar_separator())
+
+        self.undo_btn = self._tool_button("undo", self.undo, text_beside=False)
+        self.redo_btn = self._tool_button("redo", self.redo, text_beside=False)
+        layout.addWidget(self.undo_btn)
+        layout.addWidget(self.redo_btn)
+        layout.addWidget(self._toolbar_separator())
+
+        self.detect_btn = self._tool_button("detect", self._on_detect_toggled, checkable=True)
+        self.detect_btn.setShortcut(QKeySequence("Ctrl+F"))
+        self.compare_btn = self._tool_button("compare", self._on_compare_toggled, checkable=True)
+        self.compare_btn.setShortcut(QKeySequence("Ctrl+Shift+C"))
+        layout.addWidget(self.detect_btn)
+        layout.addWidget(self.compare_btn)
+        layout.addWidget(self._toolbar_separator())
+
+        self.zoom_out_btn = self._tool_button("zoom_out", lambda: self.canvas.zoom_out(), text_beside=False)
+        self.zoom_label = QToolButton()
+        self.zoom_label.setObjectName("ZoomLabel")
+        self.zoom_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.zoom_label.clicked.connect(self._toggle_fit_actual)
+        self.zoom_in_btn = self._tool_button("zoom_in", lambda: self.canvas.zoom_in(), text_beside=False)
+        self.fit_btn = self._tool_button("fit", lambda: self.canvas.zoom_to_fit(), text_beside=False)
+        for widget in (self.zoom_out_btn, self.zoom_label, self.zoom_in_btn, self.fit_btn):
+            layout.addWidget(widget)
+
+        layout.addStretch(1)
+
+        self.live_btn = self._tool_button(
+            "live", lambda on: self.real_time_preview.get() != on and self.real_time_preview.set(on), checkable=True)
+        layout.addWidget(self.live_btn)
+
+        self.upgrade_btn = QPushButton()
+        self.upgrade_btn.setProperty("variant", "upgrade")
+        self.upgrade_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.upgrade_btn.clicked.connect(self.show_activation_dialog)
+        bind_icon(self.upgrade_btn, "star", 14, "accent_orange")
+        self.pro_pill = QLabel()
+        self.pro_pill.setObjectName("ProPill")
+        layout.addSpacing(6)
+        layout.addWidget(self.upgrade_btn)
+        layout.addWidget(self.pro_pill)
+
+        # Keyboard-only shortcuts (the menu already owns Ctrl+O/S/Z/Y/D/B)
+        for sequence, slot in (
+            (QKeySequence.StandardKey.ZoomIn, self.canvas_zoom_in),
+            ("Ctrl+=", self.canvas_zoom_in),
+            (QKeySequence.StandardKey.ZoomOut, self.canvas_zoom_out),
+            ("Ctrl+0", self.canvas_zoom_fit),
+            ("Ctrl+1", self.canvas_zoom_actual),
+            ("Ctrl+Return", self.process_image),
+            ("Ctrl+Enter", self.process_image),
+        ):
+            QShortcut(QKeySequence(sequence), self, activated=slot)
+
+        # The toolbar must never dictate the window's minimum width — that is what stops
+        # the desktop from snapping the window to half the screen. When it runs out of
+        # room it drops to icon-only buttons instead (labels stay as tooltips).
+        self._labelled_tools = [self.open_btn, self.save_btn, self.detect_btn, self.compare_btn, self.live_btn]
+        self._toolbar_compact = False
+        self._toolbar_full_width = 0
+        self.toolbar.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        self.toolbar.installEventFilter(self)
+        return self.toolbar
+
+    def _measure_toolbar(self):
+        """Remember how wide the labelled toolbar is; call whenever its texts change."""
+        self._set_toolbar_compact(False)
+        self.toolbar.layout().invalidate()
+        self._toolbar_full_width = self.toolbar.layout().sizeHint().width()
+        self._update_toolbar_mode()
+
+    def _update_toolbar_mode(self):
+        self._set_toolbar_compact(self.toolbar.width() < self._toolbar_full_width)
+
+    def _set_toolbar_compact(self, compact):
+        if compact == self._toolbar_compact:
+            return
+        self._toolbar_compact = compact
+        style = Qt.ToolButtonStyle.ToolButtonIconOnly if compact else Qt.ToolButtonStyle.ToolButtonTextBesideIcon
+        for button in self._labelled_tools:
+            button.setToolButtonStyle(style)
+        self.brand_label.setVisible(not compact)
+        self.upgrade_btn.setText("" if compact else self._t("ui.toolbar.upgrade"))
+
+    def eventFilter(self, obj, event):
+        if obj is self.toolbar and event.type() == QEvent.Type.Resize:
+            self._update_toolbar_mode()
+        return super().eventFilter(obj, event)
+
+    # Wrappers so shortcuts can be created before the canvas exists
+    def canvas_zoom_in(self):
+        self.canvas.zoom_in()
+
+    def canvas_zoom_out(self):
+        self.canvas.zoom_out()
+
+    def canvas_zoom_fit(self):
+        self.canvas.zoom_to_fit()
+
+    def canvas_zoom_actual(self):
+        self.canvas.zoom_actual()
+
+    # ── Sidebar ──────────────────────────────────────────────────────────────
+
+    def _build_sidebar(self):
+        self.sidebar = QFrame()
+        self.sidebar.setObjectName("Sidebar")
+        self.sidebar.setMinimumWidth(300)
+        self.sidebar.setMaximumWidth(440)
+        outer = QVBoxLayout(self.sidebar)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        content = QWidget()
+        content.setObjectName("SidebarContent")
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(14, 6, 14, 12)
+        layout.setSpacing(0)
+
+        layout.addWidget(self._build_detection_section())
+        layout.addWidget(self._build_effect_section())
+        layout.addWidget(self._build_settings_section())
+        layout.addWidget(self._build_metadata_section())
+        layout.addStretch(1)
+
+        scroll.setWidget(content)
+        outer.addWidget(scroll, 1)
+        outer.addWidget(self._build_sidebar_footer())
+        return self.sidebar
+
+    def _build_detection_section(self):
+        self.detect_section = CollapsibleSection(1)
+        body = self.detect_section.body_layout
+
+        self.detection_grid = OptionGrid(columns=2, variant="chip")
+        for mode in DETECTION_MODES:
+            self.detection_grid.add_option(mode, mode)
+        self.detection_grid.valueChanged.connect(self._on_detection_selected)
+        self.detection_grid.lockedClicked.connect(self._prompt_upgrade)
+        body.addWidget(self.detection_grid)
+
+        self.word_entry = QLineEdit()
+        self.word_entry.setClearButtonEnabled(True)
+        self.word_entry.textChanged.connect(self.target_word_var.set)
+        body.addWidget(self.word_entry)
+
+        self.manual_hint = caption(role="hint")
+        self.ai_face_hint = caption(role="hint")
+        self.tier_hint = caption()
+        body.addWidget(self.manual_hint)
+        body.addWidget(self.ai_face_hint)
+        body.addWidget(self.tier_hint)
+        return self.detect_section
+
+    def _build_effect_section(self):
+        self.effect_section = CollapsibleSection(2)
+        self.effect_grid = OptionGrid(columns=3, variant="tile")
+        for effect in STANDARD_EFFECTS:
+            self.effect_grid.add_option(effect, effect)
+        self.ai_heading = self.effect_grid.add_heading()
+        for effect in AI_EFFECTS:
+            self.effect_grid.add_option(effect, effect, wide=True)
+        self.effect_grid.valueChanged.connect(self._on_effect_selected)
+        self.effect_grid.lockedClicked.connect(self._prompt_upgrade)
+        self.effect_section.body_layout.addWidget(self.effect_grid)
+        return self.effect_section
+
+    def _build_settings_section(self):
+        self.settings_section = CollapsibleSection(3)
+        body = self.settings_section.body_layout
+
+        self.blur_row = SliderRow(BLUR_RANGE['min'], BLUR_RANGE['max'], self.blur_strength.get(), step=2)
+        self.pixel_row = SliderRow(PIXEL_RANGE['min'], PIXEL_RANGE['max'], self.pixel_size.get(), suffix=" px")
+        self.opacity_row = SliderRow(OPACITY_RANGE['min'], OPACITY_RANGE['max'], self.opacity.get(), suffix="%")
+        self.blur_row.valueChanged.connect(self.blur_strength.set)
+        self.pixel_row.valueChanged.connect(self.pixel_size.set)
+        self.opacity_row.valueChanged.connect(self.opacity.set)
+        for row in (self.blur_row, self.pixel_row, self.opacity_row):
+            row.valueChanged.connect(lambda _value: self.on_parameter_change())
+            body.addWidget(row)
+        return self.settings_section
+
+    def _build_metadata_section(self):
+        self.metadata_section = CollapsibleSection(4)
+        body = self.metadata_section.body_layout
+
+        self.metadata_mode = SegmentedControl(METADATA_MODES)
+        self.metadata_mode.valueChanged.connect(self._on_metadata_mode_selected)
+        body.addWidget(self.metadata_mode)
+
+        self.metadata_desc = caption()
+        body.addWidget(self.metadata_desc)
+
+        self.spoof_profile_frame = QWidget()
+        profile_layout = QVBoxLayout(self.spoof_profile_frame)
+        profile_layout.setContentsMargins(2, 0, 0, 0)
+        profile_layout.setSpacing(6)
+        self.profile_group = QButtonGroup(self)
+        self.profile_radios = {}
+        for key in SPOOF_PROFILE_KEYS:
+            radio = QRadioButton()
+            radio.toggled.connect(lambda checked, k=key: checked and self.spoof_profile.set(k))
+            self.profile_group.addButton(radio)
+            profile_layout.addWidget(radio)
+            self.profile_radios[key] = radio
+
+        self.customize_btn = QPushButton()
+        self.customize_btn.setProperty("variant", "link")
+        self.customize_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.customize_btn.clicked.connect(self._open_metadata_customizer)
+        profile_layout.addWidget(self.customize_btn)
+        body.addWidget(self.spoof_profile_frame)
+
+        self.metadata_locked_btn = QPushButton()
+        self.metadata_locked_btn.setProperty("variant", "link")
+        self.metadata_locked_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.metadata_locked_btn.clicked.connect(self.show_activation_dialog)
+        bind_icon(self.metadata_locked_btn, "lock", 14, "accent_cyan")
+        body.addWidget(self.metadata_locked_btn)
+        return self.metadata_section
+
+    def _build_sidebar_footer(self):
+        footer = QFrame()
+        footer.setObjectName("SidebarFooter")
+        layout = QVBoxLayout(footer)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(8)
+
+        self.process_btn = QPushButton()
+        self.process_btn.setProperty("variant", "primary")
+        self.process_btn.setProperty("size", "large")
+        self.process_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.process_btn.clicked.connect(self.process_image)
+        bind_icon(self.process_btn, "apply", 18, "on_accent")
+        layout.addWidget(self.process_btn)
+
+        row = QHBoxLayout()
+        row.setSpacing(6)
+        self.clear_btn = QPushButton()
+        self.clear_btn.setProperty("variant", "ghost")
+        self.clear_btn.clicked.connect(self.clear_regions)
+        bind_icon(self.clear_btn, "clear", 16, "text_secondary")
+        self.batch_btn = QPushButton()
+        self.batch_btn.setProperty("variant", "ghost")
+        self.batch_btn.clicked.connect(self.open_batch_window)
+        bind_icon(self.batch_btn, "batch", 16, "text_secondary")
+        row.addWidget(self.clear_btn, 1)
+        row.addWidget(self.batch_btn, 1)
+        layout.addLayout(row)
+        return footer
+
+    # ── Status bar & menus ───────────────────────────────────────────────────
+
+    def _build_status_bar(self):
+        self.status_bar = QStatusBar()
+        self.setStatusBar(self.status_bar)
+
+        self.status_label = QLabel()
+        self.status_bar.addWidget(self.status_label, 1)
+
+        self.update_btn = QPushButton()
+        self.update_btn.setObjectName("update_btn")
+        self.update_btn.setVisible(False)
+        self.update_btn.clicked.connect(self.apply_update)
+        self.status_bar.addPermanentWidget(self.update_btn)
+
+        self.info_label = QLabel()
+        self.status_bar.addPermanentWidget(self.info_label)
 
     def create_menu_bar(self):
         menubar = self.menuBar()
         menubar.clear()
+        _ = self._t
 
-        _ = self.locale_manager.get
-
-        # File Menu
+        # File
         file_menu = menubar.addMenu(_("menu.file"))
-        open_action = file_menu.addAction(_("menu.file_items.open_image"), self.load_image)
-        open_action.setShortcut("Ctrl+O")
+        file_menu.addAction(_("menu.file_items.open_image"), self.load_image).setShortcut("Ctrl+O")
 
         recent_menu = file_menu.addMenu(_("menu.file_items.open_recent"))
         recent_files = self.db_manager.get_recent_files(5)
         if recent_files:
             for file_info in recent_files:
-                file_path = file_info['path']
-                file_name = os.path.basename(file_path)
-                recent_menu.addAction(file_name, lambda checked=False, p=file_path: self.load_image_from_path(p))
+                path = file_info['path']
+                recent_menu.addAction(os.path.basename(path),
+                                      lambda checked=False, p=path: self.load_image_from_path(p))
             recent_menu.addSeparator()
             recent_menu.addAction(_("menu.file_items.clear_history"), self.clear_recent_history)
         else:
-            no_recent_action = recent_menu.addAction(_("menu.file_items.no_recent"))
-            no_recent_action.setEnabled(False)
+            recent_menu.addAction(_("menu.file_items.no_recent")).setEnabled(False)
 
         file_menu.addSeparator()
-        save_action = file_menu.addAction(_("menu.file_items.save_result"), self.save_image)
-        save_action.setShortcut("Ctrl+S")
+        file_menu.addAction(_("menu.file_items.save_result"), self.save_image).setShortcut("Ctrl+S")
         file_menu.addAction(_("menu.file_items.save_comparison"), self.save_comparison)
-
         file_menu.addSeparator()
         file_menu.addAction(_("menu.file_items.open_exports"), self.open_exports_folder)
-
         file_menu.addSeparator()
-        batch_action = file_menu.addAction(_("menu.file_items.batch_process"), self.open_batch_window)
-        batch_action.setShortcut("Ctrl+B")
-
+        file_menu.addAction(_("menu.file_items.batch_process"), self.open_batch_window).setShortcut("Ctrl+B")
         file_menu.addSeparator()
         file_menu.addAction(_("menu.file_items.exit"), self.close)
 
-        # Edit Menu
+        # Edit
         edit_menu = menubar.addMenu(_("menu.edit"))
-        undo_action = edit_menu.addAction(_("menu.edit_items.undo"), self.undo)
-        undo_action.setShortcut("Ctrl+Z")
-        redo_action = edit_menu.addAction(_("menu.edit_items.redo"), self.redo)
-        redo_action.setShortcut("Ctrl+Y")
-
+        edit_menu.addAction(_("menu.edit_items.undo"), self.undo).setShortcut("Ctrl+Z")
+        edit_menu.addAction(_("menu.edit_items.redo"), self.redo).setShortcut("Ctrl+Y")
         edit_menu.addSeparator()
-        clear_action = edit_menu.addAction(_("menu.edit_items.clear_selections"), self.clear_regions)
-        clear_action.setShortcut("Ctrl+D")
+        edit_menu.addAction(_("menu.edit_items.clear_selections"), self.clear_regions).setShortcut("Ctrl+D")
         edit_menu.addAction(_("menu.edit_items.reset_image"), self.reset_image)
 
-        # Presets Menu
+        # Presets
         presets_menu = menubar.addMenu(_("menu.presets"))
         presets_menu.addAction(_("menu.presets_items.save_settings"), self.save_preset)
         presets_menu.addAction(_("menu.presets_items.load_preset"), self.load_preset)
         presets_menu.addAction(_("menu.presets_items.manage_presets"), self.manage_presets)
 
-        # View Menu
+        # View
         view_menu = menubar.addMenu(_("menu.view"))
         theme_menu = view_menu.addMenu(_("menu.view_items.themes"))
+        theme_group = QActionGroup(self)
+        current_theme = self.theme_manager.get_current_theme_key()
         for theme_name, theme_key in self.theme_manager.get_theme_names():
-            theme_menu.addAction(theme_name, lambda checked=False, k=theme_key: self.change_theme(k))
+            action = theme_menu.addAction(theme_name, lambda checked=False, k=theme_key: self.change_theme(k))
+            action.setCheckable(True)
+            action.setChecked(theme_key == current_theme)
+            theme_group.addAction(action)
 
         lang_menu = view_menu.addMenu(_("menu.view_items.language"))
-        languages = self.locale_manager.get_language_list()
         lang_group = QActionGroup(self)
-        for lang in languages:
-            lang_code = lang['code']
-            display_name = f"{lang['name']} ({lang['native_name']})"
-            action = lang_menu.addAction(display_name)
+        for lang in self.locale_manager.get_language_list():
+            action = lang_menu.addAction(f"{lang['name']} ({lang['native_name']})")
             action.setCheckable(True)
-            if lang_code == self.language_var.get():
-                action.setChecked(True)
-            action.triggered.connect(lambda checked=False, code=lang_code: self.change_language(code))
+            action.setChecked(lang['code'] == self.language_var.get())
+            action.triggered.connect(lambda checked=False, code=lang['code']: self.change_language(code))
             lang_group.addAction(action)
 
-        # Help Menu
+        # Help
         help_menu = menubar.addMenu(_("menu.help"))
         if self.license_manager.is_max_activated:
-            pro_act = help_menu.addAction(_("ui.tier.pro_activated_menu"))
-            pro_act.setEnabled(False)
+            help_menu.addAction(_("ui.tier.pro_activated_menu")).setEnabled(False)
         else:
             help_menu.addAction(_("ui.tier.upgrade_menu"), self.show_activation_dialog)
-
         help_menu.addSeparator()
         help_menu.addAction(_("menu.help_items.check_updates"), self.check_for_updates)
         help_menu.addSeparator()
@@ -563,725 +698,271 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         help_menu.addAction(_("menu.help_items.about"), self.show_about)
         help_menu.addAction(_("menu.help_items.shortcuts"), self.show_shortcuts)
 
-    def create_widgets(self):
-        central_widget = QWidget(self)
-        self.setCentralWidget(central_widget)
+    # ═════════════════════════════════════════════════════════════════════════
+    # Text (called on start-up and whenever the language changes)
+    # ═════════════════════════════════════════════════════════════════════════
 
-        main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(15, 10, 15, 10)
-        main_layout.setSpacing(10)
+    def update_ui_text(self):
+        _ = self._t
+        self.update_window_title()
 
-        # Header Frame
-        self.header_frame = QFrame()
-        self.header_frame.setObjectName("HeaderFrame")
-        self.header_frame.setFixedHeight(70)
-        header_layout = QHBoxLayout(self.header_frame)
-        header_layout.setContentsMargins(20, 10, 20, 10)
+        # Toolbar
+        self.brand_label.setText(plain(_("ui.header.title")))
+        for button, text_key, tip_key in (
+            (self.open_btn, "ui.toolbar.open", "ui.toolbar.open_tip"),
+            (self.save_btn, "ui.toolbar.save", "ui.toolbar.save_tip"),
+            (self.undo_btn, None, "ui.toolbar.undo_tip"),
+            (self.redo_btn, None, "ui.toolbar.redo_tip"),
+            (self.detect_btn, "ui.toolbar.detect", "ui.toolbar.detect_tip"),
+            (self.compare_btn, "ui.toolbar.compare", "ui.toolbar.compare_tip"),
+            (self.zoom_out_btn, None, "ui.toolbar.zoom_out_tip"),
+            (self.zoom_label, None, "ui.toolbar.zoom_label_tip"),
+            (self.zoom_in_btn, None, "ui.toolbar.zoom_in_tip"),
+            (self.fit_btn, None, "ui.toolbar.fit_tip"),
+            (self.live_btn, "ui.toolbar.live", "ui.toolbar.live_tip"),
+            (self.upgrade_btn, "ui.toolbar.upgrade", "ui.toolbar.upgrade_tip"),
+        ):
+            if text_key:
+                button.setText(_(text_key))
+            button.setToolTip(_(tip_key))
+        self.pro_pill.setText(_("ui.toolbar.pro"))
 
-        self.title_label = QLabel(self.ui_strings["ui.header.title"].get())
-        self.title_label.setObjectName("TitleLabel")
-        self.title_label.setFont(QFont("Helvetica", 20, QFont.Weight.Bold))
-        header_layout.addWidget(self.title_label)
+        # Section 1 — detection
+        self.detect_section.set_title(_("ui.sidebar.detect_title"))
+        for mode in DETECTION_MODES:
+            self.detection_grid.set_text(mode, plain(_(f"detection.{mode}")))
+        self.word_entry.setPlaceholderText(_("ui.sidebar.word_placeholder"))
+        self.manual_hint.setText(_("ui.sidebar.manual_hint"))
+        self.ai_face_hint.setText(_("ui.sidebar.ai_face_only"))
 
-        header_layout.addStretch(1)
+        # Section 2 — effect
+        self.effect_section.set_title(_("ui.sidebar.effect_title"))
+        for effect in STANDARD_EFFECTS:
+            self.effect_grid.set_text(effect, plain(_(f"effects.{effect}")))
+        self.ai_heading.setText(_("ui.sidebar.ai_heading").upper())
+        self.effect_grid.set_text("ai_evasion", _("ui.sidebar.ai_hybrid"))
+        self.effect_grid.set_tooltip("ai_evasion", _("ui.sidebar.ai_hybrid_tip"))
+        self.effect_grid.set_text("ai_evasion_invisible", _("ui.sidebar.ai_invisible"))
+        self.effect_grid.set_tooltip("ai_evasion_invisible", _("ui.sidebar.ai_invisible_tip"))
 
-        self.preview_check = QCheckBox(self.ui_strings["ui.header.preview"].get())
-        self.preview_check.setFont(QFont("Helvetica", 11))
-        self.preview_check.stateChanged.connect(lambda state: self.real_time_preview.set(state == 2))
-        header_layout.addWidget(self.preview_check)
+        # Section 3 — fine-tune
+        self.settings_section.set_title(_("ui.sidebar.settings_title"))
+        self.blur_row.set_label(_("ui.controls.blur_strength"))
+        self.pixel_row.set_label(_("ui.controls.pixel_size"))
+        self.opacity_row.set_label(plain(_("ui.controls.opacity").replace("(%)", "")))
 
-        main_layout.addWidget(self.header_frame)
+        # Section 4 — metadata
+        self.metadata_section.set_title(_("ui.sidebar.metadata_title"))
+        for mode in METADATA_MODES:
+            self.metadata_mode.set_text(mode, _(f"ui.metadata.{mode}"))
+        for key, radio in self.profile_radios.items():
+            radio.setText(_(f"ui.metadata.profiles.{key}"))
+        self.customize_btn.setText(_("ui.metadata.editor"))
+        self.metadata_locked_btn.setText(_("ui.metadata.locked"))
 
-        # Main splitter (separates Sidebar and Canvas Area)
-        self.splitter = QSplitter(Qt.Orientation.Horizontal)
-        self.splitter.setChildrenCollapsible(False)
-        main_layout.addWidget(self.splitter, 1)
-
-        # Sidebar Left Panel Scroll Area
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        self.scroll_area.setMinimumWidth(260)
-        self.scroll_area.setMaximumWidth(400)
-
-        scroll_content = QWidget()
-        scroll_content.setObjectName("SidebarContainer")
-        self.scroll_layout = QVBoxLayout(scroll_content)
-        self.scroll_layout.setContentsMargins(20, 15, 20, 15)
-        self.scroll_layout.setSpacing(12)
-
-        self.add_controls_to_panel(scroll_content)
-
-        self.scroll_area.setWidget(scroll_content)
-        self.splitter.addWidget(self.scroll_area)
-
-        # Right Panel (Toolbar + Canvas)
-        self.right_panel = QWidget()
-        right_layout = QVBoxLayout(self.right_panel)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(10)
-
-        # Toolbar Frame
-        self.toolbar_frame = QFrame()
-        self.toolbar_frame.setObjectName("ToolbarFrame")
-        self.toolbar_frame.setMinimumHeight(55)
-        toolbar_layout = QHBoxLayout(self.toolbar_frame)
-        toolbar_layout.setContentsMargins(12, 6, 12, 6)
-        toolbar_layout.setSpacing(10)
-
-        # Load Image Button
-        self.toolbar_load_btn = QPushButton("📂 Load Image")
-        self.toolbar_load_btn.clicked.connect(self.load_image)
-        toolbar_layout.addWidget(self.toolbar_load_btn)
-
-        # Apply Effect Button
-        self.toolbar_process_btn = QPushButton("🌫️ Apply Effect")
-        self.toolbar_process_btn.clicked.connect(self.process_image)
-        self.toolbar_process_btn.setEnabled(False)
-        toolbar_layout.addWidget(self.toolbar_process_btn)
-
-        # Save Result Button
-        self.toolbar_save_btn = QPushButton("💾 Save Result")
-        self.toolbar_save_btn.clicked.connect(self.save_image)
-        self.toolbar_save_btn.setEnabled(False)
-        toolbar_layout.addWidget(self.toolbar_save_btn)
-
-        # Clear All Button
-        self.toolbar_clear_btn = QPushButton("🧹 Clear All")
-        self.toolbar_clear_btn.clicked.connect(self.clear_regions)
-        toolbar_layout.addWidget(self.toolbar_clear_btn)
-
-        # Vertical Divider Line
-        v_line = QFrame()
-        v_line.setObjectName("ToolbarSeparator")
-        v_line.setFrameShape(QFrame.Shape.VLine)
-        toolbar_layout.addWidget(v_line)
-
-        # Undo Button
-        self.toolbar_undo_btn = QPushButton("↩️ Undo")
-        self.toolbar_undo_btn.clicked.connect(self.undo)
-        self.toolbar_undo_btn.setEnabled(False)
-        toolbar_layout.addWidget(self.toolbar_undo_btn)
-
-        # Redo Button
-        self.toolbar_redo_btn = QPushButton("↪️ Redo")
-        self.toolbar_redo_btn.clicked.connect(self.redo)
-        self.toolbar_redo_btn.setEnabled(False)
-        toolbar_layout.addWidget(self.toolbar_redo_btn)
-
-        toolbar_layout.addStretch(1)
-        right_layout.addWidget(self.toolbar_frame)
-
-        # Custom Image Canvas
-        self.canvas = ImageCanvas(self)
-        right_layout.addWidget(self.canvas, 1)
-
-        self.splitter.addWidget(self.right_panel)
-
-        # Initial sizes and stretch factors for splitter
-        self.splitter.setSizes([350, 1050])
-        self.splitter.setStretchFactor(0, 0)  # sidebar - do not grow automatically
-        self.splitter.setStretchFactor(1, 1)  # canvas - grow with window
-
-        # Status Bar
-        self.status_bar = QStatusBar()
-        self.status_bar.setObjectName("StatusBar")
-        self.setStatusBar(self.status_bar)
-
-        self.status_label = QLabel(self.locale_manager.get("ui.status.ready"))
-        self.status_label.setFont(QFont("Helvetica", 10))
-        self.status_bar.addWidget(self.status_label, 1)
-
-        self.update_btn = QPushButton("🔄 Restart to Update")
-        self.update_btn.setObjectName("update_btn")
-        self.update_btn.setFont(QFont("Helvetica", 9, QFont.Weight.Bold))
-        self.update_btn.setVisible(False)
-        self.update_btn.clicked.connect(self.apply_update)
-        self.status_bar.addPermanentWidget(self.update_btn)
-
-        self.info_label = QLabel("")
-        self.info_label.setFont(QFont("Helvetica", 9))
-        self.status_bar.addPermanentWidget(self.info_label)
-
-    def add_controls_to_panel(self, parent):
-        # Panel Title
-        self.controls_title_label = QLabel(self.ui_strings["ui.controls.title"].get())
-        self.controls_title_label.setObjectName("TitleLabel")
-        self.controls_title_label.setFont(QFont("Helvetica", 18, QFont.Weight.Bold))
-        self.controls_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.scroll_layout.addWidget(self.controls_title_label)
-
-        # Tier Badge
-        self.create_tier_badge(self.scroll_layout)
-
-        # Load Image Button
-        self.load_btn = QPushButton(self.ui_strings["ui.controls.load_image"].get())
-        self.load_btn.setObjectName("primary_action")
-        self.load_btn.setFont(QFont("Helvetica", 12, QFont.Weight.Bold))
-        self.load_btn.clicked.connect(self.load_image)
-        self.scroll_layout.addWidget(self.load_btn)
-
-        self.add_separator(self.scroll_layout)
-
-        # Effect Section
-        self.create_effect_section(self.scroll_layout)
-
-        self.add_separator(self.scroll_layout)
-
-        # Detection Section
-        self.create_detection_section(self.scroll_layout)
-
-        self.add_separator(self.scroll_layout)
-
-        # Parameters Section
-        self.create_parameters_section(self.scroll_layout)
-
-        self.add_separator(self.scroll_layout)
-
-        # Action Buttons
-        self.create_action_buttons(self.scroll_layout)
-
-        self.add_separator(self.scroll_layout)
-
-        # EXIF section
-        self.create_exif_section(self.scroll_layout)
-
-        # Tip label
-        self.tip_label = QLabel(self.ui_strings["ui.controls.tip"].get())
-        self.tip_label.setObjectName("tip_label")
-        _f = QFont("Helvetica", 9)
-        _f.setItalic(True)
-        self.tip_label.setFont(_f)
-        self.tip_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.tip_label.setWordWrap(True)
-        self.scroll_layout.addWidget(self.tip_label)
-
-    def create_tier_badge(self, parent_layout):
-        self.tier_badge_container = QFrame()
-        self.tier_badge_layout = QVBoxLayout(self.tier_badge_container)
-        self.tier_badge_layout.setContentsMargins(12, 10, 12, 10)
-        self.tier_badge_layout.setSpacing(4)
-
-        self.tier_icon_label = QLabel()
-        self.tier_icon_label.setFont(QFont("Helvetica", 11, QFont.Weight.Bold))
-        self.tier_badge_layout.addWidget(self.tier_icon_label)
-
-        self.tier_desc_label = QLabel()
-        self.tier_desc_label.setFont(QFont("Helvetica", 8))
-        self.tier_badge_layout.addWidget(self.tier_desc_label)
-
-        self.tier_upgrade_btn = QPushButton("")
-        self.tier_upgrade_btn.setFont(QFont("Helvetica", 9, QFont.Weight.Bold))
-        self.tier_upgrade_btn.clicked.connect(self.show_activation_dialog)
-        self.tier_badge_layout.addWidget(self.tier_upgrade_btn)
-
-        parent_layout.addWidget(self.tier_badge_container)
-        self.update_tier_badge_ui()
-
-    def update_tier_badge_ui(self):
-        is_pro = self.license_manager.is_max_activated
-        _ = self.locale_manager.get
-
-        if is_pro:
-            icon_text = _("ui.tier.pro_badge")
-            desc_text = _("ui.tier.pro_desc")
-            self.tier_upgrade_btn.setVisible(False)
-            self.tier_badge_container.setObjectName("tier_badge_pro")
-            self.tier_icon_label.setObjectName("tier_icon_pro")
-            self.tier_desc_label.setObjectName("tier_desc_pro")
+        # Footer & status bar
+        self.process_btn.setText(_("ui.sidebar.apply"))
+        self.process_btn.setToolTip(_("ui.sidebar.apply_tip"))
+        self.clear_btn.setText(_("ui.sidebar.clear"))
+        self.batch_btn.setText(_("ui.sidebar.batch"))
+        self.update_btn.setText(_("ui.status.restart_to_update"))
+        if self.original_image is None:
+            self.status_label.setText(_("ui.status.ready"))
         else:
-            icon_text = _("ui.tier.free_badge")
-            desc_text = _("ui.tier.free_desc")
-            self.tier_upgrade_btn.setVisible(True)
-            self.tier_upgrade_btn.setObjectName("tier_upgrade_btn")
-            self.tier_badge_container.setObjectName("tier_badge_free")
-            self.tier_icon_label.setObjectName("tier_icon_free")
-            self.tier_desc_label.setObjectName("tier_desc_free")
+            self._show_image_status()
 
-        self.tier_upgrade_btn.setText(_("ui.tier.upgrade_btn"))
-        self.tier_icon_label.setText(icon_text)
-        self.tier_desc_label.setText(desc_text)
+        # Canvas
+        self.canvas.set_placeholder(_("ui.canvas.placeholder_title"), _("ui.canvas.placeholder_subtitle"))
+        self.canvas.set_compare_labels(_("ui.canvas.before"), _("ui.canvas.after"))
 
-        for widget in (self.tier_badge_container, self.tier_icon_label, self.tier_desc_label, self.tier_upgrade_btn):
-            widget.style().unpolish(widget)
-            widget.style().polish(widget)
+        self.word_entry.setAlignment(Qt.AlignmentFlag.AlignRight if self.is_rtl else Qt.AlignmentFlag.AlignLeft)
+        self._refresh_tier_ui()
+        self._sync_controls()
+        self.create_menu_bar()
+        self._measure_toolbar()
 
-    def create_effect_section(self, parent_layout):
-        self.effect_section_label = QLabel(self.ui_strings["ui.controls.effect_type"].get())
-        self.effect_section_label.setFont(QFont("Helvetica", 13, QFont.Weight.Bold))
-        parent_layout.addWidget(self.effect_section_label)
+    def update_window_title(self):
+        title = self._t("app.title")
+        if self.license_manager.is_max_activated:
+            title += " (PRO)"
+        self.setWindowTitle(title)
 
-        effect_container = QFrame()
-        effect_layout = QVBoxLayout(effect_container)
-        effect_layout.setContentsMargins(0, 0, 0, 0)
-        effect_layout.setSpacing(5)
+    # ═════════════════════════════════════════════════════════════════════════
+    # State → controls
+    # ═════════════════════════════════════════════════════════════════════════
 
-        self.effect_radios = []
-        self.effect_button_group = QButtonGroup(self)
+    def _bind_state(self):
+        """Every settings Var refreshes the controls, so presets / restore just set Vars."""
+        for var in (self.detection_mode, self.effect_type, self.scrub_exif,
+                    self.spoof_metadata, self.spoof_profile):
+            var.add_listener(lambda _value: self._sync_controls())
+        self.blur_strength.add_listener(self.blur_row.set_value)
+        self.pixel_size.add_listener(self.pixel_row.set_value)
+        self.opacity.add_listener(self.opacity_row.set_value)
+        self.real_time_preview.add_listener(self._on_live_preview_changed)
+        self.target_word_var.add_listener(
+            lambda text: self.word_entry.text() != text and self.word_entry.setText(text))
 
-        effect_values = ["blur", "pixelation", "black_bar", "gradient", "mosaic", "glass", "oil_paint", "ai_evasion"]
-        is_pro = self.license_manager.is_max_activated
-        for idx, (key, val) in enumerate(zip(self.effect_keys, effect_values)):
-            rb = QRadioButton(self.effect_strings[idx].get())
-            rb.setFont(QFont("Helvetica", 10))
-            rb.toggled.connect(lambda checked, v=val: self._on_effect_rb_toggled(checked, v))
-            self.effect_button_group.addButton(rb, idx)
-            effect_layout.addWidget(rb)
-            self.effect_radios.append(rb)
-            # AI Evasion is PRO-only and only meaningful for face detection mode
-            if val == "ai_evasion":
-                rb.setEnabled(is_pro)
-                rb.setToolTip("🛡️ PRO — Hides face from AI detectors (face mode only, ~30-90 sec)")
-            if val == "blur":
-                rb.setChecked(True)
-
-        parent_layout.addWidget(effect_container)
-
-    def _on_effect_rb_toggled(self, checked, value):
-        if checked:
-            self.effect_type.set(value)
-            self.on_effect_change()
-
-    def create_detection_section(self, parent_layout):
-        self.detection_section_label = QLabel(self.ui_strings["ui.controls.detection_mode"].get())
-        self.detection_section_label.setFont(QFont("Helvetica", 13, QFont.Weight.Bold))
-        parent_layout.addWidget(self.detection_section_label)
-
-        self.detection_container = QFrame()
-        self.detection_layout = QVBoxLayout(self.detection_container)
-        self.detection_layout.setContentsMargins(0, 0, 0, 0)
-        self.detection_layout.setSpacing(5)
-
-        parent_layout.addWidget(self.detection_container)
-
-        self.detection_button_group = QButtonGroup(self)
-        self.detection_button_group.setExclusive(True)
-
-        # target_text row
-        self.target_text_row = QWidget()
-        tt_layout = QHBoxLayout(self.target_text_row)
-        tt_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.target_text_rb = QRadioButton(self.ui_strings["ui.controls.target_text"].get())
-        self.target_text_rb.setFont(QFont("Helvetica", 10))
-        self.target_text_rb.toggled.connect(lambda checked: self._on_detection_rb_toggled(checked, "target_text"))
-        self.detection_button_group.addButton(self.target_text_rb, 7)
-        tt_layout.addWidget(self.target_text_rb)
-
-        self.target_text_badge = QPushButton()
-        self.target_text_badge.setFont(QFont("Helvetica", 7, QFont.Weight.Bold))
-        self.target_text_badge.setFlat(True)
-        self.target_text_badge.clicked.connect(self.show_activation_dialog)
-        tt_layout.addWidget(self.target_text_badge)
-        tt_layout.addStretch(1)
-        self.detection_layout.addWidget(self.target_text_row)
-
-        # Target Text Input Field
-        self.text_input_frame = QFrame()
-        tif_layout = QVBoxLayout(self.text_input_frame)
-        tif_layout.setContentsMargins(10, 5, 10, 5)
-
-        self.target_text_label = QLabel(self.ui_strings["ui.controls.target_text"].get())
-        self.target_text_label.setFont(QFont("Helvetica", 10, QFont.Weight.Bold))
-        tif_layout.addWidget(self.target_text_label)
-
-        self.word_entry = QLineEdit()
-        self.word_entry.textChanged.connect(self.target_word_var.set)
-        tif_layout.addWidget(self.word_entry)
-        self.text_input_frame.setVisible(False)
-        self.detection_layout.addWidget(self.text_input_frame)
-
-        # Other detection modes
-        self.detection_radios = []
-        self.detection_rows = []
-        self.detection_badges = []
-
-        self.detection_modes_list = [
-            ("face", 0), ("eye", 1), ("body", 2),
-            ("license_plate", 3), ("text", 4), ("manual", 5), ("full", 6)
-        ]
-
-        for value, idx in self.detection_modes_list:
-            row_widget = QWidget()
-            row_layout = QHBoxLayout(row_widget)
-            row_layout.setContentsMargins(0, 0, 0, 0)
-
-            rb = QRadioButton(self.detection_strings[idx].get())
-            rb.setFont(QFont("Helvetica", 10))
-            rb.toggled.connect(lambda checked, val=value: self._on_detection_rb_toggled(checked, val))
-            self.detection_button_group.addButton(rb, idx)
-            row_layout.addWidget(rb)
-            self.detection_radios.append(rb)
-
-            badge = QPushButton()
-            badge.setFont(QFont("Helvetica", 7, QFont.Weight.Bold))
-            badge.setFlat(True)
-            badge.clicked.connect(self.show_activation_dialog)
-            row_layout.addWidget(badge)
-            self.detection_badges.append((value, badge))
-
-            row_layout.addStretch(1)
-            self.detection_layout.addWidget(row_widget)
-            self.detection_rows.append((value, row_widget))
-            if value == "face":
-                rb.setChecked(True)
-
-        self.update_detection_section_ui()
-
-    def _on_detection_rb_toggled(self, checked, value):
-        if checked:
-            self.detection_mode.set(value)
-            self.on_detection_change()
-
-    def update_detection_section_ui(self):
-        is_pro = self.license_manager.is_max_activated
-        colors = getattr(self, 'colors', COLORS)
-
+    def _sync_controls(self):
+        """Bring every sidebar control in line with the current settings."""
+        _ = self._t
+        mode = self.detection_mode.get()
         effect = self.effect_type.get()
-        is_ai_evasion = (effect == "ai_evasion")
+        is_ai = effect in AI_EFFECTS
 
-        # Disable target text if AI evasion is active
-        if hasattr(self, 'target_text_rb'):
-            self.target_text_rb.setEnabled(not is_ai_evasion)
+        # Section 1
+        self.detection_grid.set_value(mode)
+        self.detection_grid.set_allowed({"face"} if is_ai else None)
+        self.word_entry.setVisible(mode == "target_text")
+        self.manual_hint.setVisible(mode == "manual")
+        self.ai_face_hint.setVisible(is_ai)
+        self.canvas.set_drawing_enabled(mode == "manual")
+        self.detect_section.set_summary(plain(_(f"detection.{mode}")))
 
-        # Update other radios
-        if hasattr(self, 'detection_radios'):
-            for rb, (value, idx) in zip(self.detection_radios, self.detection_modes_list):
-                if is_ai_evasion:
-                    rb.setEnabled(value == "face")
-                else:
-                    rb.setEnabled(True)
-
-        kind = "pro" if not is_pro else "ai_active"
-        self._style_badge(self.target_text_badge, kind, colors)
-
-        pro_only = {"body", "license_plate", "text"}
-        ai_upgrade = {"face", "eye"}
-
-        for value, badge in self.detection_badges:
-            if value in pro_only and not is_pro:
-                self._style_badge(badge, "pro", colors)
-            elif value in ai_upgrade and is_pro:
-                self._style_badge(badge, "ai_active", colors)
-            elif value in ai_upgrade and not is_pro:
-                self._style_badge(badge, "ai_upgrade", colors)
-            else:
-                badge.setVisible(False)
-
-    def _style_badge(self, badge, kind, colors=None):
-        if kind == "pro":
-            text = "⭐ PRO"
-            badge.setObjectName("badge_pro")
-            badge.setEnabled(True)
-            badge.setVisible(True)
-        elif kind == "ai_active":
-            text = "🛡️ Anti-AI"
-            badge.setObjectName("badge_ai_active")
-            badge.setEnabled(False)
-            badge.setVisible(True)
-        elif kind == "ai_upgrade":
-            text = "🔓→🛡️"
-            badge.setObjectName("badge_ai_upgrade")
-            badge.setEnabled(True)
-            badge.setVisible(True)
+        # Section 2
+        self.effect_grid.set_value(effect)
+        if is_ai:
+            effect_name = _("ui.sidebar.ai_hybrid" if effect == "ai_evasion" else "ui.sidebar.ai_invisible")
+            effect_name = effect_name.split("—")[0].strip()
         else:
-            badge.setVisible(False)
-            return
+            effect_name = plain(_(f"effects.{effect}"))
+        self.effect_section.set_summary(effect_name)
 
-        badge.setText(text)
-        badge.style().unpolish(badge)
-        badge.style().polish(badge)
+        # Section 3
+        self.blur_row.setVisible(effect in BLUR_STRENGTH_EFFECTS)
+        self.pixel_row.setVisible(effect == "pixelation")
+        self.settings_section.set_summary(f"{self.opacity.get()}%")
 
-    def create_slider(self, parent_layout, label_text, variable, min_val, max_val, value_label_object_name=None, resolution=1):
-        frame = QFrame()
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        # Section 4
+        meta_mode = "strip" if self.scrub_exif.get() else "spoof" if self.spoof_metadata.get() else "keep"
+        self.metadata_mode.set_value(meta_mode)
+        self.metadata_desc.setText(_(f"ui.metadata.{meta_mode}_desc"))
+        self.metadata_section.set_summary(_(f"ui.metadata.{meta_mode}"))
+        self.spoof_profile_frame.setVisible(meta_mode == "spoof")
+        profile = self.spoof_profile.get()
+        if profile in self.profile_radios and not self.profile_radios[profile].isChecked():
+            self.profile_radios[profile].setChecked(True)
+        self.customize_btn.setVisible(profile == "custom")
 
-        # Store label widget reference for updates
-        lbl = QLabel(label_text)
-        lbl.setFont(QFont("Helvetica", 11, QFont.Weight.Bold))
-        lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(lbl)
+    def _refresh_tier_ui(self):
+        """Lock / unlock Pro features everywhere."""
+        is_pro = self.license_manager.is_max_activated
+        for mode in PRO_ONLY_MODES:
+            self.detection_grid.set_locked(mode, not is_pro)
+        for effect in AI_EFFECTS:
+            self.effect_grid.set_locked(effect, not is_pro)
+        # Settings restored from an earlier Pro session must not keep a locked option selected
+        if not is_pro and self.effect_type.get() in AI_EFFECTS:
+            self.effect_type.set("blur")
+        if not is_pro and self.detection_mode.get() in PRO_ONLY_MODES:
+            self.detection_mode.set("face")
 
-        value_lbl = QLabel(str(variable.get()))
-        value_lbl.setFont(QFont("Helvetica", 10))
-        if value_label_object_name:
-            value_lbl.setObjectName(value_label_object_name)
-        value_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(value_lbl)
+        self.tier_hint.setText(self._t("ui.sidebar.pro_hint" if is_pro else "ui.sidebar.free_hint"))
+        self.upgrade_btn.setVisible(not is_pro)
+        self.pro_pill.setVisible(is_pro)
+        self.metadata_mode.setEnabled(is_pro)
+        self.spoof_profile_frame.setEnabled(is_pro)
+        self.metadata_locked_btn.setVisible(not is_pro)
 
-        slider = QSlider(Qt.Orientation.Horizontal)
-        slider.setRange(min_val, max_val)
-        slider.setSingleStep(resolution)
-        slider.setValue(variable.get())
-        slider.valueChanged.connect(lambda val: self._on_slider_changed(val, variable, value_lbl))
-        layout.addWidget(slider)
+    def refresh_exif_and_tier_badge(self):
+        self._refresh_tier_ui()
+        self._sync_controls()
 
-        parent_layout.addWidget(frame)
+    def _update_action_states(self):
+        has_image = self.original_image is not None
+        self.process_btn.setEnabled(has_image)
+        self.save_btn.setEnabled(self.processed_image is not None)
+        self.clear_btn.setEnabled(has_image)
+        self.undo_btn.setEnabled(self.history_manager.can_undo())
+        self.redo_btn.setEnabled(self.history_manager.can_redo())
+        for widget in (self.detect_btn, self.compare_btn, self.zoom_out_btn,
+                       self.zoom_label, self.zoom_in_btn, self.fit_btn):
+            widget.setEnabled(has_image)
+        if not has_image:
+            self.zoom_label.setText("—")
 
-        # Save references for layout and label updates
-        frame.label_widget = lbl
-        return frame
+    # Kept for callers that still use the old names
+    update_buttons = _update_action_states
+    restore_button_states = _update_action_states
 
-    def _on_slider_changed(self, val, variable, value_lbl):
-        variable.set(val)
-        value_lbl.setText(str(val))
+    # ═════════════════════════════════════════════════════════════════════════
+    # Sidebar events
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _on_detection_selected(self, mode):
+        self.detection_mode.set(mode)
+        previewing = self.detect_btn.isChecked()
+        self._reset_detection_preview()
+
+        if mode in ("face", "eye") and self.license_manager.is_max_activated:
+            from src.models.detection_engine import is_model_downloaded
+            if not is_model_downloaded():
+                self.prompt_download_ai_model()
+
+        if previewing and mode in PREVIEWABLE_MODES:
+            self.detect_btn.setChecked(True)  # re-run the overlay for the new mode
         self.on_parameter_change()
 
-    def create_parameters_section(self, parent_layout):
-        self.params_frame = QFrame()
-        params_layout = QVBoxLayout(self.params_frame)
-        params_layout.setContentsMargins(0, 0, 0, 0)
-        params_layout.setSpacing(10)
+    def _on_effect_selected(self, effect):
+        self.effect_type.set(effect)
+        if effect in AI_EFFECTS and self.detection_mode.get() != "face":
+            self.detection_mode.set("face")
+            self._reset_detection_preview()
+        self.on_parameter_change()
 
-        self.blur_param = self.create_slider(params_layout, self.ui_strings["ui.controls.blur_strength"].get(),
-                                             self.blur_strength,
-                                             BLUR_RANGE['min'], BLUR_RANGE['max'],
-                                             value_label_object_name="blur_value_label", resolution=2)
-        # Fetch reference for updating texts
-        self.blur_param_label = self.blur_param.label_widget
+    def _on_metadata_mode_selected(self, mode):
+        self.scrub_exif.set(mode == "strip")
+        self.spoof_metadata.set(mode == "spoof")
 
-        self.pixel_param = self.create_slider(params_layout, self.ui_strings["ui.controls.pixel_size"].get(),
-                                              self.pixel_size,
-                                              PIXEL_RANGE['min'], PIXEL_RANGE['max'],
-                                              value_label_object_name="pixel_value_label", resolution=1)
-        self.pixel_param_label = self.pixel_param.label_widget
-
-        self.opacity_param = self.create_slider(params_layout, self.ui_strings["ui.controls.opacity"].get(),
-                                                self.opacity,
-                                                OPACITY_RANGE['min'], OPACITY_RANGE['max'],
-                                                value_label_object_name="opacity_value_label", resolution=1)
-        self.opacity_param_label = self.opacity_param.label_widget
-
-        parent_layout.addWidget(self.params_frame)
-        self.update_parameter_visibility()
-
-    def create_action_buttons(self, parent_layout):
-        self.process_btn = QPushButton(self.ui_strings["ui.controls.apply_effect"].get())
-        self.process_btn.setObjectName("process_btn")
-        self.process_btn.setEnabled(False)
-        self.process_btn.clicked.connect(self.process_image)
-        parent_layout.addWidget(self.process_btn)
-
-        undo_frame = QWidget()
-        undo_layout = QHBoxLayout(undo_frame)
-        undo_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.undo_btn = QPushButton(self.ui_strings["ui.controls.undo"].get())
-        self.undo_btn.setObjectName("undo_btn")
-        self.undo_btn.setEnabled(False)
-        self.undo_btn.clicked.connect(self.undo)
-        undo_layout.addWidget(self.undo_btn)
-
-        self.redo_btn = QPushButton(self.ui_strings["ui.controls.redo"].get())
-        self.redo_btn.setObjectName("redo_btn")
-        self.redo_btn.setEnabled(False)
-        self.redo_btn.clicked.connect(self.redo)
-        undo_layout.addWidget(self.redo_btn)
-        parent_layout.addWidget(undo_frame)
-
-        self.clear_btn = QPushButton(self.ui_strings["ui.controls.clear_selections"].get())
-        self.clear_btn.setObjectName("clear_btn")
-        self.clear_btn.clicked.connect(self.clear_regions)
-        parent_layout.addWidget(self.clear_btn)
-
-        self.save_btn = QPushButton(self.ui_strings["ui.controls.save_result"].get())
-        self.save_btn.setObjectName("save_btn")
-        self.save_btn.setEnabled(False)
-        self.save_btn.clicked.connect(self.save_image)
-        parent_layout.addWidget(self.save_btn)
-
-        self.batch_btn = QPushButton(self.ui_strings["ui.controls.batch_process"].get())
-        self.batch_btn.clicked.connect(self.open_batch_window)
-        parent_layout.addWidget(self.batch_btn)
-
-    def create_exif_section(self, parent_layout):
-        self.exif_section_frame = QFrame()
-        self.exif_layout = QVBoxLayout(self.exif_section_frame)
-        self.exif_layout.setContentsMargins(0, 0, 0, 0)
-        self.exif_layout.setSpacing(8)
-
-        parent_layout.addWidget(self.exif_section_frame)
-
-        self.exif_title_label = QLabel()
-        self.exif_title_label.setFont(QFont("Helvetica", 11, QFont.Weight.Bold))
-        self.exif_layout.addWidget(self.exif_title_label)
-
-        # Scrub EXIF
-        self.scrub_row = QWidget()
-        sr_layout = QHBoxLayout(self.scrub_row)
-        sr_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.cb_scrub = QCheckBox("Strip all EXIF on save")
-        self.cb_scrub.setFont(QFont("Helvetica", 10))
-        self.cb_scrub.stateChanged.connect(self._on_scrub_state_changed)
-        sr_layout.addWidget(self.cb_scrub)
-
-        self.scrub_max_badge = QPushButton("⭐ Max")
-        self.scrub_max_badge.setObjectName("scrub_max_badge")
-        _f_scrub_badge = QFont("Helvetica", 9)
-        _f_scrub_badge.setItalic(True)
-        self.scrub_max_badge.setFont(_f_scrub_badge)
-        self.scrub_max_badge.clicked.connect(self.show_activation_dialog)
-        sr_layout.addWidget(self.scrub_max_badge)
-        sr_layout.addStretch(1)
-        self.exif_layout.addWidget(self.scrub_row)
-
-        self.scrub_desc = QLabel("Permanently removes GPS, camera & device tags.")
-        self.scrub_desc.setObjectName("scrub_desc")
-        _f_scrub_desc = QFont("Helvetica", 8)
-        _f_scrub_desc.setItalic(True)
-        self.scrub_desc.setFont(_f_scrub_desc)
-        self.scrub_desc.setWordWrap(True)
-        self.exif_layout.addWidget(self.scrub_desc)
-
-        # Divider
-        self.exif_divider = QFrame()
-        self.exif_divider.setObjectName("exif_divider")
-        self.exif_divider.setFrameShape(QFrame.Shape.HLine)
-        self.exif_layout.addWidget(self.exif_divider)
-
-        # Spoof Metadata
-        self.spoof_row = QWidget()
-        s_layout = QHBoxLayout(self.spoof_row)
-        s_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.cb_spoof = QCheckBox("Inject fake metadata on save")
-        self.cb_spoof.setFont(QFont("Helvetica", 10))
-        self.cb_spoof.stateChanged.connect(self._on_spoof_state_changed)
-        s_layout.addWidget(self.cb_spoof)
-
-        self.spoof_max_badge = QPushButton("⭐ Max")
-        self.spoof_max_badge.setObjectName("spoof_max_badge")
-        _f_spoof_badge = QFont("Helvetica", 9)
-        _f_spoof_badge.setItalic(True)
-        self.spoof_max_badge.setFont(_f_spoof_badge)
-        self.spoof_max_badge.clicked.connect(self.show_activation_dialog)
-        s_layout.addWidget(self.spoof_max_badge)
-        s_layout.addStretch(1)
-        self.exif_layout.addWidget(self.spoof_row)
-
-        # Spoof profiles container
-        self.spoof_profile_frame = QFrame()
-        self.spf_layout = QVBoxLayout(self.spoof_profile_frame)
-        self.spf_layout.setContentsMargins(15, 0, 0, 0)
-        self.spf_layout.setSpacing(3)
-
-        self.profile_radios = []
-        self.profile_labels = {
-            "ghost":  "👻 Ghost  — Nokia in Antarctica, year 2000",
-            "troll":  "🌊 Troll  — Random ocean, vintage camera",
-            "artist": "🎨 Artist — Hides GPS, keeps copyright",
-            "custom": "⚙️  Custom  — per-field control"
-        }
-
-        self.profile_button_group = QButtonGroup(self)
-        for idx, (val, text) in enumerate(self.profile_labels.items()):
-            rb = QRadioButton(text)
-            rb.setFont(QFont("Helvetica", 9))
-            rb.toggled.connect(lambda checked, v=val: self._on_profile_rb_toggled(checked, v))
-            self.profile_button_group.addButton(rb, idx)
-            self.spf_layout.addWidget(rb)
-            self.profile_radios.append((val, rb))
-
-        self.customize_btn = QPushButton("⚙️  Open Metadata Editor…")
-        self.customize_btn.setFont(QFont("Helvetica", 9, QFont.Weight.Bold))
-        self.customize_btn.clicked.connect(self._open_metadata_customizer)
-        self.spf_layout.addWidget(self.customize_btn)
-        self.customize_btn.setVisible(False)
-
-        for val, rb in self.profile_radios:
-            if val == "troll":
-                rb.setChecked(True)
-
-        self.exif_layout.addWidget(self.spoof_profile_frame)
-        self.spoof_profile_frame.setVisible(False)
-
-        self.spoof_desc = QLabel("Replaces real metadata with plausible decoys.")
-        self.spoof_desc.setObjectName("spoof_desc")
-        _f_spoof_desc = QFont("Helvetica", 8)
-        _f_spoof_desc.setItalic(True)
-        self.spoof_desc.setFont(_f_spoof_desc)
-        self.spoof_desc.setWordWrap(True)
-        self.exif_layout.addWidget(self.spoof_desc)
-
-        self.update_exif_section_ui()
-
-    def _on_profile_rb_toggled(self, checked, value):
-        if checked:
-            self.spoof_profile.set(value)
-            self._on_profile_radio_changed()
-
-    def update_exif_section_ui(self):
-        is_max = self.license_manager.is_max_activated
-
-        icon = "🛡️" if is_max else "🔒"
-        self.exif_title_label.setText(f"{icon} Privacy — Metadata")
-        self.exif_title_label.setObjectName("exif_title_pro" if is_max else "exif_title_free")
-        self.exif_title_label.style().unpolish(self.exif_title_label)
-        self.exif_title_label.style().polish(self.exif_title_label)
-
-        self.cb_scrub.setEnabled(is_max)
-        self.cb_spoof.setEnabled(is_max)
-        self.scrub_max_badge.setVisible(not is_max)
-        self.spoof_max_badge.setVisible(not is_max)
-
-        for val, rb in self.profile_radios:
-            rb.setEnabled(is_max)
-        self.customize_btn.setEnabled(is_max)
-
-    def update_effect_section_ui(self):
-        is_pro = self.license_manager.is_max_activated
-        if hasattr(self, 'effect_radios'):
-            effect_values = ["blur", "pixelation", "black_bar", "gradient", "mosaic", "glass", "oil_paint", "ai_evasion"]
-            for rb, val in zip(self.effect_radios, effect_values):
-                if val == "ai_evasion":
-                    rb.setEnabled(is_pro)
-
-    def _on_scrub_state_changed(self, state):
-        val = (state == 2)
-        if self.scrub_exif.get() != val:
-            self.scrub_exif.set(val)
-            self._on_scrub_toggled()
-
-    def _on_spoof_state_changed(self, state):
-        val = (state == 2)
-        if self.spoof_metadata.get() != val:
-            self.spoof_metadata.set(val)
-            self._on_spoof_toggled()
-
-    def _on_scrub_toggled(self):
-        if self.scrub_exif.get():
-            self.spoof_metadata.set(False)
-            self.cb_spoof.setChecked(False)
-            self.spoof_profile_frame.setVisible(False)
-
-    def _on_spoof_toggled(self):
-        if self.spoof_metadata.get():
-            self.scrub_exif.set(False)
-            self.cb_scrub.setChecked(False)
-            self.spoof_profile_frame.setVisible(True)
-            self._show_spoof_profile_frame()
+    def _prompt_upgrade(self, value):
+        if value in AI_EFFECTS:
+            name = self._t("ui.sidebar.ai_heading")
         else:
-            self.spoof_profile_frame.setVisible(False)
-            self._hide_spoof_profile_frame()
+            name = plain(self._t(f"detection.{value}"))
+        answer = QMessageBox.question(
+            self, self._t("ui.sidebar.locked_title"), self._t("ui.sidebar.locked_msg", name=name),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self.show_activation_dialog()
 
-    def _show_spoof_profile_frame(self):
-        self.spoof_profile_frame.setVisible(True)
-        if self.spoof_profile.get() == "custom":
-            self.customize_btn.setVisible(True)
+    def on_parameter_change(self):
+        self._sync_controls()
+        self.save_current_effect_settings()
+        if self.real_time_preview.get() and self.original_image is not None:
+            self._apply_live_preview()
+
+    def _on_live_preview_changed(self, enabled):
+        if self.live_btn.isChecked() != enabled:
+            self.live_btn.setChecked(enabled)
+        self.toggle_preview()
+
+    def toggle_preview(self):
+        enabled = self.real_time_preview.get()
+        try:
+            self.db_manager.save_real_time_preview_enabled(enabled)
+        except Exception as e:
+            logger.warning(f"Could not save preview preference: {e}")
+
+        if enabled:
+            self.status_label.setText(self._t("ui.status.preview_enabled"))
+            if self.original_image is not None:
+                self._apply_live_preview()
         else:
-            self.customize_btn.setVisible(False)
+            self._live_applied = False
+            self.status_label.setText(self._t("ui.status.preview_disabled"))
 
-    def _hide_spoof_profile_frame(self):
-        self.spoof_profile_frame.setVisible(False)
-
-    def _on_profile_radio_changed(self):
-        if self.spoof_profile.get() == "custom":
-            self.customize_btn.setVisible(True)
-        else:
-            self.customize_btn.setVisible(False)
+    def _apply_live_preview(self):
+        """Re-apply with new settings, replacing (not stacking on) the previous live result."""
+        if self.effect_type.get() in AI_EFFECTS:
+            return  # far too slow to run on every slider tick
+        reverted = self._live_applied and self.history_manager.can_undo()
+        if reverted:
+            self.processed_image = self.history_manager.undo()
+        self._live_applied = self._apply_effect(quiet=True)
+        if reverted and not self._live_applied:
+            self.display_image(self.processed_image)
+            self._update_action_states()
 
     def _open_metadata_customizer(self):
         current_exif = {}
@@ -1294,168 +975,282 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         dlg.exec()
         if dlg.result is not None:
             self.custom_field_actions = dlg.result
-            self.status_label.setText("Custom metadata rules saved.")
+            self.status_label.setText(self._t("ui.metadata.custom_saved"))
 
-    def add_separator(self, parent_layout):
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setObjectName("separator")
-        parent_layout.addWidget(line)
+    # ═════════════════════════════════════════════════════════════════════════
+    # Loading & display
+    # ═════════════════════════════════════════════════════════════════════════
 
     def load_image(self):
-        picker = ImagePicker(self)
-        file_path = picker.open()
-        if not file_path:
-            return
-        self.load_image_from_path(file_path)
+        file_path = ImagePicker(self).open()
+        if file_path:
+            self.load_image_from_path(file_path)
 
     def load_image_from_path(self, file_path):
+        _ = self._t
         if not file_path or not os.path.exists(file_path):
-            QMessageBox.critical(self, "Error", "File not found!")
+            QMessageBox.critical(self, _("ui.messages.title_error"), _("ui.messages.file_not_found"))
             return
 
         try:
-            self.image_path = file_path
-            self.db_manager.add_recent_file(file_path)
-
             # imdecode supports unicode file paths
             loaded_image = cv2.imdecode(np.fromfile(file_path, dtype=np.uint8), cv2.IMREAD_COLOR)
             if loaded_image is None or loaded_image.size == 0:
-                QMessageBox.critical(self, "Error", "Could not load image! File might be empty or unsupported.")
-                self.original_image = None
-                self.processed_image = None
+                QMessageBox.critical(self, _("ui.messages.title_error"),
+                                     _("dialogs.error.image_corrupted", filename=os.path.basename(file_path)))
                 return
+
+            self.image_path = file_path
+            self.db_manager.add_recent_file(file_path)
 
             self.original_exif_bytes = None
             try:
                 pil_img = Image.open(file_path)
-                if 'exif' in pil_img.info:
-                    self.original_exif_bytes = pil_img.info['exif']
+                self.original_exif_bytes = pil_img.info.get('exif')
             except Exception:
-                self.original_exif_bytes = None
+                pass
 
             self.original_image = loaded_image
-            self.processed_image = self.original_image.copy()
+            self.processed_image = loaded_image.copy()
+            self._original_pixmap = self._to_pixmap(loaded_image)
             self.drawing_regions = []
             self.history_manager.clear()
+            self._live_applied = False
 
-            self.display_image(self.original_image)
-            self.process_btn.setEnabled(True)
-            self.toolbar_process_btn.setEnabled(True)
+            self.canvas.set_regions([])
+            self.compare_btn.setChecked(False)
+            self._reset_detection_preview()
+            self.canvas.set_image(self._original_pixmap)
+            self.canvas.zoom_to_fit()
 
-            info = self.image_utils.get_image_info(self.original_image)
-            self.status_label.setText(f"Loaded: {os.path.basename(file_path)}")
-            self.info_label.setText(f"{info['width']}x{info['height']} | {info['size_kb']} KB")
-            self.restore_button_states()
-
-            # Refresh recent files menu
-            self.create_menu_bar()
+            self._show_image_status()
+            self._update_action_states()
+            self.create_menu_bar()  # refresh "Open Recent"
         except Exception as e:
-            QMessageBox.critical(self, "Loading Error", f"Failed to load image:\n{str(e)}")
-            self.original_image = None
-            self.processed_image = None
-            self.status_label.setText("Failed to load image")
+            QMessageBox.critical(self, _("ui.messages.title_error"), _("dialogs.error.loading_image", error=str(e)))
+            self.status_label.setText(_("ui.status.failed_load"))
+
+    def _show_image_status(self):
+        info = self.image_utils.get_image_info(self.original_image)
+        self.status_label.setText(self._t("ui.status.loaded", filename=os.path.basename(self.image_path)))
+        self.info_label.setText(self._t("ui.info.image_info", width=info['width'],
+                                        height=info['height'], size_kb=info['size_kb']))
+
+    def handle_dropped_file(self, file_path):
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext not in SUPPORTED_EXTS:
+            QMessageBox.warning(self, self._t("ui.messages.unsupported_title"),
+                                self._t("ui.messages.unsupported_drop", ext=ext or "(none)"))
+            return
+        self.load_image_from_path(file_path)
+
+    @staticmethod
+    def _to_pixmap(cv_image):
+        rgb = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb.shape
+        return QPixmap.fromImage(QImage(rgb.data, w, h, ch * w, QImage.Format.Format_RGB888))
 
     def display_image(self, cv_image):
         if cv_image is None or cv_image.size == 0:
             return
-
         try:
-            rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+            self.canvas.set_image(self._to_pixmap(cv_image))
         except cv2.error as e:
-            QMessageBox.critical(self, "Display Error", f"Could not convert image: {e}")
+            QMessageBox.critical(self, self._t("ui.messages.title_error"),
+                                 self._t("ui.messages.display_error", error=str(e)))
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # Canvas tools: zoom, compare, detection preview, manual regions
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _on_zoom_changed(self, scale):
+        self.zoom_label.setText(f"{round(scale * 100)}%")
+
+    def _toggle_fit_actual(self):
+        if self.canvas.is_fit():
+            self.canvas.zoom_actual()
+        else:
+            self.canvas.zoom_to_fit()
+
+    def _on_compare_toggled(self, enabled):
+        if enabled and self._original_pixmap is not None:
+            self.canvas.set_compare_image(self._original_pixmap)
+            self.status_label.setText(self._t("ui.status.compare_on"))
+        else:
+            self.canvas.set_compare_image(None)
+
+    def _on_detect_toggled(self, enabled):
+        if not enabled:
+            self._detection_preview = None
+            self.canvas.clear_detections()
             return
-
-        canvas_width = self.canvas.width()
-        canvas_height = self.canvas.height()
-        if canvas_width <= 1 or canvas_height <= 1:
-            canvas_width = 900
-            canvas_height = 700
-
-        try:
-            resized, scale = self.image_utils.resize_for_display(
-                rgb_image, canvas_width, canvas_height
-            )
-        except Exception as e:
-            QMessageBox.critical(self, "Display Error", f"Could not resize: {e}")
+        if self.processed_image is None:
+            self.detect_btn.setChecked(False)
             return
-
-        h, w, ch = resized.shape
-        bytes_per_line = ch * w
-        qimage = QImage(resized.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
-        qpixmap = QPixmap.fromImage(qimage)
-
-        # Center position
-        x = (canvas_width - w) // 2
-        y = (canvas_height - h) // 2
-        x = max(0, x)
-        y = max(0, y)
-
-        self.display_scale = scale
-        self.display_offset = (x, y)
-        self.canvas.set_image(qpixmap, x, y)
-
-    def process_image(self):
-        if self.original_image is None:
-            return
-
-        if self.processed_image is not None:
-            self.history_manager.save_state(self.processed_image)
 
         mode = self.detection_mode.get()
+        if mode not in PREVIEWABLE_MODES:
+            self.status_label.setText(self._t("ui.status.detect_unavailable"))
+            self.detect_btn.setChecked(False)
+            return
+
+        QApplication.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
+        try:
+            detected = self._detect(mode)
+        finally:
+            QApplication.restoreOverrideCursor()
+        if detected is None:
+            self.detect_btn.setChecked(False)
+            return
+
+        rects, pro = detected
+        self._detection_preview = {"mode": mode, "rects": rects, "pro": pro}
+        self.canvas.set_detections([self._outline(d) for d in list(rects) + list(pro)])
+        self._on_detections_changed()
+
+    def _on_detections_changed(self):
+        if not self._detection_preview:
+            return
+        total = len(self._detection_preview["rects"]) + len(self._detection_preview["pro"])
+        if total == 0:
+            self.status_label.setText(self._t("ui.status.detected_none"))
+            return
+        active = total - len(self.canvas.skipped_detections())
+        # The noun agrees with the total ("1 of 3 regions"), so the total drives the plural
+        self.status_label.setText(self._t("ui.status.detected", shown=active, count=total))
+
+    def _reset_detection_preview(self):
+        if self.detect_btn.isChecked():
+            self.detect_btn.setChecked(False)  # toggled(False) clears the overlay
+        self._detection_preview = None
+        self.canvas.clear_detections()
+
+    @staticmethod
+    def _outline(det):
+        """Polygon (image coords) for any detection format."""
+        if isinstance(det, dict):
+            if det["type"] == "polygon":
+                return det["points"]
+            if det["type"] == "rotated_rect":
+                return cv2.boxPoints((det["center"], det["size"], det["angle"])).tolist()
+        x, y, w, h = det
+        return [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
+
+    def _on_region_drawn(self, rect):
+        self.drawing_regions.append((rect.x(), rect.y(), rect.width(), rect.height()))
+        self.canvas.set_regions(self.drawing_regions)
+        self.status_label.setText(self._t("ui.status.region_added", count=len(self.drawing_regions)))
+        if self.real_time_preview.get():
+            self._apply_live_preview()
+
+    def clear_regions(self):
+        self.drawing_regions = []
+        self.canvas.set_regions([])
+        self._reset_detection_preview()
+        self.status_label.setText(self._t("ui.status.cleared"))
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # Detection & processing
+    # ═════════════════════════════════════════════════════════════════════════
+
+    def _detect(self, mode, quiet=False):
+        """
+        Find the regions for `mode` on the current image.
+        Returns (rects, pro_regions), or None when the user has to act first
+        (a message has been shown unless `quiet`, as during live preview).
+        """
+        _ = self._t
+
+        def tell(show, text, title_key="ui.messages.title_info"):
+            if not quiet:
+                show(self, _(title_key), text)
+
+        image = self.processed_image
+        engine = self.detection_engine
+        is_pro = self.license_manager.is_max_activated
+
+        def cascades_ready():
+            # Haar detectors return [] when their files are missing — never treat that as "no faces"
+            missing = engine.missing_cascades(mode)
+            if missing:
+                self.status_label.setText(_("ui.status.detection_unavailable"))
+                tell(QMessageBox.critical, _("ui.messages.cascades_missing", files=", ".join(missing)),
+                     "ui.messages.title_error")
+            return not missing
+
+        if mode in ("face", "eye"):
+            pro = []
+            if is_pro:
+                pro = engine.detect_faces_pro(image) if mode == "face" else engine.detect_eyes_pro(image)
+            if pro:
+                return [], pro
+            if not cascades_ready():
+                return None
+            return (engine.detect_faces(image) if mode == "face" else engine.detect_eyes(image)), []
+        if mode == "body":
+            if not cascades_ready():
+                return None
+            return engine.detect_full_body(image), []
+        if mode == "license_plate":
+            return engine.detect_license_plates(image), []
+        if mode == "text":
+            return engine.detect_text(image), []
+        if mode == "target_text":
+            word = self.target_word_var.get()
+            if not word:
+                tell(QMessageBox.warning, _("dialogs.error.no_word"))
+                return None
+            rects = self.text_detector.detect_specific_word(image, word)
+            if not rects:
+                tell(QMessageBox.information, _("dialogs.error.word_not_found", word=word))
+                return None
+            return rects, []
+        if mode == "manual":
+            if not self.drawing_regions:
+                tell(QMessageBox.information, _("dialogs.error.no_selections"))
+                return None
+            return list(self.drawing_regions), []
+        if mode == "full":
+            h, w = image.shape[:2]
+            return [(0, 0, w, h)], []
+        return None
+
+    def _previewed_regions(self):
+        """The Detect overlay's results minus the ones the user clicked to skip."""
+        skipped = self.canvas.skipped_detections()
+        rects = self._detection_preview["rects"]
+        pro = self._detection_preview["pro"]
+        kept_rects = [r for i, r in enumerate(rects) if i not in skipped]
+        kept_pro = [p for i, p in enumerate(pro) if i + len(rects) not in skipped]
+        return kept_rects, kept_pro
+
+    def process_image(self):
+        """Apply button / Ctrl+Enter."""
+        if self._live_applied:
+            # Live preview already shows the result — Apply just keeps it.
+            self._live_applied = False
+            self.status_label.setText(self._t("ui.status.applied"))
+            return
+        self._apply_effect()
+
+    def _apply_effect(self, quiet=False):
+        """Detect + apply. Returns True when the image changed synchronously."""
+        if self.original_image is None:
+            return False
+
+        _ = self._t
+        mode = self.detection_mode.get()
         effect = self.effect_type.get()
-        self.processed_image = self.processed_image.copy()
+        from_preview = bool(self._detection_preview and self._detection_preview["mode"] == mode)
 
         try:
-            is_pro = self.license_manager.is_max_activated
-            regions = []
-            pro_regions = []
-
-            if mode == "face":
-                if is_pro:
-                    pro_regions = self.detection_engine.detect_faces_pro(self.processed_image)
-                    if not pro_regions:
-                        regions = self.detection_engine.detect_faces(self.processed_image)
-                else:
-                    regions = self.detection_engine.detect_faces(self.processed_image)
-
-            elif mode == "eye":
-                if is_pro:
-                    pro_regions = self.detection_engine.detect_eyes_pro(self.processed_image)
-                    if not pro_regions:
-                        regions = self.detection_engine.detect_eyes(self.processed_image)
-                else:
-                    regions = self.detection_engine.detect_eyes(self.processed_image)
-
-            elif mode == "body":
-                regions = self.detection_engine.detect_full_body(self.processed_image)
-            elif mode == "license_plate":
-                regions = self.detection_engine.detect_license_plates(self.processed_image)
-            elif mode == "text":
-                regions = self.detection_engine.detect_text(self.processed_image)
-            elif mode == "target_text":
-                word = self.target_word_var.get()
-                if not word:
-                    QMessageBox.warning(self, "Wait!", "Please type the word you want to blur.")
-                    return
-                regions = self.text_detector.detect_specific_word(self.processed_image, word)
-                if not regions:
-                    QMessageBox.information(self, "Info", f"Could not find the word '{word}' in this image.")
-                    return
-            elif mode == "manual":
-                if not self.drawing_regions:
-                    QMessageBox.information(self, "Info", "Draw regions on the image first!")
-                    return
-                regions = self.drawing_regions
-            elif mode == "full":
-                h, w = self.processed_image.shape[:2]
-                regions = [(0, 0, w, h)]
+            if from_preview:
+                regions, pro_regions = self._previewed_regions()
             else:
-                return
-
-            # Apply FREE rectangle regions
-            for (x, y, w, h) in regions:
-                self.apply_effect_to_region(x, y, w, h, effect)
+                detected = self._detect(mode, quiet=quiet)
+                if detected is None:
+                    return False
+                regions, pro_regions = detected
 
             effect_kwargs = dict(
                 strength=self.blur_strength.get(),
@@ -1464,165 +1259,124 @@ class AdvancedPrivacyStudioPro(QMainWindow):
             )
 
             # ── AI Evasion — async path ────────────────────────────────────────
-            if effect == "ai_evasion" and pro_regions:
+            if effect in AI_EFFECTS and pro_regions:
                 polygon_regions = [d for d in pro_regions if d["type"] == "polygon"]
                 if not polygon_regions:
-                    QMessageBox.warning(self, "AI Evasion",
-                        "AI Evasion works on face oval regions only.\n"
-                        "No face oval detected — try Face (PRO) detection mode.")
-                    return
+                    QMessageBox.warning(self, _("ui.sidebar.ai_heading"), _("ui.ai.no_oval"))
+                    return False
 
-                self._run_adversarial_async(
-                    self.processed_image.copy(), polygon_regions, effect_kwargs
-                )
-                return  # Result delivered via signal when worker finishes
+                # Faces picked on the canvas already; otherwise ask when there are several.
+                if len(polygon_regions) > 1 and not from_preview:
+                    dlg = FaceSelectionDialog(self, self.processed_image, polygon_regions)
+                    if dlg.exec() != QDialog.DialogCode.Accepted:
+                        return False
+                    polygon_regions = dlg.get_selected_faces()
+                    if not polygon_regions:
+                        return False
 
-            # ── Standard PRO AI regions ────────────────────────────────────────
+                self._run_adversarial_async(self.processed_image.copy(), polygon_regions, effect, effect_kwargs)
+                return False  # Result delivered via signal when the worker finishes
+
+            # ── Standard path ──────────────────────────────────────────────────
+            self.history_manager.save_state(self.processed_image)
+            result = self.processed_image.copy()
+            for (x, y, w, h) in regions:
+                try:
+                    result = ImageProcessor.apply_effect_to_region(
+                        result, x, y, w, h, effect_type=effect, **effect_kwargs)
+                except Exception as e:
+                    logger.error(f"Error applying effect to region: {e}")
             for det in pro_regions:
                 if det["type"] == "polygon":
-                    self.processed_image = self.image_processor.apply_effect_to_polygon(
-                        self.processed_image, det["points"], effect, **effect_kwargs
-                    )
+                    result = self.image_processor.apply_effect_to_polygon(
+                        result, det["points"], effect, **effect_kwargs)
                 elif det["type"] == "rotated_rect":
-                    self.processed_image = self.image_processor.apply_effect_rotated(
-                        self.processed_image,
-                        det["center"], det["size"], det["angle"],
-                        effect, **effect_kwargs
-                    )
+                    result = self.image_processor.apply_effect_rotated(
+                        result, det["center"], det["size"], det["angle"], effect, **effect_kwargs)
+            self.processed_image = result
 
             total = len(regions) + len(pro_regions)
-            badge = " 🛡️ Anti-AI" if pro_regions else ""
+            badge = " · 🛡️ Anti-AI" if pro_regions else ""
+            self._reset_detection_preview()
             self.display_image(self.processed_image)
-            self.save_btn.setEnabled(True)
-            self.toolbar_save_btn.setEnabled(True)
-            self.status_label.setText(f"Processed {total} region(s){badge}")
-            self.update_buttons()
+            self.status_label.setText(_("ui.status.processed", count=total) + badge)
+            self._update_action_states()
+            return True
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Processing failed: {str(e)}")
+            QMessageBox.critical(self, _("ui.messages.title_error"), _("dialogs.error.processing", error=str(e)))
+            return False
 
-    def _run_adversarial_async(self, image, pro_regions, effect_kwargs):
+    def _set_busy(self, busy):
+        """Lock the UI while the AI Evasion worker owns MediaPipe and the image."""
+        for widget in (self.sidebar, self.toolbar, self.menuBar()):
+            widget.setEnabled(not busy)
+        if not busy:
+            self._update_action_states()
+
+    def _run_adversarial_async(self, image, pro_regions, effect, effect_kwargs):
         """Launch AdversarialWorker in a background QThread with a progress dialog."""
+        _ = self._t
         n_faces = len(pro_regions)
-        total_iters = 40
+        iters = AdversarialWorker.ITERS_PER_FACE
 
-        progress_dlg = QProgressDialog(
-            "🛡️ Computing AI Evasion…\nThis may take 30–90 seconds.",
-            "Cancel", 0, total_iters * n_faces, self
-        )
-        progress_dlg.setWindowTitle("AI Evasion — Processing")
+        progress_dlg = QProgressDialog(_("ui.ai.progress_start"), _("ui.ai.cancel"), 0, iters * n_faces, self)
+        progress_dlg.setWindowTitle(_("ui.ai.progress_title"))
         progress_dlg.setWindowModality(Qt.WindowModality.WindowModal)
         progress_dlg.setMinimumDuration(0)
         progress_dlg.setValue(0)
 
-        # Disable ALL detection/effect/load/batch controls while worker runs to prevent
-        # concurrent access to MediaPipe and state corruption from main thread.
-        self.process_btn.setEnabled(False)
-        self.toolbar_process_btn.setEnabled(False)
-        if hasattr(self, 'load_btn') and self.load_btn:
-            self.load_btn.setEnabled(False)
-        if hasattr(self, 'toolbar_load_btn') and self.toolbar_load_btn:
-            self.toolbar_load_btn.setEnabled(False)
-        if hasattr(self, 'batch_btn') and self.batch_btn:
-            self.batch_btn.setEnabled(False)
-        if hasattr(self, 'save_btn') and self.save_btn:
-            self.save_btn.setEnabled(False)
-        if hasattr(self, 'toolbar_save_btn') and self.toolbar_save_btn:
-            self.toolbar_save_btn.setEnabled(False)
-
-        self.effect_button_group.setExclusive(False)
-        for rb in getattr(self, 'effect_radios', []):
-            rb.setEnabled(False)
-        self.detection_button_group.setExclusive(False)
-        for rb in getattr(self, 'detection_radios', []):
-            rb.setEnabled(False)
-
-        self._adv_worker = AdversarialWorker(image, pro_regions, effect_kwargs, self)
+        self._set_busy(True)
+        self._adv_worker = AdversarialWorker(image, pro_regions, effect, effect_kwargs, self)
 
         def on_progress(abs_i, total_per_face, score):
             progress_dlg.setValue(abs_i)
             face_num = ((abs_i - 1) // total_per_face) + 1 if total_per_face > 0 else 1
             iter_in_face = ((abs_i - 1) % total_per_face) + 1 if total_per_face > 0 else abs_i
-            progress_dlg.setLabelText(
-                f"🛡️ Face {face_num}/{n_faces} — iter {iter_in_face}/{total_per_face} | score {score:.2f}"
-            )
+            progress_dlg.setLabelText(_("ui.ai.progress_step", face=face_num, faces=n_faces,
+                                        iter=iter_in_face, iters=total_per_face, score=f"{score:.2f}"))
             if progress_dlg.wasCanceled():
                 self._adv_worker.cancel()
 
-        def _restore_controls():
-            self.process_btn.setEnabled(True)
-            self.toolbar_process_btn.setEnabled(True)
-            if hasattr(self, 'load_btn') and self.load_btn:
-                self.load_btn.setEnabled(True)
-            if hasattr(self, 'toolbar_load_btn') and self.toolbar_load_btn:
-                self.toolbar_load_btn.setEnabled(True)
-            if hasattr(self, 'batch_btn') and self.batch_btn:
-                self.batch_btn.setEnabled(True)
-            if hasattr(self, 'save_btn') and self.save_btn:
-                self.save_btn.setEnabled(True)
-            if hasattr(self, 'toolbar_save_btn') and self.toolbar_save_btn:
-                self.toolbar_save_btn.setEnabled(True)
-
-            is_pro = self.license_manager.is_max_activated
-            effect_values = ["blur", "pixelation", "black_bar", "gradient", "mosaic", "glass", "oil_paint", "ai_evasion"]
-            for rb, val in zip(getattr(self, 'effect_radios', []), effect_values):
-                rb.setEnabled(True if val != "ai_evasion" else is_pro)
-            self.effect_button_group.setExclusive(True)
-            for rb in getattr(self, 'detection_radios', []):
-                rb.setEnabled(True)
-            self.detection_button_group.setExclusive(True)
-
         def on_finished(result_image, final_score):
             progress_dlg.close()
-            _restore_controls()
+            self._set_busy(False)
 
             if result_image is None:
-                self.status_label.setText("AI Evasion cancelled.")
+                self.status_label.setText(_("ui.status.ai_cancelled"))
                 return
             self.history_manager.save_state(self.processed_image)
             self.processed_image = result_image
+            self._reset_detection_preview()
             self.display_image(self.processed_image)
-            self.save_btn.setEnabled(True)
-            self.toolbar_save_btn.setEnabled(True)
 
             # Three distinct outcomes — never mislead the user
             if final_score == 0.0:
-                msg = "✅ AI Evasion complete — face is hidden from AI detectors"
+                msg = _("ui.status.ai_success")
             elif final_score < 1.0:
-                score_pct = int((1.0 - final_score) * 100)
-                msg = f"⚠️ AI Evasion partial — {score_pct}% evasion rate"
+                msg = _("ui.status.ai_partial", percent=int((1.0 - final_score) * 100))
             else:
                 # score==1.0: adversarial step crashed; base blur was preserved (fail-closed)
-                msg = "❌ AI Evasion failed — face is blurred but NOT verified against AI detection"
+                msg = _("ui.status.ai_failed")
             self.status_label.setText(msg)
-            self.update_buttons()
+            self._update_action_states()
 
         self._adv_worker.progress.connect(on_progress)
         self._adv_worker.finished_result.connect(on_finished)
         progress_dlg.canceled.connect(self._adv_worker.cancel)
         self._adv_worker.start()
 
-    def apply_effect_to_region(self, x, y, w, h, effect):
-        if self.original_image is None:
-            return
-        try:
-            self.processed_image = ImageProcessor.apply_effect_to_region(
-                self.processed_image,
-                x, y, w, h,
-                effect_type=effect,
-                strength=self.blur_strength.get(),
-                pixel_size=self.pixel_size.get(),
-                opacity=self.opacity.get()
-            )
-        except Exception as e:
-            logger.error(f"Error applying effect to region: {e}")
+    # ═════════════════════════════════════════════════════════════════════════
+    # Saving
+    # ═════════════════════════════════════════════════════════════════════════
 
     def save_image(self):
         if self.processed_image is None:
             return
+        _ = self._t
 
-        file_path, _ = QFileDialog.getSaveFileName(
+        file_path, _filter = QFileDialog.getSaveFileName(
             self,
-            "Save Processed Image",
+            _("ui.messages.save_dialog_title"),
             os.path.expanduser("~"),
             "JPEG Images (*.jpg *.jpeg);;PNG Images (*.png);;BMP Images (*.bmp);;TIFF Images (*.tiff);;All Files (*)"
         )
@@ -1701,218 +1455,174 @@ class AdvancedPrivacyStudioPro(QMainWindow):
                     except Exception as e:
                         logger.error(f"Metadata custom warning: {e}")
                 else:
-                    if self.original_exif_bytes:
-                        try:
-                            pil_img = Image.open(file_path)
-                            pil_img.save(file_path, exif=self.original_exif_bytes)
-                        except Exception as e:
-                            logger.error(f"EXIF restore warning: {e}")
+                    self._restore_original_exif(file_path)
             elif ext in ('.jpg', '.jpeg', '.png'):
                 try:
                     _spoof_metadata(file_path, file_path, profile=profile)
                 except Exception as e:
                     logger.error(f"Metadata spoof warning: {e}")
             else:
-                if self.original_exif_bytes:
-                    try:
-                        pil_img = Image.open(file_path)
-                        pil_img.save(file_path, exif=self.original_exif_bytes)
-                    except Exception as e:
-                        logger.error(f"EXIF restore warning: {e}")
+                self._restore_original_exif(file_path)
         else:
-            if self.original_exif_bytes:
-                try:
-                    pil_img = Image.open(file_path)
-                    pil_img.save(file_path, exif=self.original_exif_bytes)
-                except Exception as e:
-                    logger.error(f"EXIF restore warning: {e}")
+            self._restore_original_exif(file_path)
 
-        QMessageBox.information(self, "Success", "Image saved successfully!")
-        self.status_label.setText(f"Saved: {os.path.basename(file_path)}")
+        QMessageBox.information(self, _("ui.messages.title_success"), _("dialogs.info.saved"))
+        self.status_label.setText(_("ui.status.saved", filename=os.path.basename(file_path)))
+
+    def _restore_original_exif(self, file_path):
+        if not self.original_exif_bytes:
+            return
+        try:
+            pil_img = Image.open(file_path)
+            pil_img.save(file_path, exif=self.original_exif_bytes)
+        except Exception as e:
+            logger.error(f"EXIF restore warning: {e}")
 
     def save_comparison(self):
         if self.original_image is None or self.processed_image is None:
             return
-        file_path, _ = QFileDialog.getSaveFileName(
+        file_path, _filter = QFileDialog.getSaveFileName(
             self,
-            "Save Comparison Image",
+            self._t("ui.messages.comparison_dialog_title"),
             os.path.expanduser("~"),
             "JPEG Images (*.jpg);;PNG Images (*.png)"
         )
         if file_path:
             ExportManager.export_comparison(self.original_image, self.processed_image, file_path)
-            QMessageBox.information(self, "Success", "Comparison saved!")
+            QMessageBox.information(self, self._t("ui.messages.title_success"), self._t("dialogs.info.comparison_saved"))
 
-    def update_parameter_visibility(self):
-        if not hasattr(self, 'blur_param') or not hasattr(self, 'pixel_param') or not hasattr(self, 'text_input_frame'):
-            return
-        self.blur_param.setVisible(False)
-        self.pixel_param.setVisible(False)
-        self.text_input_frame.setVisible(False)
-
-        if self.detection_mode.get() == "target_text":
-            self.text_input_frame.setVisible(True)
-
-        effect = self.effect_type.get()
-        if effect in ["blur", "glass"]:
-            self.blur_param.setVisible(True)
-        elif effect == "pixelation":
-            self.pixel_param.setVisible(True)
+    # ═════════════════════════════════════════════════════════════════════════
+    # History
+    # ═════════════════════════════════════════════════════════════════════════
 
     def undo(self):
         prev_image = self.history_manager.undo()
         if prev_image is not None:
             self.history_manager.add_to_redo(self.processed_image)
             self.processed_image = prev_image
+            self._live_applied = False
             self.display_image(self.processed_image)
-            self.status_label.setText("Undo successful")
-            self.update_buttons()
+            self.status_label.setText(self._t("ui.status.undo_done"))
+            self._update_action_states()
 
     def redo(self):
         next_image = self.history_manager.redo()
         if next_image is not None:
-            self.history_manager.save_state(self.processed_image)
+            self.history_manager.save_state(self.processed_image, clear_redo=False)
             self.processed_image = next_image
+            self._live_applied = False
             self.display_image(self.processed_image)
-            self.status_label.setText("Redo successful")
-            self.update_buttons()
-
-    def clear_regions(self):
-        self.drawing_regions = []
-        self.canvas.drag_start = None
-        self.canvas.drag_end = None
-        if self.original_image is not None:
-            self.display_image(self.processed_image)
-        self.status_label.setText("Cleared all selections")
-        self.canvas.update()
+            self.status_label.setText(self._t("ui.status.redo_done"))
+            self._update_action_states()
 
     def reset_image(self):
         if self.original_image is not None:
             self.processed_image = self.original_image.copy()
-            self.display_image(self.processed_image)
             self.drawing_regions = []
+            self.canvas.set_regions([])
             self.history_manager.clear()
-            self.status_label.setText("Image reset to original")
-            self.update_buttons()
-
-    def switch_view(self, view_type):
-        if view_type == 'original' and self.original_image is not None:
-            self.display_image(self.original_image)
-            self.status_label.setText("Viewing Original Image")
-        elif view_type == 'processed' and self.processed_image is not None:
+            self._live_applied = False
             self.display_image(self.processed_image)
-            self.status_label.setText("Viewing Processed Image")
-        elif view_type == 'compare':
-            if self.original_image is None or self.processed_image is None:
-                return
-            h1, w1 = self.original_image.shape[:2]
-            h2, w2 = self.processed_image.shape[:2]
-            proc_img_resized = self.processed_image
-            if (h1, w1) != (h2, w2):
-                proc_img_resized = cv2.resize(self.processed_image, (w1, h1))
-            divider = np.ones((h1, 10, 3), dtype=np.uint8) * 255
-            comparison_image = np.hstack((self.original_image, divider, proc_img_resized))
-            self.display_image(comparison_image)
-            self.status_label.setText("Viewing Comparison Image")
+            self.status_label.setText(self._t("ui.status.reset"))
+            self._update_action_states()
 
-    def restore_button_states(self):
-        enabled = self.original_image is not None
-        self.process_btn.setEnabled(enabled)
-        self.clear_btn.setEnabled(enabled)
-        self.toolbar_process_btn.setEnabled(enabled)
-        self.toolbar_clear_btn.setEnabled(enabled)
+    # ═════════════════════════════════════════════════════════════════════════
+    # Presets & batch
+    # ═════════════════════════════════════════════════════════════════════════
 
-        save_enabled = self.processed_image is not None
-        self.save_btn.setEnabled(save_enabled)
-        self.toolbar_save_btn.setEnabled(save_enabled)
-        self.update_buttons()
+    def _current_settings(self):
+        return {
+            'effect_type': self.effect_type.get(),
+            'detection_mode': self.detection_mode.get(),
+            'blur_strength': self.blur_strength.get(),
+            'pixel_size': self.pixel_size.get(),
+            'opacity': self.opacity.get(),
+        }
 
-    def update_buttons(self):
-        can_undo = self.history_manager.can_undo()
-        self.undo_btn.setEnabled(can_undo)
-        self.toolbar_undo_btn.setEnabled(can_undo)
-
-        can_redo = self.history_manager.can_redo()
-        self.redo_btn.setEnabled(can_redo)
-        self.toolbar_redo_btn.setEnabled(can_redo)
+    def _apply_settings(self, settings):
+        self.effect_type.set(settings.get('effect_type', 'blur'))
+        self.detection_mode.set(settings.get('detection_mode', 'face'))
+        self.blur_strength.set(settings.get('blur_strength', BLUR_RANGE['default']))
+        self.pixel_size.set(settings.get('pixel_size', PIXEL_RANGE['default']))
+        self.opacity.set(settings.get('opacity', OPACITY_RANGE['default']))
 
     def save_preset(self):
-        name, ok = QInputDialog.getText(self, "Save Preset", "Enter preset name:")
+        _ = self._t
+        name, ok = QInputDialog.getText(self, _("presets.save"), _("presets.save_prompt"))
         if ok and name:
-            settings = {
-                'effect_type': self.effect_type.get(),
-                'detection_mode': self.detection_mode.get(),
-                'blur_strength': self.blur_strength.get(),
-                'pixel_size': self.pixel_size.get(),
-                'opacity': self.opacity.get()
-            }
-            self.preset_manager.add_preset(name, settings)
-            QMessageBox.information(self, "Success", f"Preset '{name}' saved!")
+            self.preset_manager.add_preset(name, self._current_settings())
+            QMessageBox.information(self, _("ui.messages.title_success"), _("dialogs.info.preset_saved", name=name))
 
     def load_preset(self):
+        _ = self._t
         presets = self.preset_manager.get_all_presets()
         if not presets:
-            QMessageBox.information(self, "Info", "No presets available")
+            QMessageBox.information(self, _("ui.messages.title_info"), _("presets.no_presets"))
             return
-        
-        preset_names = list(presets.keys())
-        name, ok = QInputDialog.getItem(self, "Load Preset", "Select preset to load:", preset_names, 0, False)
+        name, ok = QInputDialog.getItem(self, _("presets.load"), _("ui.messages.select_preset_prompt"),
+                                        list(presets.keys()), 0, False)
         if ok and name:
-            settings = presets[name]
-            self.effect_type.set(settings.get('effect_type', 'blur'))
-            self.detection_mode.set(settings.get('detection_mode', 'face'))
-            self.blur_strength.set(settings.get('blur_strength', BLUR_RANGE['default']))
-            self.pixel_size.set(settings.get('pixel_size', PIXEL_RANGE['default']))
-            self.opacity.set(settings.get('opacity', OPACITY_RANGE['default']))
-            self.update_parameter_visibility()
-            QMessageBox.information(self, "Success", f"Preset '{name}' loaded!")
+            self._apply_settings(presets[name])
+            QMessageBox.information(self, _("ui.messages.title_success"), _("ui.messages.preset_loaded", name=name))
 
     def manage_presets(self):
+        _ = self._t
         presets = self.preset_manager.get_all_presets()
         if not presets:
-            QMessageBox.information(self, "Info", "No presets to manage.")
+            QMessageBox.information(self, _("ui.messages.title_info"), _("presets.no_presets"))
             return
-        
-        preset_names = list(presets.keys())
-        name, ok = QInputDialog.getItem(self, "Delete Preset", "Select preset to delete:", preset_names, 0, False)
+        name, ok = QInputDialog.getItem(self, _("ui.messages.delete_preset_title"),
+                                        _("ui.messages.delete_preset_prompt"), list(presets.keys()), 0, False)
         if ok and name:
             self.preset_manager.delete_preset(name)
-            QMessageBox.information(self, "Success", f"Preset '{name}' deleted!")
+            QMessageBox.information(self, _("ui.messages.title_success"), _("ui.messages.preset_deleted", name=name))
 
     def open_batch_window(self):
-        dlg = BatchWindow(self, self.batch_processor, self.license_manager)
-        dlg.exec()
+        BatchWindow(self, self.batch_processor, self.license_manager).exec()
+
+    def save_current_effect_settings(self):
+        try:
+            self.db_manager.save_last_effect_settings(self._current_settings())
+        except Exception as e:
+            logger.warning(f"Could not save effect settings: {e}")
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # Pro activation
+    # ═════════════════════════════════════════════════════════════════════════
 
     def show_activation_dialog(self):
         """Start local browser-based authentication flow."""
+        _ = self._t
         dialog = QDialog(self)
-        dialog.setWindowTitle("Activating DotScramble Pro")
-        dialog.setFixedSize(400, 220)
+        dialog.setWindowTitle(_("ui.activation.title"))
+        dialog.setFixedSize(420, 220)
 
         layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(10)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(12)
 
-        title = QLabel("Waiting for authentication...")
-        title.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        title = QLabel(_("ui.activation.waiting"))
+        title.setObjectName("DialogTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
 
-        desc = QLabel("Please complete the activation in your browser.\nThis window will close automatically.")
+        desc = caption(_("ui.activation.desc"))
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(desc)
 
         progress = QProgressBar()
         progress.setRange(0, 0)
+        progress.setTextVisible(False)
         layout.addWidget(progress)
 
         def fallback_to_manual():
-            if hasattr(self, 'auth_manager') and self.auth_manager:
+            if getattr(self, 'auth_manager', None):
                 self.auth_manager.stop()
             dialog.reject()
             self._show_manual_activation_dialog()
 
-        manual_btn = QPushButton("Enter Key Manually")
+        manual_btn = QPushButton(_("ui.activation.manual_btn"))
+        manual_btn.setProperty("variant", "ghost")
         manual_btn.clicked.connect(fallback_to_manual)
         layout.addWidget(manual_btn)
 
@@ -1933,147 +1643,204 @@ class AdvancedPrivacyStudioPro(QMainWindow):
 
     def _handle_auth_callback(self, dialog, key):
         dialog.accept()
-        self.status_label.setText("Activating...")
+        self._activate(key)
+
+    def _show_manual_activation_dialog(self):
+        key, ok = QInputDialog.getText(self, self._t("ui.activation.manual_title"), self._t("ui.activation.manual_prompt"))
+        if ok and key:
+            self._activate(key.strip())
+
+    def _activate(self, key):
+        _ = self._t
+        self.status_label.setText(_("ui.status.activating"))
         QApplication.processEvents()
 
         success, message = self.license_manager.verify_and_activate(key)
         if success:
-            QMessageBox.information(self, "Success", message)
+            QMessageBox.information(self, _("ui.messages.title_success"), message)
             self.update_window_title()
             self.create_menu_bar()
             self.refresh_exif_and_tier_badge()
-            self.status_label.setText("DotScramble Pro Activated!")
+            self.status_label.setText(_("ui.status.activated"))
         else:
-            QMessageBox.critical(self, "Activation Failed", message)
-            self.status_label.setText("Activation failed.")
+            QMessageBox.critical(self, _("ui.activation.failed_title"), message)
+            self.status_label.setText(_("ui.status.activation_failed"))
 
-    def _show_manual_activation_dialog(self):
-        key, ok = QInputDialog.getText(
-            self,
-            "Activate Pro",
-            "Enter your DotSuite API Key to unlock DotScramble Pro:"
-        )
-        if ok and key:
-            key = key.strip()
-            self.status_label.setText("Activating...")
-            QApplication.processEvents()
+    def prompt_download_ai_model(self):
+        _ = self._t
+        if QMessageBox.question(self, _("ui.model.title"), _("ui.model.prompt"),
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                                ) != QMessageBox.StandardButton.Yes:
+            return
 
-            success, message = self.license_manager.verify_and_activate(key)
-            if success:
-                QMessageBox.information(self, "Success", message)
-                self.update_window_title()
-                self.create_menu_bar()
-                self.refresh_exif_and_tier_badge()
-                self.status_label.setText("DotScramble Pro Activated!")
-            else:
-                QMessageBox.critical(self, "Activation Failed", message)
-                self.status_label.setText("Activation failed.")
+        dl_win = QDialog(self)
+        dl_win.setWindowTitle(_("ui.model.downloading_title"))
+        dl_win.setFixedSize(320, 120)
 
-    def refresh_exif_and_tier_badge(self):
-        self.update_tier_badge_ui()
-        self.update_exif_section_ui()
-        self.update_detection_section_ui()
-        self.update_effect_section_ui()
+        layout = QVBoxLayout(dl_win)
+        label = QLabel(_("ui.model.downloading"))
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(label)
+
+        progress = QProgressBar()
+        progress.setRange(0, 100)
+        layout.addWidget(progress)
+
+        import threading
+
+        def download_thread():
+            from src.models.detection_engine import download_model_file
+
+            def update_progress(percentage):
+                QTimer.singleShot(0, lambda: progress.setValue(int(percentage)))
+
+            success = download_model_file(update_progress)
+
+            def on_finish():
+                dl_win.accept()
+                if success:
+                    QMessageBox.information(self, _("ui.messages.title_success"), _("ui.model.success"))
+                    if self.real_time_preview.get() and self.original_image is not None:
+                        self._apply_live_preview()
+                else:
+                    QMessageBox.critical(self, _("ui.model.failed_title"), _("ui.model.failed"))
+            QTimer.singleShot(0, on_finish)
+
+        threading.Thread(target=download_thread, daemon=True).start()
+        dl_win.exec()
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # Help, updates & folders
+    # ═════════════════════════════════════════════════════════════════════════
 
     def show_donate(self):
+        _ = self._t
         dialog = QDialog(self)
-        dialog.setWindowTitle("Support the Developer")
-        dialog.setFixedSize(400, 320)
+        dialog.setWindowTitle(_("dialogs.info.donate"))
+        dialog.setFixedSize(400, 340)
 
         layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setContentsMargins(24, 20, 24, 20)
         layout.setSpacing(10)
 
-        title = QLabel("Support the Developer")
-        title.setFont(QFont("Helvetica", 16, QFont.Weight.Bold))
+        title = QLabel(_("dialogs.info.donate"))
+        title.setObjectName("DialogTitle")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
 
-        desc = QLabel("Thank you for considering supporting this project!\nChoose your preferred donation platform:")
+        desc = caption(_("dialogs.info.donate_text"))
         desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc.setWordWrap(True)
         layout.addWidget(desc)
 
-        btn_paypal = QPushButton("💳 PayPal")
-        btn_paypal.setObjectName("btn_paypal")
-        btn_paypal.clicked.connect(lambda: self.open_url("https://paypal.me/freerave1"))
-        layout.addWidget(btn_paypal)
+        for object_name, text_key, url in (
+            ("btn_paypal", "donate.paypal", "https://paypal.me/freerave1"),
+            ("btn_coffee", "donate.buy_coffee", "https://buymeacoffee.com/freerave"),
+            ("btn_kofi", "donate.kofi", "https://ko-fi.com/freerave"),
+            ("btn_github", "donate.github", "https://github.com/sponsors/kareem2099"),
+        ):
+            button = QPushButton(_(text_key))
+            button.setObjectName(object_name)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.clicked.connect(lambda checked=False, u=url: self.open_url(u))
+            layout.addWidget(button)
 
-        btn_coffee = QPushButton("☕ Buy Me a Coffee")
-        btn_coffee.setObjectName("btn_coffee")
-        btn_coffee.clicked.connect(lambda: self.open_url("https://buymeacoffee.com/freerave"))
-        layout.addWidget(btn_coffee)
-
-        btn_kofi = QPushButton("🎨 Ko-fi")
-        btn_kofi.setObjectName("btn_kofi")
-        btn_kofi.clicked.connect(lambda: self.open_url("https://ko-fi.com/freerave"))
-        layout.addWidget(btn_kofi)
-
-        btn_github = QPushButton("⭐ GitHub Sponsors")
-        btn_github.setObjectName("btn_github")
-        btn_github.clicked.connect(lambda: self.open_url("https://github.com/sponsors/kareem2099"))
-        layout.addWidget(btn_github)
-
-        btn_close = QPushButton("Close")
-        btn_close.clicked.connect(dialog.accept)
-        layout.addWidget(btn_close)
-
+        close_btn = QPushButton(_("ui.messages.close"))
+        close_btn.setProperty("variant", "ghost")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
         dialog.exec()
 
     def open_url(self, url):
         try:
             webbrowser.open(url)
         except Exception:
-            QMessageBox.critical(self, "Error", f"Could not open browser. Please visit:\n{url}")
+            QMessageBox.critical(self, self._t("ui.messages.title_error"), self._t("donate.url_error", url=url))
 
     def show_about(self):
-        QMessageBox.information(self, "About",
-            f"DotScramble\nVersion {APP_VERSION}\n\n"
-            "Privacy Protection for the Digital Age\n\n"
-            "Support the developer:\n"
-            "• PayPal: https://paypal.me/freerave1\n"
-            "• Buy Me a Coffee: https://buymeacoffee.com/freerave\n"
-            "• Ko-fi: https://ko-fi.com/freerave\n\n"
-            "Made with ❤️ by FreeRave")
+        QMessageBox.information(self, self._t("menu.help_items.about"),
+                                self._t("dialogs.info.about", version=APP_VERSION))
 
     def show_shortcuts(self):
-        shortcuts_text = "\n".join([f"{key}: {value}" for key, value in SHORTCUTS.items()])
-        QMessageBox.information(self, "Keyboard Shortcuts", shortcuts_text)
+        _ = self._t
+        rows = [
+            ("Ctrl+O", _("menu.file_items.open_image")),
+            ("Ctrl+S", _("menu.file_items.save_result")),
+            ("Ctrl+Enter", _("ui.sidebar.apply")),
+            ("Ctrl+Z", _("menu.edit_items.undo")),
+            ("Ctrl+Y", _("menu.edit_items.redo")),
+            ("Ctrl+D", _("menu.edit_items.clear_selections")),
+            ("Ctrl+F", _("ui.toolbar.detect")),
+            ("Ctrl+Shift+C", _("ui.toolbar.compare")),
+            ("Ctrl+ +  /  Ctrl+ −", _("ui.messages.zoom")),
+            ("Ctrl+0  /  Ctrl+1", _("ui.messages.zoom_fit_actual")),
+            ("Ctrl+B", _("menu.file_items.batch_process")),
+        ]
+        QMessageBox.information(self, _("dialogs.info.shortcuts"),
+                                "\n".join(f"{keys}    {label}" for keys, label in rows))
 
     def check_for_updates(self):
         self.auto_updater.check_for_updates(silent=False)
 
-    def open_exports_folder(self):
+    def _open_folder(self, path):
         try:
-            webbrowser.open(str(DIRS['exports']))
+            webbrowser.open(str(path))
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Could not open exports folder: {e}")
+            QMessageBox.critical(self, self._t("ui.messages.title_error"),
+                                 self._t("ui.messages.open_folder_error", error=str(e)))
+
+    def open_exports_folder(self):
+        self._open_folder(DIRS['exports'])
 
     def open_app_data_folder(self):
-        try:
-            webbrowser.open(str(SYSTEM_DIR))
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Could not open app data folder: {e}")
+        self._open_folder(SYSTEM_DIR)
 
-    def on_update_ready(self):
+    def on_update_ready(self, silent):
         self.update_btn.setVisible(True)
-        QMessageBox.information(self, "Update Ready",
-            "A new update has been downloaded in the background.\n"
-            "You can restart anytime using the button in the status bar.")
+        if silent:
+            QMessageBox.information(self, self._t("ui.messages.update_ready_title"), self._t("dialogs.info.update_ready"))
+        else:
+            self.apply_update()
 
     def apply_update(self):
-        if QMessageBox.question(self, "Restart Application",
-                                "Application will close to apply the update. Continue?",
-                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
+        if QMessageBox.question(self, self._t("ui.messages.restart_title"), self._t("dialogs.info.restart_required"),
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                                ) == QMessageBox.StandardButton.Yes:
             self.auto_updater.apply_pending_update()
+
+    def clear_recent_history(self):
+        if QMessageBox.question(self, self._t("ui.messages.clear_history_title"),
+                                self._t("dialogs.warning.clear_history"),
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                                ) == QMessageBox.StandardButton.Yes:
+            self.db_manager.clear_recent_files()
+            self.create_menu_bar()
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # Theme, language & window state
+    # ═════════════════════════════════════════════════════════════════════════
 
     def change_theme(self, theme_key):
         self.theme_manager.apply_theme(theme_key, self)
+        self.create_menu_bar()
 
     def on_theme_changed(self, colors):
         self.colors = colors.copy()
-        # Repaint canvas with new theme colors
-        self.canvas.update()
+        IconProvider.instance().set_colors(colors)
+
+    @property
+    def is_rtl(self):
+        return bool(getattr(self, 'rtl_manager', None) and self.rtl_manager.is_rtl)
+
+    def apply_rtl_layout(self, language_code):
+        if self.locale_manager.set_language(language_code):
+            self.rtl_manager.set_rtl_state(self.locale_manager.is_rtl())
+
+    def change_language(self, language_code):
+        if self.locale_manager.set_language(language_code):
+            self.language_var.set(language_code)
+            self.db_manager.save_last_used_language(language_code)
+            self.apply_rtl_layout(language_code)
+            self.update_ui_text()
 
     def restore_window_state(self):
         try:
@@ -2089,11 +1856,10 @@ class AdvancedPrivacyStudioPro(QMainWindow):
                 if x is not None and y is not None:
                     self.move(x, y)
 
-            # Restore splitter state
-            splitter_bytes = self.db_manager.get_setting('splitter_state')
-            if splitter_bytes:
+            splitter_hex = self.db_manager.get_setting('splitter_state')
+            if splitter_hex:
                 from PySide6.QtCore import QByteArray
-                self.splitter.restoreState(QByteArray.fromHex(splitter_bytes.encode()))
+                self.splitter.restoreState(QByteArray.fromHex(splitter_hex.encode()))
         except Exception as e:
             logger.warning(f"Could not restore window state: {e}")
 
@@ -2101,142 +1867,18 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         try:
             last_language = self.db_manager.get_last_used_language()
             self.language_var.set(last_language)
-
-            loc_mgr = get_locale_manager()
-            if loc_mgr.set_language(last_language):
+            if self.locale_manager.set_language(last_language):
                 self.apply_rtl_layout(last_language)
-                self.update_ui_text()
 
-            last_theme = self.db_manager.get_last_used_theme()
-            self.theme_manager.apply_theme(last_theme, self)
+            if not self.theme_manager.apply_theme(self.db_manager.get_last_used_theme(), self):
+                self.theme_manager.apply_theme(self.theme_manager.get_current_theme_key(), self)
+            self._apply_settings(self.db_manager.get_last_effect_settings())
+            self.real_time_preview.set(self.db_manager.get_real_time_preview_enabled())
 
-            effect_settings = self.db_manager.get_last_effect_settings()
-            self.effect_type.set(effect_settings.get('effect_type', 'blur'))
-            self.detection_mode.set(effect_settings.get('detection_mode', 'face'))
-            self.blur_strength.set(effect_settings.get('blur_strength', 51))
-            self.pixel_size.set(effect_settings.get('pixel_size', 15))
-            self.opacity.set(effect_settings.get('opacity', 100))
-
-            real_time = self.db_manager.get_real_time_preview_enabled()
-            self.real_time_preview.set(real_time)
-
-            self.update_parameter_visibility()
+            self.update_ui_text()
             logger.info("User settings restored from database")
         except Exception as e:
             logger.warning(f"Could not restore user settings: {e}")
-
-    def on_effect_change(self):
-        effect = self.effect_type.get()
-        if effect == "ai_evasion":
-            self.detection_mode.set("face")
-
-        self.update_parameter_visibility()
-        self.save_current_effect_settings()
-        if self.real_time_preview.get():
-            self.process_image()
-
-    def on_detection_change(self):
-        mode = self.detection_mode.get()
-        effect = self.effect_type.get()
-        if effect == "ai_evasion" and mode != "face":
-            self.detection_mode.set("face")
-            return
-
-        pro_only_modes = ['target_text', 'text', 'body', 'license_plate']
-
-        if mode in pro_only_modes and not self.license_manager.is_max_activated:
-            mode_display = mode.replace('_', ' ').title()
-            QMessageBox.information(
-                self,
-                "Pro Feature",
-                f"The '{mode_display}' detection mode is a Pro feature.\n\n"
-                f"Upgrade to DotScramble Pro for advanced AI models."
-            )
-            self.detection_mode.set("face")
-            mode = "face"
-
-        if mode in ["face", "eye"] and self.license_manager.is_max_activated:
-            from src.models.detection_engine import is_model_downloaded
-            if not is_model_downloaded():
-                self.prompt_download_ai_model()
-
-        self.update_parameter_visibility()
-        self.save_current_effect_settings()
-        if self.real_time_preview.get() and self.original_image is not None:
-            self.process_image()
-
-    def prompt_download_ai_model(self):
-        if QMessageBox.question(self, "AI Model Required",
-                                 "This PRO feature requires downloading an AI model file (~8MB).\n\n"
-                                 "Would you like to download it now?",
-                                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) != QMessageBox.StandardButton.Yes:
-            return
-
-        dl_win = QDialog(self)
-        dl_win.setWindowTitle("Downloading AI Model")
-        dl_win.setFixedSize(300, 120)
-
-        layout = QVBoxLayout(dl_win)
-        label = QLabel("Downloading face_landmarker.task...")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(label)
-
-        progress = QProgressBar()
-        progress.setRange(0, 100)
-        layout.addWidget(progress)
-
-        import threading
-        def download_thread():
-            from src.models.detection_engine import download_model_file
-            def update_progress(percentage):
-                QTimer.singleShot(0, lambda: progress.setValue(int(percentage)))
-
-            success = download_model_file(update_progress)
-
-            def on_finish():
-                dl_win.accept()
-                if success:
-                    QMessageBox.information(self, "Success", "AI Model downloaded successfully! PRO features are now active.")
-                    if self.real_time_preview.get() and self.original_image is not None:
-                        self.process_image()
-                else:
-                    QMessageBox.critical(self, "Download Failed", "Failed to download the AI model. Please check your internet connection.")
-            QTimer.singleShot(0, on_finish)
-
-        threading.Thread(target=download_thread, daemon=True).start()
-        dl_win.exec()
-
-    def on_parameter_change(self):
-        self.save_current_effect_settings()
-        if self.real_time_preview.get() and self.original_image is not None:
-            self.process_image()
-
-    def save_current_effect_settings(self):
-        settings = {
-            'effect_type': self.effect_type.get(),
-            'detection_mode': self.detection_mode.get(),
-            'blur_strength': self.blur_strength.get(),
-            'pixel_size': self.pixel_size.get(),
-            'opacity': self.opacity.get()
-        }
-        try:
-            self.db_manager.save_last_effect_settings(settings)
-        except Exception as e:
-            logger.warning(f"Could not save effect settings: {e}")
-
-    def toggle_preview(self):
-        enabled = self.real_time_preview.get()
-        try:
-            self.db_manager.save_real_time_preview_enabled(enabled)
-        except Exception as e:
-            logger.warning(f"Could not save preview preference: {e}")
-
-        if enabled:
-            self.status_label.setText("Real-time preview enabled")
-            if self.original_image is not None:
-                self.process_image()
-        else:
-            self.status_label.setText("Real-time preview disabled")
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -2245,35 +1887,18 @@ class AdvancedPrivacyStudioPro(QMainWindow):
             self.restore_window_state()
             self.restore_user_settings()
 
-    def changeEvent(self, event):
-        if event.type() == event.Type.WindowStateChange:
-            is_maximized = self.isMaximized()
-            if not hasattr(self, '_last_maximized_state'):
-                self._last_maximized_state = False
-            if is_maximized != self._last_maximized_state:
-                self._last_maximized_state = is_maximized
-                QTimer.singleShot(150, self.on_canvas_resize)
-        super().changeEvent(event)
-
     def closeEvent(self, event):
         self.on_close()
         event.accept()
 
     def on_close(self):
         try:
-            is_maximized = self.isMaximized()
-            if is_maximized:
+            if self.isMaximized():
                 self.db_manager.save_setting('window_state', {'maximized': True}, 'window')
             else:
                 geom = self.geometry()
                 self.db_manager.save_window_state(geom.width(), geom.height(), geom.x(), geom.y(), False)
-
-            # Save splitter state
-            self.db_manager.save_setting(
-                'splitter_state',
-                self.splitter.saveState().toHex().data().decode(),
-                'window'
-            )
+            self.db_manager.save_setting('splitter_state', self.splitter.saveState().toHex().data().decode(), 'window')
             logger.info("Application state saved before closing")
         except Exception as e:
             logger.warning(f"Error saving application state: {e}")
@@ -2282,199 +1907,3 @@ class AdvancedPrivacyStudioPro(QMainWindow):
             self.db_manager.close()
         except Exception:
             pass
-
-    @property
-    def is_rtl(self):
-        if hasattr(self, 'rtl_manager') and self.rtl_manager:
-            return self.rtl_manager.is_rtl
-        return False
-
-    def clear_recent_history(self):
-        if QMessageBox.question(self, "Clear History", "Are you sure you want to clear recent files history?",
-                                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
-            self.db_manager.clear_recent_files()
-            self.create_menu_bar()
-
-    def apply_rtl_layout(self, language_code):
-        loc_mgr = get_locale_manager()
-        if loc_mgr.set_language(language_code):
-            self.rtl_manager.set_rtl_state(loc_mgr.is_rtl())
-
-    def update_input_field_direction(self):
-        if hasattr(self, 'word_entry') and self.word_entry:
-            if self.is_rtl:
-                self.word_entry.setAlignment(Qt.AlignmentFlag.AlignRight)
-            else:
-                self.word_entry.setAlignment(Qt.AlignmentFlag.AlignLeft)
-
-    def update_ui_text(self):
-        loc_mgr = get_locale_manager()
-        _ = loc_mgr.get
-
-        self.update_window_title()
-        self.update_tier_badge_ui()
-
-        if hasattr(self, 'status_label') and self.status_label:
-            current = self.status_label.text()
-            if "Ready" in current or "جاهز" in current:
-                self.status_label.setText(_("ui.status.ready"))
-
-        # Update variable values
-        for key, var in self.ui_strings.items():
-            var.set(_(key))
-
-        for i, key in enumerate(self.effect_keys):
-            self.effect_strings[i].set(_(key))
-
-        for i, key in enumerate(self.detection_keys):
-            self.detection_strings[i].set(_(key))
-
-        # Update labels & check/radio buttons
-        if hasattr(self, 'title_label') and self.title_label:
-            self.title_label.setText(self.ui_strings["ui.header.title"].get())
-
-        if hasattr(self, 'preview_check') and self.preview_check:
-            self.preview_check.setText(self.ui_strings["ui.header.preview"].get())
-
-        if hasattr(self, 'controls_title_label') and self.controls_title_label:
-            self.controls_title_label.setText(self.ui_strings["ui.controls.title"].get())
-
-        if hasattr(self, 'load_btn') and self.load_btn:
-            self.load_btn.setText(self.ui_strings["ui.controls.load_image"].get())
-
-        if hasattr(self, 'effect_section_label') and self.effect_section_label:
-            self.effect_section_label.setText(self.ui_strings["ui.controls.effect_type"].get())
-
-        if hasattr(self, 'detection_section_label') and self.detection_section_label:
-            self.detection_section_label.setText(self.ui_strings["ui.controls.detection_mode"].get())
-
-        if hasattr(self, 'target_text_label') and self.target_text_label:
-            self.target_text_label.setText(self.ui_strings["ui.controls.target_text"].get())
-        if hasattr(self, 'target_text_rb') and self.target_text_rb:
-            self.target_text_rb.setText(self.ui_strings["ui.controls.target_text"].get())
-
-        if hasattr(self, 'process_btn') and self.process_btn:
-            self.process_btn.setText(self.ui_strings["ui.controls.apply_effect"].get())
-
-        if hasattr(self, 'undo_btn') and self.undo_btn:
-            self.undo_btn.setText(self.ui_strings["ui.controls.undo"].get())
-
-        if hasattr(self, 'redo_btn') and self.redo_btn:
-            self.redo_btn.setText(self.ui_strings["ui.controls.redo"].get())
-
-        if hasattr(self, 'clear_btn') and self.clear_btn:
-            self.clear_btn.setText(self.ui_strings["ui.controls.clear_selections"].get())
-
-        if hasattr(self, 'save_btn') and self.save_btn:
-            self.save_btn.setText(self.ui_strings["ui.controls.save_result"].get())
-
-        if hasattr(self, 'batch_btn') and self.batch_btn:
-            self.batch_btn.setText(self.ui_strings["ui.controls.batch_process"].get())
-
-        if hasattr(self, 'tip_label') and self.tip_label:
-            self.tip_label.setText(self.ui_strings["ui.controls.tip"].get())
-
-        # Radios
-        if hasattr(self, 'effect_radios'):
-            for i, rb in enumerate(self.effect_radios):
-                rb.setText(self.effect_strings[i].get())
-
-        if hasattr(self, 'detection_radios'):
-            for i, rb in enumerate(self.detection_radios):
-                rb.setText(self.detection_strings[i].get())
-
-        # Parameters
-        if hasattr(self, 'blur_param_label') and self.blur_param_label:
-            self.blur_param_label.setText(self.ui_strings["ui.controls.blur_strength"].get())
-        if hasattr(self, 'pixel_param_label') and self.pixel_param_label:
-            self.pixel_param_label.setText(self.ui_strings["ui.controls.pixel_size"].get())
-        if hasattr(self, 'opacity_param_label') and self.opacity_param_label:
-            self.opacity_param_label.setText(self.ui_strings["ui.controls.opacity"].get())
-
-        # Toolbar
-        if hasattr(self, 'toolbar_load_btn') and self.toolbar_load_btn:
-            self.toolbar_load_btn.setText("📂 " + _("ui.buttons.load").replace("📁 ", ""))
-        if hasattr(self, 'toolbar_process_btn') and self.toolbar_process_btn:
-            self.toolbar_process_btn.setText("🌫️ " + _("ui.buttons.apply").replace("✨ ", ""))
-        if hasattr(self, 'toolbar_save_btn') and self.toolbar_save_btn:
-            self.toolbar_save_btn.setText("💾 " + self.ui_strings["ui.controls.save_result"].get().replace("💾 ", ""))
-        if hasattr(self, 'toolbar_clear_btn') and self.toolbar_clear_btn:
-            self.toolbar_clear_btn.setText("🧹 " + _("ui.buttons.reset").replace("🗑️ ", ""))
-        if hasattr(self, 'toolbar_undo_btn') and self.toolbar_undo_btn:
-            self.toolbar_undo_btn.setText("↩️ " + self.ui_strings["ui.controls.undo"].get().replace("↶ ", "").replace("↩️ ", ""))
-        if hasattr(self, 'toolbar_redo_btn') and self.toolbar_redo_btn:
-            self.toolbar_redo_btn.setText("↪️ " + self.ui_strings["ui.controls.redo"].get().replace("↷ ", "").replace("↪️ ", ""))
-
-        self.update_input_field_direction()
-        self.create_menu_bar()
-
-    def change_language(self, language_code):
-        loc_mgr = get_locale_manager()
-        if loc_mgr.set_language(language_code):
-            self.db_manager.save_last_used_language(language_code)
-            self.apply_rtl_layout(language_code)
-            self.update_ui_text()
-
-            current_theme = self.theme_manager.get_current_theme_key()
-            self.theme_manager.apply_theme(current_theme, self)
-
-    def on_canvas_resize(self):
-        self._resize_timer.start(60)  # 60ms debounce
-
-    def _do_canvas_resize(self):
-        if self.processed_image is not None:
-            self.display_image(self.processed_image)
-        elif self.original_image is not None:
-            self.display_image(self.original_image)
-        else:
-            self.canvas.update()
-
-    def handle_dropped_file(self, file_path):
-        try:
-            SUPPORTED_EXTS = {
-                ".jpg", ".jpeg", ".png", ".bmp",
-                ".gif", ".tiff", ".tif", ".webp"
-            }
-            ext = os.path.splitext(file_path)[1].lower()
-            if ext not in SUPPORTED_EXTS:
-                QMessageBox.warning(
-                    self,
-                    "Unsupported File",
-                    f"The dropped file type '{ext or '(none)'}' is not supported.\n\n"
-                    "Supported formats: JPG, PNG, BMP, TIFF, WebP, GIF"
-                )
-                return
-            self.load_image_from_path(file_path)
-        except Exception as e:
-            QMessageBox.critical(self, "Drop Error", f"Could not load dropped file:\n{str(e)}")
-
-    def _update_detection_mode_radios(self, value):
-        if hasattr(self, 'detection_radios'):
-            if value == "target_text":
-                self.target_text_rb.setChecked(True)
-            else:
-                self.target_text_rb.setChecked(False)
-
-            for rb, (mode_val, idx) in zip(self.detection_radios, self.detection_modes_list):
-                if mode_val == value:
-                    rb.setChecked(True)
-                else:
-                    rb.setChecked(False)
-
-    def _update_effect_type_radios(self, value):
-        if hasattr(self, 'effect_radios'):
-            effect_values = ["blur", "pixelation", "black_bar", "gradient", "mosaic", "glass", "oil_paint", "ai_evasion"]
-            for rb, val in zip(self.effect_radios, effect_values):
-                if val == value:
-                    rb.setChecked(True)
-                else:
-                    rb.setChecked(False)
-            self.update_detection_section_ui()
-
-    def _update_spoof_profile_radios(self, value):
-        if hasattr(self, 'profile_radios'):
-            for val, rb in self.profile_radios:
-                if val == value:
-                    rb.setChecked(True)
-                else:
-                    rb.setChecked(False)

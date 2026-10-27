@@ -1,0 +1,4 @@
+{
+    "min_supported_version": "1.5.0",
+    "note": "Read by core/version_gate.py from the main branch. Copies older than min_supported_version show a blocking 'update required' screen with a Download button; no release is needed to change it. Policy: stays at 1.5.0 (the first version with this gate, so it blocks nobody). Raise it only for a major release such as 2.0.0, or when an old version has a problem that only updating fixes."
+}

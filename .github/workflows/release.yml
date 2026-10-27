@@ -1,129 +1,242 @@
-name: Release — Validate & Publish
+name: Release
 
-# ─────────────────────────────────────────────────────────────────────────────
-# DESIGN NOTES:
+# Push a tag like v1.5.0 to publish a GitHub Release with
+#   DotScramble-Linux-x86_64.{AppImage,deb,pkg.tar.zst,tar.gz}, SHA256SUMS,
+#   a detached .asc signature for each package, and the public signing key.
+# The in-app updater (core/auto_updater.py) looks for exactly these asset names.
 #
-# The build happens LOCALLY (not here). Why?
-#   - license_manager.py is a Cython-compiled security module.
-#   - Its source is intentionally excluded from git.
-#   - GitHub Actions has no access to it — and that's by design.
+# Secrets (Settings → Secrets and variables → Actions):
+#   LICENSE_MANAGER_PY_B64  base64 of src/managers/license_manager.py, which is gitignored.
+#                           Restored only inside the job, compiled with Cython, then deleted.
+#   GPG_PRIVATE_KEY         the armored FreeRave release key (GPG_PASSPHRASE if it has one,
+#                           GPG_KEY_ID to pick a subkey). Without it the release is not
+#                           published: the in-app updater refuses unsigned updates.
 #
-# Release workflow:
-#   1. Developer runs `python3 build.py` locally.
-#   2. Developer runs `gh release create vX.Y.Z release/* ...` to upload artifacts.
-#   3. This workflow fires on release publication, validates the release, and
-#      injects the version tag so downstream references are correct.
-# ─────────────────────────────────────────────────────────────────────────────
-
+# Run it by hand (Actions → Release → Run workflow) for a dry run: every package is built,
+# smoke-tested, summed and signed, and uploaded as the "release" artifact. Nothing is published.
 on:
-  release:
-    types: [published]
-
-  # Also allow manual trigger for testing
+  push:
+    tags: ["v*"]
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release tag (e.g. v1.4.0)'
-        required: true
-        default: 'v1.4.1'
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  # The release key the updater pins (core/auto_updater.py RELEASE_KEY_FINGERPRINT)
+  RELEASE_KEY_FINGERPRINT: 0F0467813146DE68272EDC82145D345956DE18D2
 
 jobs:
-  validate-release:
-    name: Validate Release Assets
-    runs-on: ubuntu-latest
+  test:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
 
+  build:
+    needs: test
+    # A PyInstaller binary only runs where glibc is at least as new as the build machine's.
+    # 22.04 (glibc 2.35) is the oldest image PySide6 6.12 runs on (manylinux_2_34), so this
+    # reaches Ubuntu 22.04+, Debian 12+, Fedora 36+… instead of only bleeding-edge distros.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      APPIMAGE_EXTRACT_AND_RUN: "1"  # no FUSE on the runner (appimagetool and the smoke test)
+      LICENSE_B64: ${{ secrets.LICENSE_MANAGER_PY_B64 }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements.txt
 
-      - name: Get release tag
-        id: tag
+      - name: Tools
+        timeout-minutes: 12
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-          fi
+          # man-db rebuilds its index after every install and can stall the runner for ages
+          sudo rm -f /var/lib/man-db/auto-update
+          # a stalled mirror download is dropped after 30 s and retried (applies to every apt call)
+          printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
+            | sudo tee /etc/apt/apt.conf.d/99ci-network > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon0 libfontconfig1 \
+            libdbus-1-3 libxcb-cursor0 tesseract-ocr libarchive-tools zstd
+          pip install -r requirements.txt
 
-      - name: Extract clean version (strip leading v)
-        id: version
+      - name: Version matches the tag
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          VERSION="${TAG#v}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "📦 Release version: $VERSION"
-
-      - name: Verify version matches codebase
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          CODEBASE_VERSION=$(grep -oP '(?<=APP_VERSION = \")[^\"]+' src/config.py || echo "not found")
-          echo "Tag version:       $VERSION"
-          echo "Codebase version:  $CODEBASE_VERSION"
-          if [ "$VERSION" != "$CODEBASE_VERSION" ]; then
-            echo "⚠️ Warning: tag version ($VERSION) does not match config.py ($CODEBASE_VERSION)"
-            echo "   Make sure to bump version_info.py and src/config.py before tagging."
-          else
-            echo "✅ Version match confirmed."
-          fi
-
-      - name: Validate release assets are present
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          EXPECTED=(
-            "DotScramble-Linux-x86_64.AppImage"
-            "DotScramble-Linux-x86_64.AppImage.asc"
-            "DotScramble-Linux-x86_64.deb"
-            "DotScramble-Linux-x86_64.deb.asc"
-            "DotScramble-Linux-x86_64.pkg.tar.zst"
-            "DotScramble-Linux-x86_64.pkg.tar.zst.asc"
-            "SHA256SUMS"
-          )
-
-          echo "Fetching assets for release $TAG..."
-          ASSETS=$(gh release view "$TAG" --json assets --jq '[.assets[].name]' 2>/dev/null || echo "[]")
-          echo "Found assets: $ASSETS"
-
-          ALL_OK=true
-          for asset in "${EXPECTED[@]}"; do
-            if echo "$ASSETS" | grep -q "\"$asset\""; then
-              echo "  ✅ $asset"
-            else
-              echo "  ❌ Missing: $asset"
-              ALL_OK=false
-            fi
-          done
-
-          if [ "$ALL_OK" = "false" ]; then
-            echo ""
-            echo "⚠️ Some expected assets are missing from the release."
-            echo "   Upload them with:"
-            echo "   gh release upload $TAG release/DotScramble-Linux-x86_64.AppImage ..."
+          tag="${GITHUB_REF_NAME#v}"
+          info=$(python -c "import version_info; print(version_info.VERSION)")
+          fallback=$(sed -n 's/^ *APP_VERSION = "\([^"]*\)".*/\1/p' src/config.py | head -1)
+          echo "tag=$tag  version_info.py=$info  src/config.py fallback=$fallback"
+          if [ "$tag" != "$info" ] || [ "$tag" != "$fallback" ]; then
+            echo "::error::Bump version_info.py and the APP_VERSION fallback in src/config.py to $tag before tagging."
             exit 1
           fi
 
-          echo ""
-          echo "✅ All release assets validated."
-
-      - name: Update release body with validation stamp
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compile the license module
         run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          VERSION="${{ steps.version.outputs.version }}"
-          DATE=$(date -u '+%Y-%m-%d %H:%M UTC')
-
-          # Build stamp as a single line to avoid YAML multiline issues
-          STAMP=$(printf '\n\n---\n> Release validated by GitHub Actions on %s\n> Version: %s | Artifacts signed with GPG (.asc)\n> Verify integrity: sha256sum -c SHA256SUMS' "$DATE" "$VERSION")
-
-          CURRENT_BODY=$(gh release view "$TAG" --json body --jq '.body' 2>/dev/null || echo "")
-          if ! echo "$CURRENT_BODY" | grep -q "Release validated by GitHub Actions"; then
-            gh release edit "$TAG" --notes "${CURRENT_BODY}${STAMP}"
-            echo "Release notes updated with validation stamp."
-          else
-            echo "Validation stamp already present, skipping."
+          if [ -z "$LICENSE_B64" ]; then
+            echo "::error::The LICENSE_MANAGER_PY_B64 secret is not set, so the license module can't be built."
+            exit 1
           fi
+          printf '%s' "$LICENSE_B64" | base64 -d > src/managers/license_manager.py
+          python setup_license.py build_ext --inplace
+          ls -la src/managers/license_manager*.so
+
+      - name: Build the packages
+        run: python build.py --no-sign
+
+      - name: Remove the license source
+        if: always()
+        run: rm -f src/managers/license_manager.py src/managers/license_manager.c
+
+      - name: Inspect the packages
+        run: |
+          cd release
+          ls -la
+          dpkg-deb --info DotScramble-Linux-x86_64.deb
+          dpkg-deb -c DotScramble-Linux-x86_64.deb | grep -q usr/share/dotscramble/DotScramble
+          bsdtar -tf DotScramble-Linux-x86_64.pkg.tar.zst | grep -q '^\./\.PKGINFO$\|^\.PKGINFO$'
+          tar -tzf DotScramble-Linux-x86_64.tar.gz | grep -qx DotScramble
+          # the binary must carry the compiled license module and none of its readable forms
+          pyi-archive_viewer -l -r DotScramble > contents.txt
+          grep -q "license_manager\.cpython-.*\.so" contents.txt
+          if grep -E "license_manager(\.py|\.c|\.cpython-[0-9]+\.pyc)'" contents.txt; then
+            echo "::error::Readable license code is inside the binary (see the lines above)."
+            exit 1
+          fi
+          rm contents.txt
+
+      - name: AppImage smoke test
+        timeout-minutes: 5
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          image="$PWD/release/DotScramble-Linux-x86_64.AppImage"
+          chmod +x "$image"
+          # its own HOME and working folder, so the app's logs/ and settings land outside release/
+          mkdir -p "$RUNNER_TEMP/smoke/home"
+          cd "$RUNNER_TEMP/smoke"
+          # a healthy start keeps running until the timeout (exit 124)
+          set +e
+          HOME="$RUNNER_TEMP/smoke/home" timeout 40 "$image" > smoke.log 2>&1
+          code=$?
+          set -e
+          cat smoke.log
+          test "$code" = 124
+          grep -q "Application initialized successfully" smoke.log
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages
+          if-no-files-found: error
+          path: |
+            release/DotScramble-Linux-x86_64.AppImage
+            release/DotScramble-Linux-x86_64.deb
+            release/DotScramble-Linux-x86_64.pkg.tar.zst
+            release/DotScramble-Linux-x86_64.tar.gz
+
+  release-files:
+    # Collect the packages, write SHA256SUMS, sign every package (.asc), add the public key.
+    # Only this job sees the signing key.
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+      GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: packages
+          path: release
+
+      - name: Import the signing key
+        if: env.GPG_PRIVATE_KEY != ''
+        run: |
+          printf '%s\n' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          # must be the key the in-app updater trusts, or every update would be rejected
+          gpg --batch --with-colons --fingerprint | grep -q "^fpr:*$RELEASE_KEY_FINGERPRINT:" || {
+            echo "::error::GPG_PRIVATE_KEY is not the release key $RELEASE_KEY_FINGERPRINT pinned in core/auto_updater.py."
+            exit 1
+          }
+
+      - name: SHA256SUMS and signatures
+        run: |
+          cd release
+          sha256sum DotScramble-Linux-x86_64.* > SHA256SUMS
+          if [ -n "$GPG_PRIVATE_KEY" ]; then
+            for f in DotScramble-Linux-x86_64.*; do
+              gpg --batch --yes --armor --detach-sign \
+                ${GPG_PASSPHRASE:+--pinentry-mode loopback --passphrase "$GPG_PASSPHRASE"} \
+                --local-user "${GPG_KEY_ID:-$RELEASE_KEY_FINGERPRINT}" \
+                --output "$f.asc" "$f"
+            done
+          else
+            echo "::warning::GPG_PRIVATE_KEY is not set: no .asc signatures, so this run can't be published."
+          fi
+          cp ../public_key.asc DotScramble-signing-key.asc
+          sha256sum -c SHA256SUMS
+          for f in *.asc; do
+            [ "$f" = DotScramble-signing-key.asc ] && continue
+            gpg --batch --verify "$f" "${f%.asc}"
+          done
+          ls -la
+
+      - name: Release notes
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then version="${GITHUB_REF_NAME#v}"
+          else version=$(python3 -c "import version_info; print(version_info.VERSION)"); fi
+          # the "## [x.y.z]" section of CHANGELOG.md, up to the next version heading
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }' CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "::warning::CHANGELOG.md has no section for $version."
+            echo "See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/CHANGELOG.md)." > RELEASE_NOTES.md
+          fi
+          printf '\n---\nVerify a download: `sha256sum -c SHA256SUMS --ignore-missing` and `gpg --verify <file>.asc <file>` (key: DotScramble-signing-key.asc).\n' >> RELEASE_NOTES.md
+          cat RELEASE_NOTES.md
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: |
+            release/
+            RELEASE_NOTES.md
+
+  github-release:
+    needs: release-files
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: .
+
+      - name: Every file the in-app updater needs is here
+        run: |
+          missing=0
+          for f in AppImage deb pkg.tar.zst tar.gz; do
+            for asset in "DotScramble-Linux-x86_64.$f" "DotScramble-Linux-x86_64.$f.asc"; do
+              [ -s "release/$asset" ] || { echo "::error::missing $asset"; missing=1; }
+            done
+          done
+          [ -s release/SHA256SUMS ] || { echo "::error::missing SHA256SUMS"; missing=1; }
+          exit $missing
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" \
+            --title "DotScramble ${GITHUB_REF_NAME#v}" --notes-file RELEASE_NOTES.md release/*

@@ -89,22 +89,174 @@
                 "compare": "Compare"
             },
             "placeholder_title": "Drag & Drop Image Here",
-            "placeholder_subtitle": "or click 'Load Image' to start"
+            "placeholder_subtitle": "or press Ctrl+O to browse your images",
+            "before": "BEFORE",
+            "after": "AFTER"
         },
         "status": {
             "ready": "Ready to load image...",
             "loaded": "Loaded: {filename}",
-            "processed": "Processed {count} region(s)",
+            "processed": {
+                "one": "Processed {count} region",
+                "other": "Processed {count} regions"
+            },
             "saved": "Saved: {filename}",
             "preview_enabled": "Real-time preview enabled",
             "preview_disabled": "Real-time preview disabled",
             "region_added": "Added region ({count} total)",
             "cleared": "Cleared all selections",
             "reset": "Image reset to original",
-            "failed_load": "Failed to load image"
+            "failed_load": "Failed to load image",
+            "detected": {
+                "one": "{shown} of {count} region will be hidden — click it to skip it",
+                "other": "{shown} of {count} regions will be hidden — click one to skip it"
+            },
+            "detected_none": "Nothing found with this detection mode.",
+            "detect_unavailable": "Detect preview works with automatic modes (not Manual or Full Image).",
+            "compare_on": "Compare: drag the divider to see before / after",
+            "applied": "Effect applied.",
+            "undo_done": "Undo",
+            "redo_done": "Redo",
+            "activating": "Activating…",
+            "activated": "DotScramble Pro activated!",
+            "activation_failed": "Activation failed.",
+            "restart_to_update": "Restart to update",
+            "ai_cancelled": "AI Evasion cancelled.",
+            "ai_success": "✅ AI Evasion complete — the face is hidden from AI detectors",
+            "ai_partial": "⚠️ AI Evasion partial — {percent}% evasion rate",
+            "ai_failed": "❌ AI Evasion failed — the face is blurred but NOT verified against AI detection",
+            "detection_unavailable": "⚠️ Detection unavailable — nothing was hidden"
         },
         "info": {
             "image_info": "{width}x{height} | {size_kb} KB"
+        },
+        "toolbar": {
+            "open": "Open",
+            "open_tip": "Open an image (Ctrl+O)",
+            "save": "Save",
+            "save_tip": "Save the result (Ctrl+S)",
+            "undo_tip": "Undo (Ctrl+Z)",
+            "redo_tip": "Redo (Ctrl+Y)",
+            "detect": "Detect",
+            "detect_tip": "Preview what will be hidden — click a region to skip it (Ctrl+F)",
+            "compare": "Compare",
+            "compare_tip": "Before / after split view — drag the divider (Ctrl+Shift+C)",
+            "zoom_in_tip": "Zoom in (Ctrl++)",
+            "zoom_out_tip": "Zoom out (Ctrl+-)",
+            "zoom_label_tip": "Click to switch between Fit and 100%",
+            "fit_tip": "Fit to window (Ctrl+0)",
+            "live": "Live preview",
+            "live_tip": "Re-apply the effect automatically whenever a setting changes",
+            "upgrade": "Upgrade",
+            "upgrade_tip": "Unlock AI detection, AI Evasion and metadata tools",
+            "pro": "PRO"
+        },
+        "sidebar": {
+            "detect_title": "What to hide",
+            "effect_title": "How to hide it",
+            "settings_title": "Fine-tune",
+            "metadata_title": "Metadata on save",
+            "ai_heading": "AI Evasion",
+            "ai_hybrid": "Hybrid — blur + hide from AI",
+            "ai_hybrid_tip": "Hides the face from AI detectors and blurs it for people (faces only, ~30–90 sec)",
+            "ai_invisible": "Invisible — hide from AI only",
+            "ai_invisible_tip": "Hides the face from AI detectors while it stays clear for people (faces only, ~30–90 sec)",
+            "free_hint": "Basic detection. Pro adds AI-powered accuracy.",
+            "pro_hint": "AI-powered detection is active.",
+            "ai_face_only": "AI Evasion works on faces only.",
+            "word_placeholder": "Word to blur, e.g. a name",
+            "manual_hint": "Drag on the image to draw the regions to hide.",
+            "apply": "Apply effect",
+            "apply_tip": "Apply the effect (Ctrl+Enter)",
+            "clear": "Clear selections",
+            "batch": "Batch process",
+            "locked_title": "Pro feature",
+            "locked_msg": "“{name}” is available in DotScramble Pro.\n\nUpgrade now?"
+        },
+        "metadata": {
+            "keep": "Keep",
+            "strip": "Strip",
+            "spoof": "Decoy",
+            "keep_desc": "The original metadata is kept as it is.",
+            "strip_desc": "Permanently removes GPS, camera and device tags.",
+            "spoof_desc": "Replaces the real metadata with plausible decoys.",
+            "profiles": {
+                "ghost": "Ghost — Nokia in Antarctica, year 2000",
+                "troll": "Troll — random ocean, vintage camera",
+                "artist": "Artist — hides GPS, keeps copyright",
+                "custom": "Custom — per-field control"
+            },
+            "editor": "Open metadata editor…",
+            "locked": "Available in Pro — upgrade",
+            "custom_saved": "Custom metadata rules saved."
+        },
+        "ai": {
+            "progress_title": "AI Evasion — Processing",
+            "progress_start": "Computing AI Evasion…\nThis may take 30–90 seconds.",
+            "progress_step": "Face {face}/{faces} — iteration {iter}/{iters} · score {score}",
+            "no_oval": "AI Evasion works on face oval regions only.\nNo face oval was detected — try the Face detection mode.",
+            "cancel": "Cancel"
+        },
+        "faces": {
+            "title": "AI Evasion — Select Faces",
+            "header": {
+                "one": "<b>{count} face detected.</b> Choose whether to protect it with AI Evasion.",
+                "other": "<b>{count} faces detected.</b> Choose which ones to protect with AI Evasion."
+            },
+            "face_n": "Face {n}",
+            "select": "Select",
+            "select_all": "Select all",
+            "deselect_all": "Deselect all",
+            "note": "AI Evasion intensity is controlled by the <b>Opacity</b> slider.",
+            "apply": "Apply AI Evasion"
+        },
+        "activation": {
+            "title": "Activating DotScramble Pro",
+            "waiting": "Waiting for authentication…",
+            "desc": "Please complete the activation in your browser.\nThis window will close automatically.",
+            "manual_btn": "Enter key manually",
+            "manual_title": "Activate Pro",
+            "manual_prompt": "Enter your DotSuite API Key to unlock DotScramble Pro:",
+            "failed_title": "Activation Failed"
+        },
+        "model": {
+            "title": "AI Model Required",
+            "prompt": "This Pro feature needs an AI model file (~8 MB).\n\nDownload it now?",
+            "downloading_title": "Downloading AI Model",
+            "downloading": "Downloading face_landmarker.task…",
+            "success": "AI model downloaded. Pro features are now active.",
+            "failed_title": "Download Failed",
+            "failed": "Could not download the AI model. Please check your internet connection."
+        },
+        "messages": {
+            "title_error": "Error",
+            "title_info": "Info",
+            "title_success": "Success",
+            "file_not_found": "File not found!",
+            "unsupported_title": "Unsupported File",
+            "unsupported_drop": "The file type '{ext}' is not supported.\n\nSupported formats: JPG, PNG, BMP, TIFF, WebP, GIF",
+            "display_error": "Could not display the image: {error}",
+            "open_folder_error": "Could not open the folder: {error}",
+            "save_dialog_title": "Save Processed Image",
+            "comparison_dialog_title": "Save Comparison Image",
+            "select_preset_prompt": "Select a preset to load:",
+            "preset_loaded": "Preset '{name}' loaded!",
+            "delete_preset_title": "Delete Preset",
+            "delete_preset_prompt": "Select a preset to delete:",
+            "preset_deleted": "Preset '{name}' deleted!",
+            "close": "Close",
+            "update_ready_title": "Update Ready",
+            "restart_title": "Restart Application",
+            "clear_history_title": "Clear History",
+            "zoom": "Zoom in / out",
+            "zoom_fit_actual": "Fit to window / actual size",
+            "cascades_missing": "Basic detection can't run: OpenCV's cascade files are missing ({files}).\n\nNothing was hidden. Reinstall the dependencies with:\npip install -r requirements.txt"
+        },
+        "version_gate": {
+            "title": "Update required",
+            "message": "DotScramble {current} is no longer supported.\n\nPlease download the latest version (at least {minimum}) to keep using the app. Your settings are kept.",
+            "download": "Download the latest version",
+            "quit": "Quit"
         }
     },
     "effects": {
@@ -115,7 +267,8 @@
         "mosaic": "🔳 Mosaic",
         "glass": "❄️ Frosted Glass",
         "oil_paint": "🎨 Oil Paint",
-        "ai_evasion": "🛡️ AI Evasion (PRO)"
+        "ai_evasion": "🛡️ AI Evasion - Hybrid (PRO)",
+        "ai_evasion_invisible": "🛡️ AI Evasion - Invisible (PRO)"
     },
     "detection": {
         "face": "🎭 Face",
@@ -154,11 +307,15 @@
             "shortcuts": "Keyboard Shortcuts",
             "update_check": "Checking for updates...",
             "update_available": "Update available: {version}\nDownload and install?",
+            "dev_update_available": "A new version ({version}) is available!\n\nNote: Auto-update is disabled in Development Mode. Please pull the latest changes or download the release from GitHub.",
             "no_updates": "You are using the latest version",
             "update_failed": "Update check failed: {error}",
             "update_downloading": "Downloading update in background...",
             "update_complete": "Update downloaded successfully!",
-            "restart_required": "Application will close to apply the update. Continue?"
+            "restart_required": "Application will close to apply the update. Continue?",
+            "update_manual": "Version {version} is available, but this copy of DotScramble can't update itself automatically. Open the download page?",
+            "update_installing": "Installing update...",
+            "update_install_failed": "The update could not be installed: {error}"
         },
         "warning": {
             "clear_history": "Are you sure you want to clear recent files history?",
@@ -190,11 +347,79 @@
         "select_output": "Select Output Folder",
         "start": "Start Processing",
         "stop": "Stop Processing",
-        "progress": "Processed {current}/{total} files",
+        "progress": {
+            "one": "Processed {current} of {count} file",
+            "other": "Processed {current} of {count} files"
+        },
         "complete": "Batch processing complete!",
         "error": "Batch processing failed: {error}",
         "no_files": "No image files found in selected folder",
-        "settings_saved": "Batch settings saved!"
+        "settings_saved": "Batch settings saved!",
+        "window_title": "📦 Batch Processing — DotScramble",
+        "header": "📦 Batch Image Processing",
+        "files_group": "📁 Selected Files",
+        "add_files": "➕ Add Files",
+        "add_folder": "📂 Add Folder",
+        "remove": "➖ Remove Selected",
+        "clear_all": "🗑️ Clear All",
+        "files_count": "Files: {count}",
+        "detect_group": "🎯 Detection Mode",
+        "effect_group": "🎨 Effect Type",
+        "progress_group": "📊 Progress",
+        "ready": "Ready to process",
+        "processed": "Processed: {current}/{total}",
+        "failed": "Failed: {count}",
+        "time": "Time: {seconds}s",
+        "stop_btn": "⏹️ Stop",
+        "close": "Close",
+        "free_limit_title": "Free Plan Limit",
+        "free_limit_msg": {
+            "one": "The free plan is limited to {count} image per batch.",
+            "other": "The free plan is limited to {count} images per batch."
+        },
+        "free_limit_removed": {
+            "one": "{count} file was removed.",
+            "other": "{count} files were removed."
+        },
+        "free_limit_upgrade": "Upgrade to Max to process unlimited images.",
+        "select_images": "Select Images",
+        "image_filter": "Images",
+        "added": {
+            "one": "Added {count} file",
+            "other": "Added {count} files"
+        },
+        "added_from_folder": {
+            "one": "Added {count} file from the folder",
+            "other": "Added {count} files from the folder"
+        },
+        "info_title": "Info",
+        "select_to_remove": "Please select files to remove",
+        "removed": {
+            "one": "Removed {count} file",
+            "other": "Removed {count} files"
+        },
+        "confirm_title": "Confirm",
+        "confirm_clear": "Clear all files from list?",
+        "cleared": "Cleared all files",
+        "warning_title": "Warning",
+        "no_selected": "No files selected!",
+        "invalid_title": "Invalid Files",
+        "invalid_found": {
+            "one": "Found {count} invalid file:",
+            "other": "Found {count} invalid files:"
+        },
+        "invalid_more": "... and {count} more",
+        "invalid_process": {
+            "one": "Process {count} valid file?",
+            "other": "Process {count} valid files?"
+        },
+        "stop_confirm": "Stop processing?",
+        "stopped": "Processing stopped by user",
+        "processing_file": "Processing: {filename}",
+        "complete_title": "Complete",
+        "complete_summary": "✅ Successful: {success}\n❌ Failed: {failed}\n📊 Total: {total}",
+        "done": "Processing complete!",
+        "close_confirm": "Processing in progress. Close anyway?"
     },
     "themes": {
         "midnight": "🌑 Midnight Dark",
@@ -254,6 +479,106 @@
             "music": "Music",
             "volumes": "Volumes",
             "root": "Root"
+        },
+        "loading": "Loading…",
+        "no_matches": "No matching files"
+    },
+    "metadata": {
+        "fields": {
+            "gps": "📍 GPS Location",
+            "make": "📷 Camera Make",
+            "model": "📷 Camera Model",
+            "software": "💻 Software",
+            "datetime": "🕐 Date / Time",
+            "copyright": "©️  Copyright",
+            "exposure": "🔆 Exposure Data"
+        },
+        "actions": {
+            "keep": "✅ Keep",
+            "strip": "🗑 Strip",
+            "spoof": "🎲 Spoof",
+            "custom": "✏️ Custom"
+        },
+        "cancel": "Cancel",
+        "customizer": {
+            "window_title": "DotScramble — Custom Metadata Control",
+            "title": "🛡️  Custom Metadata Control",
+            "plan": "Max Plan",
+            "preset": "Preset:",
+            "preset_placeholder": "Select a preset...",
+            "save_as": "💾 Save As...",
+            "delete": "🗑 Delete",
+            "spoof_all": "🎲 Spoof All",
+            "strip_all": "🗑 Strip All",
+            "apply": "✅  Apply",
+            "lat": "Lat:",
+            "lon": "Lon:",
+            "lat_placeholder": "Latitude",
+            "lon_placeholder": "Longitude",
+            "custom_value": "Custom value:",
+            "save_title": "Save Preset",
+            "save_prompt": "Enter a name for this preset:",
+            "error_title": "Error",
+            "factory_error": "Cannot overwrite a factory preset.",
+            "saved_title": "Saved",
+            "saved_msg": "Preset '{name}' saved successfully.",
+            "delete_title": "Delete Preset",
+            "delete_confirm": "Are you sure you want to delete '{name}'?"
+        },
+        "report": {
+            "window_title": "DotScramble — Confirm Save",
+            "title": "📋  Metadata Summary",
+            "strip_title": "🗑  All metadata will be STRIPPED",
+            "strip_desc": "GPS, camera model, timestamps and all other EXIF data will be permanently removed.",
+            "keep_title": "✅  Original metadata will be PRESERVED",
+            "keep_desc": "The image's original EXIF data will be restored exactly as it was.",
+            "spoof_title": "🎭  Metadata will be SPOOFED  ({profile})",
+            "spoof_default": "🎲 Spoof",
+            "field_actions": "Field-by-field actions:",
+            "strip_list_title": "The following data will be permanently removed:",
+            "strip_items": {
+                "gps": "📍 GPS coordinates",
+                "camera": "📷 Camera make & model",
+                "software": "💻 Software identifier",
+                "timestamps": "🕐 Timestamps",
+                "copyright": "©️  Copyright",
+                "exposure": "🔆 Exposure data",
+                "fingerprint": "🔒 Device fingerprint"
+            },
+            "action_desc": {
+                "keep": "Kept as-is",
+                "strip": "Stripped / removed",
+                "spoof": "Replaced with fake data"
+            },
+            "custom_gps": "Custom GPS: {lat}, {lon}",
+            "custom_value": "Custom value: '{value}'",
+            "custom_empty": "Custom (empty → spoof)",
+            "save": "💾  Save",
+            "profiles": {
+                "ghost": {
+                    "name": "👻 Ghost Profile",
+                    "desc": "Nokia 3310 · Antarctica GPS · Year 2000 timestamp"
+                },
+                "troll": {
+                    "name": "🌊 Troll Profile",
+                    "desc": "Random vintage camera · Random ocean GPS · Recent-ish date"
+                },
+                "artist": {
+                    "name": "🎨 Artist Profile",
+                    "desc": "Hides GPS & camera device · Keeps copyright field"
+                },
+                "custom": {
+                    "name": "⚙️ Custom Profile",
+                    "desc": "Per-field rules (see details below)"
+                }
+            }
+        },
+        "presets": {
+            "strip_all": "🔇 Strip Everything",
+            "strip_gps": "📍 Strip GPS Only",
+            "strip_camera_gps": "📷 Strip Camera + GPS",
+            "photographer": "🎨 Photographer (keep ©)",
+            "spoof_all": "🎲 Spoof Everything"
         }
     }
 }
