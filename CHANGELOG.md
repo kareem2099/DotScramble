@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4] - 2026-10-27
+
+### Fixed
+- **The packages could not open a window on systems without Qt's X11 libraries.** Five
+  libraries the Qt X11 (xcb) platform plugin needs (`libxkbcommon-x11`, `libxcb-icccm`,
+  `libxcb-keysyms`, `libxcb-shape`, `libxcb-xkb`) were missing from the build, so on a fresh
+  Ubuntu 22.04 and similar systems the app quit with "Could not load the Qt platform plugin
+  xcb". They are bundled now.
+- The release workflow now checks that every library of the X11 plugin is bundled, and runs
+  the AppImage on X11 in a clean Ubuntu 22.04 before publishing.
+
+---
+
 ## [1.5.3] - 2026-10-27
 
 ### Changed

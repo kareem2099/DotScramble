@@ -17,7 +17,7 @@ APP_AUTHOR = "FreeRave"
 try:
     from version_info import VERSION as APP_VERSION
 except ImportError:
-    APP_VERSION = "1.5.3"
+    APP_VERSION = "1.5.4"
 
 # ============================================================================
 # DIRECTORIES (Enterprise Standard - AppData)

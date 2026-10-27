@@ -63,7 +63,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon0 libfontconfig1 \
             libdbus-1-3 libxcb-cursor0 tesseract-ocr libarchive-tools zstd \
-            zsync desktop-file-utils appstream
+            zsync desktop-file-utils appstream \
+            libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libxcb-xkb1
+          # ^ the Qt xcb (X11) plugin's libraries: PyInstaller bundles only what is installed here,
+          #   and without them the app can't open a window on systems that lack them
           pip install -r requirements.txt
 
       - name: Version matches the tag
@@ -126,6 +129,19 @@ jobs:
             echo "::error::Readable license code is inside the binary (see the lines above)."
             exit 1
           fi
+          # every library the Qt xcb (X11) plugin links must be bundled, except the system's own
+          # (glibc, GL/EGL and libxcb come from the host, like in any AppImage)
+          qt=$(python -c "import os, PySide6; print(os.path.dirname(PySide6.__file__))")
+          missing=0
+          for lib in $(readelf -d "$qt/Qt/plugins/platforms/libqxcb.so" "$qt/Qt/lib/libQt6XcbQpa.so.6" \
+                       | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p' | sort -u); do
+            case "$lib" in
+              libQt6*|libc.so.*|libm.so.*|libdl.so.*|librt.so.*|libpthread.so.*|libstdc++.so.*|libgcc_s.so.*) continue ;;
+              libGL.so.*|libEGL.so.*|libOpenGL.so.*|libGLX.so.*|libxcb.so.1) continue ;;
+            esac
+            grep -q "'$lib'" contents.txt || { echo "::error::$lib (needed by the Qt xcb plugin) is not bundled"; missing=1; }
+          done
+          [ "$missing" = 0 ]
           rm contents.txt
 
       - name: AppImage smoke test
@@ -146,6 +162,25 @@ jobs:
           cat smoke.log
           test "$code" = 124
           grep -q "Application initialized successfully" smoke.log
+
+      - name: AppImage on X11 in a clean Ubuntu 22.04
+        # Like AppImageHub's test and a fresh install: X and Mesa, nothing Qt needs. The smoke test
+        # above uses the offscreen platform, which never loads the xcb plugin.
+        timeout-minutes: 10
+        run: |
+          docker run --rm -v "$PWD/release:/release:ro" ubuntu:22.04 bash -c '
+            export DEBIAN_FRONTEND=noninteractive
+            apt-get update -qq && apt-get install -y -qq --no-install-recommends \
+              xvfb xauth x11-utils xterm libgl1-mesa-dri libgl1-mesa-dev mesa-utils > /dev/null || exit 1
+            mkdir -p /tmp/home && cd /tmp
+            HOME=/tmp/home APPIMAGE_EXTRACT_AND_RUN=1 QT_QPA_PLATFORM=xcb \
+              timeout 40 xvfb-run -a /release/DotScramble-Linux-x86_64.AppImage > x11.log 2>&1
+            code=$?
+            cat x11.log
+            if grep -q "Could not load the Qt platform plugin" x11.log; then echo "::error::The Qt xcb plugin did not load"; exit 1; fi
+            grep -q "Application initialized successfully" x11.log || exit 1
+            [ "$code" = 124 ]  # still running after 40 s
+          '
 
       - uses: actions/upload-artifact@v7
         with:
