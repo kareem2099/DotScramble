@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-10-27
+
+### Fixed
+- **Text and word detection in the installed packages.** The AppImage, `.deb`, Arch package
+  and tarball passed their bundled library path on to the programs they start, so the system
+  Tesseract loaded the bundle's older C++ library and exited (`GLIBCXX_3.4.32 not found`), and
+  the Text and Targeted text modes reported Tesseract as missing. Programs DotScramble starts
+  now get your normal library path back. Running from source was not affected.
+
+---
+
 ## [1.5.0] - 2026-10-27
 
 The biggest DotScramble update yet: a redesigned interface, a canvas you can preview, compare

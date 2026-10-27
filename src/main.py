@@ -163,6 +163,25 @@ def setup_tesseract_configuration():
         logging.error(f"Error configuring Tesseract: {e}")
 
 
+def restore_child_library_path(environ=None, frozen=None):
+    """
+    The PyInstaller bootloader points LD_LIBRARY_PATH at the bundle, and every program we
+    start inherits it: the system Tesseract then loads the bundle's older libstdc++ and
+    exits with "GLIBCXX_3.4.32 not found". The dynamic loader read the variable when this
+    process started, so putting the user's value back only changes what children see.
+    LD_LIBRARY_PATH_ORIG stays for core.auto_updater.restart_environment.
+    """
+    environ = os.environ if environ is None else environ
+    frozen = getattr(sys, 'frozen', False) if frozen is None else frozen
+    if not frozen or not sys.platform.startswith('linux'):
+        return
+    original = environ.get("LD_LIBRARY_PATH_ORIG")
+    if original is not None:
+        environ["LD_LIBRARY_PATH"] = original
+    else:
+        environ.pop("LD_LIBRARY_PATH", None)
+
+
 def configure_qt_logging():
     """
     Silence known-harmless Qt warnings. Keep every rule here: setFilterRules()
@@ -252,6 +271,8 @@ def main():
     logger.info("DotScramble - Starting")
     logger.info("=" * 50)
     
+    restore_child_library_path()
+
     # Configure Bundled Tesseract
     setup_tesseract_configuration()
     
