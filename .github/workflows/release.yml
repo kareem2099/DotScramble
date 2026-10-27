@@ -113,7 +113,8 @@ jobs:
           grep -q '^URL: DotScramble-Linux-x86_64.AppImage$' DotScramble-Linux-x86_64.AppImage.zsync
           ./DotScramble-Linux-x86_64.AppImage --appimage-extract > /dev/null
           desktop-file-validate squashfs-root/DotScramble.desktop
-          grep -q '<release version="'"$(python -c "import version_info; print(version_info.VERSION)")"'"' \
+          version=$(cd .. && python -c "import version_info; print(version_info.VERSION)")
+          grep -q "<release version=\"$version\"" \
             squashfs-root/usr/share/metainfo/dev.dotsuite.DotScramble.metainfo.xml
           appstreamcli validate --no-net squashfs-root/usr/share/metainfo/dev.dotsuite.DotScramble.metainfo.xml \
             || echo "::warning::appstreamcli reported problems in the metainfo (see above)"
