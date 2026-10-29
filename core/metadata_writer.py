@@ -362,7 +362,10 @@ def _blend(original: dict | None) -> tuple[dict, dict]:
         except (TypeError, IndexError):
             metres = None
         if metres is not None:
-            moved = max(0.0, metres + random.uniform(-15, 15))
+            # 3–15 m up or down: close to the real one, but never equal to it after rounding
+            moved = max(0.0, metres + random.choice((-1, 1)) * random.uniform(3, 15))
+            if round(moved * 10) == round(metres * 10):
+                moved = metres + 3
             exif["GPS"][piexif.GPSIFD.GPSAltitude] = (round(moved * 10), 10)
             exif["GPS"][piexif.GPSIFD.GPSAltitudeRef] = gps_real.get(piexif.GPSIFD.GPSAltitudeRef, b"\x00")
     return exif, {"Software": software, "Author": make}
