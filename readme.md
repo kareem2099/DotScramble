@@ -8,7 +8,7 @@
 blur, pixelate or black-bar **faces, eyes, license plates and text**, strip or fake **EXIF and
 GPS metadata**, and hide faces from **AI face detection**. Everything runs on your computer.
 
-[![Version](https://img.shields.io/badge/version-1.5.4-00BCD4?style=flat-square)](https://github.com/kareem2099/DotScramble/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.6.0-00BCD4?style=flat-square)](https://github.com/kareem2099/DotScramble/blob/main/CHANGELOG.md)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-2FD38B?style=flat-square)](https://github.com/kareem2099/DotScramble/blob/main/LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-2FC8F0?style=flat-square&logo=python&logoColor=white)](https://github.com/kareem2099/DotScramble/blob/main/requirements.txt)
 [![Linux](https://img.shields.io/badge/platform-Linux%20x86__64-FFB547?style=flat-square&logo=linux&logoColor=black)](#supported-systems)
@@ -60,7 +60,10 @@ exact GPS location hidden in the file. DotScramble removes all of that in one pl
 | ↔️ **Compare** | A before / after split view with a draggable divider. |
 | 🔎 **Zoom and pan** | Mouse-wheel zoom around the cursor, fit or 100 %, and drag to move around a large photo. |
 | ⚡ **Live preview** | Change a setting and the result updates on its own, without stacking the effect. |
-| 🧾 **Metadata on save** | Keep it, strip GPS, camera and device tags, or replace them with believable decoys (Ghost, Troll, Artist), or set every field yourself. A report shows exactly what will happen before the file is written. |
+| 🧾 **Metadata on save** | Keep it, remove only the location, strip everything, or replace it with believable decoys (*Blend in*: a current phone, a spot a few km away, the date shifted by days; or Ghost, Troll, Artist), or set every field yourself. A report shows each field's value in the photo and in the saved file, and every save is read back and checked. |
+| 🕵️ **What's in this photo?** | Free for everyone: a warning when a photo carries its exact location or tags people's faces, and a list of everything the file holds, with a *Show on map* button. |
+| 🧹 **Deep cleaning** | Removes what lives outside the usual EXIF fields too: the hidden preview of the unedited photo, XMP (edit history, face regions, names), IPTC, comments and PNG text (where AI tools store the prompt), and extra images hidden after the photo. The color profile is kept, so colors don't change. |
+| ✂️ **Metadata only** | *Save metadata only* writes the open photo back untouched with new metadata, and *File → Clean Metadata Only* (`Ctrl+Shift+M`) does it for many photos or a folder. JPEG image data is copied byte for byte, so there's no quality loss. |
 | 📦 **Batch processing** | One detection mode and effect for a whole folder, with progress, a summary, and per-file errors. |
 | 💾 **Presets, undo and redo** | Save your favourite settings; step back and forward through every change. |
 | 🌍 **7 languages** | English, العربية, فارسی, Español, Русский, Deutsch, Türkçe, with right-to-left layouts and correct plurals. |
@@ -69,8 +72,9 @@ exact GPS location hidden in the file. DotScramble removes all of that in one pl
 
 ### Free and Pro
 
-Everything you need to hide faces, plates and metadata is free. Pro (the **DotScramble Max**
-plan on [DotSuite](https://dotsuite.dev/en/product/dotscramble)) adds AI-powered tools:
+Everything you need to hide faces and plates is free, and so is seeing what a photo gives away.
+Pro (the **DotScramble Max** plan on [DotSuite](https://dotsuite.dev/en/product/dotscramble))
+adds AI-powered tools and full metadata control:
 
 | | Free | Pro |
 |---|:---:|:---:|
@@ -79,11 +83,16 @@ plan on [DotSuite](https://dotsuite.dev/en/product/dotscramble)) adds AI-powered
 | Manual regions and full image | ✅ | ✅ |
 | Full body, license plates, text (OCR), one specific word | | ✅ |
 | AI Evasion (Hybrid and Invisible) | | ✅ |
-| Strip or fake metadata, per-field metadata editor | | ✅ |
-| Batch processing | 3 images per batch | Unlimited |
+| *What's in this photo?* and the location warning | ✅ | ✅ |
+| Remove the location only | 4 photos a day | Unlimited |
+| Strip everything, decoys, per-field metadata editor | | ✅ |
+| Clean metadata only (many photos or a folder) | Location only, within the daily 4 | Every choice |
+| Batch processing | 3 images per batch, metadata always stripped | Unlimited, any metadata choice |
 
 Activate Pro from **Help → Upgrade to Pro**: you sign in on dotsuite.dev in your browser and
-the app is activated automatically.
+the app is activated automatically. Pro works on 2 computers per account. **Help → License &
+devices** shows this computer's Machine ID and the devices in use; you can remove 2 devices every
+30 days yourself (in the app or on dotsuite.dev), and support can always move Pro for you.
 
 ## AI Evasion
 
@@ -196,8 +205,12 @@ hide in step 1 → pick the effect in step 2 → fine-tune in step 3 → **Apply
 - **Targeted text:** type a word (a name, a phone number) and only that word is hidden.
 - **Compare** (`Ctrl+Shift+C`): drag the divider to see the original and the result.
 - **Live preview:** turn it on in the toolbar and every change re-applies by itself.
-- **Metadata on save:** in step 4 choose *Keep*, *Strip* or *Decoy*. When you save, a summary
-  shows exactly which fields will be kept, removed or replaced.
+- **Metadata on save:** in step 4 choose *Keep*, *No location*, *Strip* or *Decoy*. When you
+  save, a report shows each field's value in the photo and what the saved file will hold. To
+  change only the metadata, without any effect, press **Save metadata only**.
+- **What's in this photo?:** the link in step 4 lists everything the open photo carries.
+- **Opening photos:** the image browser opens where you were last, with your last photo selected,
+  and *Recent* lists the photos you opened from any folder.
 - **Batch** (`Ctrl+B`): add files or a whole folder, pick a mode and an effect, choose an output
   folder, and start.
 - **Presets:** *Presets → Save Current Settings*, then load them any time.
@@ -238,7 +251,7 @@ Your photos never leave your computer. DotScramble connects only to:
 |------|-------|-----|
 | Startup and *Check for Updates* | `api.github.com`, `raw.githubusercontent.com` | new releases and the supported-version policy |
 | Downloading an update | `github.com` release files | the new version |
-| Activating or re-checking Pro | `dotsuite.dev`, `core.dotsuite.dev` | your licence |
+| Activating or re-checking Pro (about once a day) | `dotsuite.dev`, `core.dotsuite.dev` | your licence: an anonymous computer ID, a computer name, the app version and daily counts of Pro use, numbers only, never photos, file names or metadata |
 | First use of a Pro AI feature, if you agree | `storage.googleapis.com` | the MediaPipe face model (about 8 MB) |
 
 Settings, presets and history stay in `~/.local/share/DotScramble`.
@@ -263,9 +276,11 @@ Choose **License Plate** in step 1 (Pro), or **Manual** and draw a rectangle ove
 <details>
 <summary><b>How do I remove EXIF and GPS location from a photo?</b></summary>
 
-In step 4, **Metadata on save**, choose **Strip** to remove GPS, camera and device tags, or
-**Decoy** to replace them with believable fake values. When you save, a report lists every field
-before the file is written. (Metadata tools are part of Pro.)
+In step 4, **Metadata on save**, choose **No location** to remove just the GPS position (free
+for 4 photos a day), **Strip** to remove everything, or **Decoy** to replace it with believable
+fake values (Pro). When you save, a report lists every field before the file is written, and the
+saved file is checked afterwards. **Save metadata only** does this without changing the photo,
+and *File → Clean Metadata Only* does it for a whole folder.
 </details>
 
 <details>
@@ -299,10 +314,20 @@ connections it does make, none of which send your images.
 </details>
 
 <details>
+<summary><b>How do I move Pro to another computer?</b></summary>
+
+On the old computer choose **Help → License & devices → Deactivate this computer**, then
+activate on the new one. If the old computer is gone, remove it under **Devices** on your
+DotScramble dashboard at dotsuite.dev. You can remove 2 devices every 30 days yourself; for more,
+email support@dotsuite.dev.
+</details>
+
+<details>
 <summary><b>Is DotScramble free?</b></summary>
 
 Yes. It is open source under Apache 2.0, and blurring faces, plates you draw and whole images is
-free forever. Pro adds the AI-powered detection, AI Evasion, the metadata tools and unlimited
+free forever, and so are the metadata warning, the inspector and removing the location from 4
+photos a day. Pro adds the AI-powered detection, AI Evasion, full metadata control and unlimited
 batches.
 </details>
 
@@ -359,8 +384,9 @@ src/
   models/               detection engine (Haar, MediaPipe, OCR), effects, AI evasion (SPSA)
   managers/             themes, localization (plurals, RTL), licence, local auth, database
   assets/locales/       en, ar, fa, es, ru, de, tr
-core/                   image picker, batch processor, auto-updater, version gate, metadata spoofer
-gui/                    batch window, metadata editor and save report
+core/                   image picker, batch processor, auto-updater, version gate, metadata writer
+                        (plan, write, verify) and spoofer, daily quota, Pro usage counts
+gui/                    batch window, metadata editor, save report, inspector, cleaner, license window
 assets/                 themes (QSS + JSON), icons
 tests/
 .github/workflows/      ci.yml (tests), release.yml (build, smoke-test, sign, publish)

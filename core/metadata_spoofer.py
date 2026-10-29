@@ -91,7 +91,27 @@ PROFILES: dict[str, dict] = {
         "keep_copyright":      True,
         "description":         "Privacy for photographers. Keeps copyright, fakes location+device.",
     },
+    "blend": {
+        # Looks like an ordinary photo: a current phone, a spot a few km away, the date shifted.
+        # Built by core/metadata_writer from the real values; the keys here are for the CLI listing.
+        "camera":              "modern",
+        "keep_copyright":      False,
+        "description":         "Blend in. A current phone, a spot a few km away, the date shifted by days.",
+    },
 }
+
+# Current phones for the "blend" profile: (make, model, software)
+MODERN_PHONES: list[tuple[str, str, str]] = [
+    ("Apple",   "iPhone 13",       "17.6.1"),
+    ("Apple",   "iPhone 14 Pro",   "18.1"),
+    ("Apple",   "iPhone 15",       "18.3.2"),
+    ("samsung", "SM-S911B",        "S911BXXS6CXK7"),
+    ("samsung", "SM-A546B",        "A546BXXS9CXJ1"),
+    ("Google",  "Pixel 7",         "HDR+ 1.0.611829022zd"),
+    ("Google",  "Pixel 8 Pro",     "HDR+ 1.0.641377693zd"),
+    ("Xiaomi",  "23078PND5G",      "MIUI Camera"),
+    ("OnePlus", "CPH2581",         "OnePlus Camera"),
+]
 
 
 # ─── Internal helpers ──────────────────────────────────────────────────────────

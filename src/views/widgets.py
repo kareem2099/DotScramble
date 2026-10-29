@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QPushButton, QSizePolicy, QSlider, QToolButton, QVBoxLayout, QWidget,
 )
 
-from src.views.icons import bind_icon
+from src.views.icons import bind_icon, unbind_icon
 
 
 def caption(text: str = "", role: str = "caption") -> QLabel:
@@ -391,6 +391,22 @@ class SegmentedControl(QWidget):
 
     def set_text(self, value: str, text: str) -> None:
         self._buttons[value].setText(text)
+
+    def set_locked(self, value: str, locked: bool) -> None:
+        """A locked option stays clickable (so it can offer an upgrade) but looks locked."""
+        button = self._buttons.get(value)
+        if button is None:
+            return
+        button.setProperty("locked", "true" if locked else "false")
+        if locked:
+            bind_icon(button, "lock", 12, "text_disabled")
+        else:
+            unbind_icon(button)
+        repolish(button)
+
+    def is_locked(self, value: str) -> bool:
+        button = self._buttons.get(value)
+        return button is not None and button.property("locked") == "true"
 
     def _on_clicked(self, value: str) -> None:
         if value != self._value:

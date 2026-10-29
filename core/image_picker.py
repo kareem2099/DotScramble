@@ -10,6 +10,7 @@ custom-painted tiles read their colors from qproperty-* values set there.
 import os
 import sys
 from pathlib import Path
+import shiboken6
 
 from PySide6.QtWidgets import (
     QDialog, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
@@ -22,7 +23,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QPixmap, QImage, QColor, QPainter, QPen, QBrush,
-    QFont, QPainterPath, QCursor, QFontMetrics
+    QFont, QPainterPath, QCursor, QFontMetrics, QImageReader
 )
 
 from src.views.icons import IconProvider, bind_icon
@@ -126,8 +127,8 @@ class ThumbLoader(QRunnable):
 
     def run(self):
         try:
-            from PIL import Image
-            img = Image.open(self.path)
+            from PIL import Image, ImageOps
+            img = ImageOps.exif_transpose(Image.open(self.path))   # phone photos: show them upright
             img.thumbnail((self.SIZE, self.SIZE), Image.LANCZOS)
             img = img.convert('RGBA')
             data = img.tobytes('raw', 'RGBA')
@@ -159,7 +160,9 @@ class PreviewLoader(QRunnable):
     def run(self):
         try:
             kb  = os.path.getsize(self.path) // 1024
-            img = QImage(self.path)
+            reader = QImageReader(self.path)
+            reader.setAutoTransform(True)   # apply the EXIF orientation, like the editor does
+            img = reader.read()
             if img.isNull():
                 return
             px = QPixmap.fromImage(img.scaled(
@@ -408,12 +411,21 @@ class PreviewPanel(QFrame):
 
 
 # ── Main dialog ──────────────────────────────────────────────────────────────
+RECENT = "recent:"   # the "Recent" place: photos opened before, from any folder
+
+
 class ImagePicker(QDialog):
     GRID_MARGIN  = 16
     GRID_SPACING = 12
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, start_dir: str | None = None, select: str | None = None,
+                 recent: list[str] | None = None):
+        """
+        start_dir: folder to open in (the last one used); select: photo to preselect there;
+        recent: recently opened photos, shown under Quick Access → Recent.
+        """
         super().__init__(parent)
+        self._recent = [p for p in (recent or []) if os.path.isfile(p)]
         
         from src.managers.localization_manager import get_locale_manager
         self.locale = get_locale_manager()
@@ -428,7 +440,7 @@ class ImagePicker(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.resize(1020, 680)
 
-        self._cwd          = str(Path.home())
+        self._cwd          = start_dir if start_dir and os.path.isdir(start_dir) else str(Path.home())
         self._selected     = ''
         self._tiles        = []
         self._drag_pos     = None
@@ -483,6 +495,16 @@ class ImagePicker(QDialog):
             self._open_anim.start()
 
         self._navigate(self._cwd)
+        if select and os.path.isfile(select):
+            # once the grid is laid out: select the last photo and bring it into view
+            QTimer.singleShot(80, lambda: self._preselect(select))
+
+    def _preselect(self, path: str):
+        tile = next((t for t in self._tiles if t.path == path), None)
+        if tile is None:
+            return
+        self._on_tile_click(path)
+        self.scroll.ensureWidgetVisible(tile, 0, self.GRID_MARGIN)
 
     # ── UI ───────────────────────────────────────────────────────────────────
     def _build_ui(self):
@@ -557,6 +579,11 @@ class ImagePicker(QDialog):
         sb.addSpacing(6)
 
         self._sb_items = []
+        if self._recent:
+            item = SidebarItem("recent", self.locale.get("image_picker.recent"), RECENT)
+            item.selected.connect(self._navigate)
+            sb.addWidget(item)
+            self._sb_items.append(item)
         for icon, label, path in get_bookmarks():   # ← cross-platform
             item = SidebarItem(icon, label, path)
             item.selected.connect(self._navigate)
@@ -635,12 +662,12 @@ class ImagePicker(QDialog):
 
     # ── Navigation ───────────────────────────────────────────────────────────
     def _navigate(self, path: str):
-        if not os.path.isdir(path):
+        if path != RECENT and not os.path.isdir(path):
             return
         self._cwd      = path
         self._selected = ''
         self.open_btn.setEnabled(False)
-        self.path_lbl.setText(path)
+        self.path_lbl.setText(self.locale.get("image_picker.recent") if path == RECENT else path)
         self.preview.hide_preview()
 
         # Bug #3 fix: clear search text silently so the filter isn't carried
@@ -663,6 +690,14 @@ class ImagePicker(QDialog):
             w = self.bread_layout.takeAt(0).widget()
             if w:
                 w.deleteLater()
+
+        if self._cwd == RECENT:
+            crumb = QPushButton(self.locale.get("image_picker.recent"))
+            crumb.setObjectName("PickerCrumb")
+            crumb.setProperty("current", "true")
+            self.bread_layout.addWidget(crumb)
+            self.bread_layout.addStretch()
+            return
 
         parts = []
         p = Path(self._cwd)
@@ -706,21 +741,23 @@ class ImagePicker(QDialog):
         self.grid_widget.setObjectName("PickerGrid")
         self.scroll.setWidget(self.grid_widget)
 
-        try:
-            entries = sorted(
-                os.scandir(self._cwd),
-                key=lambda e: (not e.is_dir(), e.name.lower())
-            )
-        except PermissionError:
-            return
+        if self._cwd == RECENT:
+            all_e = [(p, False) for p in self._recent]          # newest first, any folder
+        else:
+            try:
+                entries = sorted(
+                    os.scandir(self._cwd),
+                    key=lambda e: (not e.is_dir(), e.name.lower())
+                )
+            except PermissionError:
+                return
+            dirs  = [(e.path, True) for e in entries if e.is_dir() and not e.name.startswith('.')]
+            files = [(e.path, False) for e in entries if e.is_file()
+                     and os.path.splitext(e.name)[1].lower() in EXTS]
+            all_e = dirs + files
 
-        dirs  = [e for e in entries if e.is_dir()  and not e.name.startswith('.')]
-        files = [e for e in entries if e.is_file()
-                 and os.path.splitext(e.name)[1].lower() in EXTS]
-        all_e = dirs + files
-
-        for entry in all_e:
-            tile = FileTile(entry.path, entry.is_dir())
+        for entry_path, entry_is_dir in all_e:
+            tile = FileTile(entry_path, entry_is_dir)
             tile.clicked.connect(self._on_tile_click)
             tile.activated.connect(self._on_tile_activate)
             self._tiles.append(tile)
@@ -858,7 +895,9 @@ class ImagePicker(QDialog):
             self._arrange_grid()
 
     def eventFilter(self, obj, event):
-        if obj is self.scroll.viewport() and event.type() == QEvent.Type.Resize:
+        # the viewport can outlive the scroll area's Python wrapper while the dialog is torn down
+        if (event.type() == QEvent.Type.Resize and shiboken6.isValid(self.scroll)
+                and obj is self.scroll.viewport()):
             self._reflow_timer.start(60)
         return super().eventFilter(obj, event)
 

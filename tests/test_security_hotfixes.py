@@ -34,48 +34,30 @@ class MockDBManager:
 def test_license_clock_rollback():
     print("🧪 Test 1: License System Clock Rollback Protection")
     print("-" * 50)
-    
+
     from src.managers.license_manager import LicenseManager
-    
-    # Setup initial mock state (a valid looking configuration)
-    db = MockDBManager()
-    db.save_setting("dotsuite_api_key", "test_key", "license")
-    # For testing, we mock a fake token. Note that token verification will return False,
-    # but startup code checks self._license_token existence first.
-    db.save_setting("license_token", "header.payload.signature", "license")
-    
-    # 1. Normal state: last check was 1 hour ago
-    current_time = time.time()
-    db.save_setting("last_license_check_time", current_time - 3600, "license")
-    
-    print("Initializing LicenseManager under normal clock conditions...")
-    manager = LicenseManager(db)
-    # The token is fake so verification fails, clearing local state
-    print(f"   [Normal] token is checked; api_key exists before check: {db.get_setting('dotsuite_api_key') is not None}")
-    
-    # Re-enable max and token for rollback test simulation
-    db.save_setting("dotsuite_api_key", "test_key", "license")
-    db.save_setting("license_token", "header.payload.signature", "license")
-    
-    # 2. Clock Rollback: set last check to 1 hour in the FUTURE
-    db.save_setting("last_license_check_time", current_time + 3600, "license")
-    
-    print("Initializing LicenseManager under rolled-back clock conditions...")
-    # This should detect time.time() < last_license_check_time and clear the settings
-    manager_tampered = LicenseManager(db)
-    
-    # Check if settings were cleared
-    api_key_res = db.get_setting("dotsuite_api_key", "")
-    token_res = db.get_setting("license_token", "")
-    is_max_res = db.get_setting("is_max_activated", None)
-    
-    if api_key_res == "" and token_res == "" and is_max_res is False:
-        print("   ✅ SUCCESS: Clock rollback detected! Local state was wiped.")
-        return True
-    else:
-        print("   ❌ FAILURE: Clock rollback was NOT detected or local state was not cleared.")
-        print(f"   Debug: api_key={api_key_res!r}, token={token_res!r}, is_max_activated={is_max_res!r}")
-        return False
+
+    # No network in tests: record the renewals the manager asks for instead of running them
+    renewals = []
+    original = LicenseManager._schedule_background_recheck
+    LicenseManager._schedule_background_recheck = lambda self, renew_now=False: renewals.append(renew_now)
+    try:
+        db = MockDBManager()
+        db.save_setting("dotsuite_api_key", "test_key", "license")
+        db.save_setting("license_token", "header.payload.signature", "license")
+        # Clock rollback: the last check is an hour in the FUTURE
+        db.save_setting("last_license_check_time", time.time() + 7200, "license")
+
+        manager = LicenseManager(db)
+    finally:
+        LicenseManager._schedule_background_recheck = original
+
+    # Pro stays off until the server confirms, but the key is kept so it can do that
+    assert manager.is_max_activated is False
+    assert db.get_setting("dotsuite_api_key") == "test_key"
+    assert renewals == [True]
+    print("   ✅ SUCCESS: Clock rollback detected; Pro waits for the server instead of trusting the clock.")
+    return True
 
 def test_base64_dynamic_padding():
     print("\n🧪 Test 2: Base64 Dynamic Padding Validation")

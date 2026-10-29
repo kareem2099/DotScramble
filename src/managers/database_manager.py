@@ -32,6 +32,15 @@ except ImportError:
     DIRS = {'backups': Path.home() / '.DotScramble' / 'backups'}
 
 
+def _owner_only(path) -> None:
+    """chmod 600 where the platform supports it (Windows keeps its own ACLs)."""
+    if os.name == "posix":
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
+
+
 class DatabaseManager:
     """
     Enhanced SQLite-based database manager for user preferences and settings.
@@ -71,6 +80,8 @@ class DatabaseManager:
         
         # Initialize database
         self._init_database()
+        # It holds the DotSuite key: readable by this user only
+        _owner_only(self.db_path)
         
         # Load all settings into cache on startup
         self._load_cache()
@@ -772,6 +783,7 @@ class DatabaseManager:
             
             import shutil
             shutil.copy2(self.db_path, backup_path)
+            _owner_only(backup_path)
             print(f"💾 Database backup created: {backup_path}")
             return True
             

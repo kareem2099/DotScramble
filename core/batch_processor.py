@@ -14,6 +14,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from src.config import SUPPORTED_FORMATS, BLUR_RANGE, PIXEL_RANGE, OPACITY_RANGE
+from core import metadata_writer
 
 class BatchProcessor:
     """Handles batch processing of multiple images"""
@@ -100,22 +101,7 @@ class BatchProcessor:
             # If no regions detected, return original
             output_filename = f"processed_{Path(input_path).stem}.jpg"
             output_path = os.path.join(output_dir, output_filename)
-            
-            ext = os.path.splitext(output_path)[1].lower() or ".jpg"
-            saved = False
-            try:
-                is_success, im_buf_arr = cv2.imencode(ext, image)
-                if is_success:
-                    im_buf_arr.tofile(output_path)
-                    saved = True
-            except Exception:
-                pass
-            if not saved:
-                try:
-                    cv2.imwrite(output_path, image)
-                except Exception:
-                    pass
-                
+            self._save(image, input_path, output_path, settings)
             return {
                 'input_path': input_path,
                 'output_path': output_path,
@@ -159,21 +145,7 @@ class BatchProcessor:
         # Save processed image (Unicode safe)
         output_filename = f"processed_{Path(input_path).stem}.jpg"
         output_path = os.path.join(output_dir, output_filename)
-        
-        ext = os.path.splitext(output_path)[1].lower() or ".jpg"
-        saved = False
-        try:
-            is_success, im_buf_arr = cv2.imencode(ext, processed_image)
-            if is_success:
-                im_buf_arr.tofile(output_path)
-                saved = True
-        except Exception:
-            pass
-        if not saved:
-            try:
-                cv2.imwrite(output_path, processed_image)
-            except Exception:
-                pass
+        self._save(processed_image, input_path, output_path, settings)
 
         return {
             'input_path': input_path,
@@ -182,6 +154,27 @@ class BatchProcessor:
             'regions_processed': len(regions),
             'error': None
         }
+
+    @staticmethod
+    def _save(image, input_path, output_path, settings):
+        """
+        Write the result with the batch's metadata choice ("strip" unless Pro chose otherwise),
+        then check the file; one that still carries what was to be removed is deleted.
+        """
+        mode = settings.get('metadata_mode', 'strip') if settings.get('is_pro') else 'strip'
+        original = metadata_writer.load_exif(input_path)
+        plan = metadata_writer.make_plan(
+            original, mode, ext=os.path.splitext(output_path)[1].lower() or ".jpg",
+            profile=settings.get('metadata_profile', 'blend'), size=(image.shape[1], image.shape[0]),
+            extras=metadata_writer.inspect_extras(input_path))
+        metadata_writer.write_image(image, output_path, plan)
+        problems = metadata_writer.verify(output_path, plan, original)
+        if problems:
+            try:
+                os.remove(output_path)
+            except OSError:
+                pass
+            raise RuntimeError(f"metadata check failed: {', '.join(problems)}")
 
     def _require_cascades(self, detection_mode: str) -> None:
         """Fail the file instead of saving it untouched as if nothing was found."""

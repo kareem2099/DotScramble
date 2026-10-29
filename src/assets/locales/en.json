@@ -19,7 +19,8 @@
             "save_comparison": "Save As Comparison",
             "open_exports": "Open Exports Folder",
             "batch_process": "Batch Process",
-            "exit": "Exit"
+            "exit": "Exit",
+            "clean_metadata": "Clean Metadata Only…"
         },
         "edit_items": {
             "undo": "Undo",
@@ -177,18 +178,35 @@
             "keep": "Keep",
             "strip": "Strip",
             "spoof": "Decoy",
-            "keep_desc": "The original metadata is kept as it is.",
-            "strip_desc": "Permanently removes GPS, camera and device tags.",
+            "keep_desc": "Keeps the original metadata. The hidden preview of the unedited photo is always removed.",
+            "strip_desc": "Removes all metadata: location, camera, dates and the rest.",
             "spoof_desc": "Replaces the real metadata with plausible decoys.",
             "profiles": {
                 "ghost": "Ghost — Nokia in Antarctica, year 2000",
                 "troll": "Troll — random ocean, vintage camera",
                 "artist": "Artist — hides GPS, keeps copyright",
-                "custom": "Custom — per-field control"
+                "custom": "Custom — per-field control",
+                "blend": "Blend in — current phone, nearby spot, shifted date"
             },
             "editor": "Open metadata editor…",
-            "locked": "Available in Pro — upgrade",
-            "custom_saved": "Custom metadata rules saved."
+            "locked": "Strip and Decoy are in Pro — upgrade",
+            "custom_saved": "Custom metadata rules saved.",
+            "location": "No location",
+            "location_desc": "Removes the GPS location; everything else is kept.",
+            "free_quota": {
+                "one": "Free: {count} of {limit} location removal left today",
+                "other": "Free: {count} of {limit} location removals left today"
+            },
+            "quota_title": "Today's free removals are used",
+            "quota_msg": "Free removes the location from {limit} photos a day, and today's are used. Pro removes it from every photo, or you can save this one with its location kept.",
+            "quota_upgrade": "Upgrade to Pro",
+            "quota_keep": "Save with location",
+            "inspect": "What's in this photo?",
+            "alert_location": "📍 This photo contains its exact location.",
+            "alert_faces": "👤 It also marks where people's faces are (XMP).",
+            "save_only": "Save metadata only",
+            "save_only_tip": "Saves this photo exactly as it is, changing only its metadata (no effect, no quality loss).",
+            "save_only_edits": "This saves the original photo without your edits, changing only its metadata. Continue?"
         },
         "ai": {
             "progress_title": "AI Evasion — Processing",
@@ -217,7 +235,14 @@
             "manual_btn": "Enter key manually",
             "manual_title": "Activate Pro",
             "manual_prompt": "Enter your DotSuite API Key to unlock DotScramble Pro:",
-            "failed_title": "Activation Failed"
+            "failed_title": "Activation Failed",
+            "deactivate_menu": "Deactivate this computer…",
+            "deactivate_title": "Deactivate this computer",
+            "deactivate_confirm": "This frees one of your account's 2 device slots so you can activate Pro on another computer. DotScramble returns to the Free plan here.\n\nDeactivate now?",
+            "deactivated": "This computer is deactivated and its slot is free. You can activate Pro on another computer.",
+            "deactivate_failed": "Couldn't deactivate: {error}\n\nCheck your connection and try again. You can also remove this computer under Devices on dotsuite.dev.",
+            "ended": "Pro ended: the license was removed or the subscription has ended.",
+            "deactivate_refused": "DotSuite didn't deactivate this computer:\n\n{error}"
         },
         "model": {
             "title": "AI Model Required",
@@ -257,6 +282,32 @@
             "message": "DotScramble {current} is no longer supported.\n\nPlease download the latest version (at least {minimum}) to keep using the app. Your settings are kept.",
             "download": "Download the latest version",
             "quit": "Quit"
+        },
+        "license": {
+            "menu": "License & devices…",
+            "title": "License & devices",
+            "this_computer": "This computer",
+            "name": "Name",
+            "machine_id": "Machine ID",
+            "copy": "Copy",
+            "copied": "Copied",
+            "status_pro": "Pro is active on this computer.",
+            "status_free": "This computer uses the Free plan.",
+            "free_hint": "Activate Pro from Help → Upgrade to Pro. Your account can use Pro on 2 computers; support may ask for the Machine ID above.",
+            "devices_title": "Devices on your account",
+            "devices_used": "{count} of {limit} in use",
+            "loading": "Checking your devices…",
+            "offline": "Couldn't reach DotSuite: {error}",
+            "this_one": "this computer",
+            "unnamed": "Unnamed computer",
+            "device_detail": "ID {id} · activated {activated} · last check-in {seen}",
+            "manage": "Manage devices on dotsuite.dev",
+            "close": "Close",
+            "removals_left": {
+                "one": "You can remove {count} more device yourself in these 30 days (here or on dotsuite.dev).",
+                "other": "You can remove {count} more devices yourself in these 30 days (here or on dotsuite.dev)."
+            },
+            "removals_none": "You've used your 2 device removals for these 30 days; the next is available on {date}. To change computers sooner, email support@dotsuite.dev."
         }
     },
     "effects": {
@@ -294,7 +345,8 @@
             "image_corrupted": "Could not load image!\n\nFile: {filename}\n\nPossible reasons:\n• File is corrupted\n• Unsupported format\n• File path contains special characters",
             "dependencies": "Missing required dependencies:\n\n{deps}\n\nPlease install them using:\npip install {deps}",
             "import": "Import error: {error}\n\nPlease ensure all modules are in the correct location:\n- gui/main_window.py\n- gui/batch_window.py\n- core/image_processor.py\n- core/batch_processor.py\n- core/utils.py\n- config.py",
-            "fatal": "Failed to start application:\n\n{error}\n\nPlease check the log file for details."
+            "fatal": "Failed to start application:\n\n{error}\n\nPlease check the log file for details.",
+            "save_failed": "The image could not be saved:\n{error}"
         },
         "info": {
             "saved": "Image saved successfully!",
@@ -315,7 +367,8 @@
             "restart_required": "Application will close to apply the update. Continue?",
             "update_manual": "Version {version} is available, but this copy of DotScramble can't update itself automatically. Open the download page?",
             "update_installing": "Installing update...",
-            "update_install_failed": "The update could not be installed: {error}"
+            "update_install_failed": "The update could not be installed: {error}",
+            "saved_no_location": "Image saved. Checked: the saved file contains no location."
         },
         "warning": {
             "clear_history": "Are you sure you want to clear recent files history?",
@@ -419,7 +472,15 @@
         "complete_title": "Complete",
         "complete_summary": "✅ Successful: {success}\n❌ Failed: {failed}\n📊 Total: {total}",
         "done": "Processing complete!",
-        "close_confirm": "Processing in progress. Close anyway?"
+        "close_confirm": "Processing in progress. Close anyway?",
+        "metadata_group": "Metadata",
+        "metadata": {
+            "strip": "Remove all",
+            "location": "Remove location only",
+            "keep": "Keep (hidden preview removed)",
+            "spoof": "Decoys (Blend in)"
+        },
+        "metadata_free_note": "Free removes all metadata from batch results. Pro lets you choose."
     },
     "themes": {
         "midnight": "🌑 Midnight Dark",
@@ -481,7 +542,8 @@
             "root": "Root"
         },
         "loading": "Loading…",
-        "no_matches": "No matching files"
+        "no_matches": "No matching files",
+        "recent": "Recent"
     },
     "metadata": {
         "fields": {
@@ -491,7 +553,14 @@
             "software": "💻 Software",
             "datetime": "🕐 Date / Time",
             "copyright": "©️  Copyright",
-            "exposure": "🔆 Exposure Data"
+            "exposure": "🔆 Exposure Data",
+            "thumbnail": "🖼 Hidden preview",
+            "fingerprint": "🔐 Device IDs",
+            "xmp": "🧾 XMP data",
+            "iptc": "🏷 IPTC data",
+            "text": "📝 Text notes",
+            "extra_images": "🖼 Extra images",
+            "icc": "🎨 Color profile"
         },
         "actions": {
             "keep": "✅ Keep",
@@ -531,7 +600,7 @@
             "strip_title": "🗑  All metadata will be STRIPPED",
             "strip_desc": "GPS, camera model, timestamps and all other EXIF data will be permanently removed.",
             "keep_title": "✅  Original metadata will be PRESERVED",
-            "keep_desc": "The image's original EXIF data will be restored exactly as it was.",
+            "keep_desc": "The original metadata is kept, except the hidden preview of the unedited photo.",
             "spoof_title": "🎭  Metadata will be SPOOFED  ({profile})",
             "spoof_default": "🎲 Spoof",
             "field_actions": "Field-by-field actions:",
@@ -570,8 +639,34 @@
                 "custom": {
                     "name": "⚙️ Custom Profile",
                     "desc": "Per-field rules (see details below)"
+                },
+                "blend": {
+                    "name": "🫥 Blend in",
+                    "desc": "A current phone · a spot a few km away · the date shifted by days"
                 }
-            }
+            },
+            "location_title": "📍  The location will be REMOVED",
+            "location_desc": "The GPS coordinates are removed; the rest of the metadata is kept.",
+            "custom_title": "⚙️  Your field-by-field rules",
+            "custom_desc": "Each field is kept, removed or replaced as you set it in the metadata editor.",
+            "unsupported_title": "🗑  This file type can't hold metadata",
+            "unsupported_desc": "BMP and similar formats have no place for metadata, so the saved file has none.",
+            "no_metadata": "This photo has no metadata to keep or remove.",
+            "col_field": "Field",
+            "col_before": "In this photo",
+            "col_after": "In the saved file",
+            "thumbnail_found": "Found",
+            "thumbnail_note": "Phones and cameras hide a small preview of the original photo inside the file. It shows the photo before your edits, faces included, so DotScramble always removes it.",
+            "action": {
+                "keep": "Kept",
+                "replace": "Replaced",
+                "remove": "Removed",
+                "remove_always": "Always removed"
+            },
+            "xmp_faces": "Found, with face locations",
+            "xmp_note": "XMP can hold your edit history and where people's faces are, sometimes with their names. It is always removed.",
+            "extra_images_note": "Some phones hide more images after the photo (depth maps, previews). They are always removed.",
+            "text_note": "Text notes can hold comments or, in AI-made images, the prompt. They are always removed."
         },
         "presets": {
             "strip_all": "🔇 Strip Everything",
@@ -579,6 +674,53 @@
             "strip_camera_gps": "📷 Strip Camera + GPS",
             "photographer": "🎨 Photographer (keep ©)",
             "spoof_all": "🎲 Spoof Everything"
+        },
+        "verify": {
+            "failed": "The saved file didn't pass the metadata check, so it was deleted:\n{details}\n\nPlease try again, or save in another format.",
+            "thumbnail": "it still contained a preview of the original photo",
+            "orientation": "its orientation tag was wrong",
+            "gps_left": "it still contained the GPS location",
+            "real_gps": "it contained the real location instead of the decoy",
+            "metadata_left": "it still contained metadata",
+            "extras_left": "it still contained XMP, IPTC, text notes or extra images"
+        },
+        "inspector": {
+            "window_title": "DotScramble — Photo metadata",
+            "title": "🔎  What's in this photo",
+            "empty": "This photo carries no metadata.",
+            "has_location": "📍 This photo contains the exact place it was taken. Anyone you send the original to can see it.",
+            "hint": "Nothing here is sent anywhere. Choose what the saved file keeps in step 4, Metadata on save.",
+            "map": "Show on map",
+            "map_tip": "Opens openstreetmap.org in your browser with these coordinates",
+            "close": "Close"
+        },
+        "cleaner": {
+            "window_title": "DotScramble — Clean metadata",
+            "title": "🧹  Clean metadata only",
+            "intro": "Removes metadata from photos without changing a single pixel. Each result is saved next to the original as name_clean; the original isn't touched.",
+            "add_files": "Add photos…",
+            "add_folder": "Add folder…",
+            "clear": "Clear",
+            "what": "What to remove",
+            "mode": {
+                "location": "The location only",
+                "strip": "All metadata",
+                "spoof": "Replace it with decoys (Blend in)"
+            },
+            "pro_only": "(Pro)",
+            "start": "Clean",
+            "status": {
+                "done": "cleaned",
+                "nothing": "nothing to clean",
+                "failed": "failed",
+                "skipped": "skipped: today's free removals are used",
+                "unsupported": "not supported"
+            },
+            "summary": "Cleaned: {done} · Nothing to clean: {nothing} · Failed: {failed}",
+            "skipped_free": {
+                "one": "{count} photo was skipped: Free removes the location from {limit} photos a day.",
+                "other": "{count} photos were skipped: Free removes the location from {limit} photos a day."
+            }
         }
     }
 }

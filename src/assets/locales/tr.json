@@ -19,7 +19,8 @@
             "save_comparison": "Karşılaştırma Olarak Kaydet",
             "open_exports": "Dışa Aktarma Klasörünü Aç",
             "batch_process": "Toplu İşlem",
-            "exit": "Çıkış"
+            "exit": "Çıkış",
+            "clean_metadata": "Yalnızca Meta Veriyi Temizle…"
         },
         "edit_items": {
             "undo": "Geri Al",
@@ -171,18 +172,35 @@
             "keep": "Koru",
             "strip": "Sil",
             "spoof": "Sahte",
-            "keep_desc": "Orijinal meta veriler olduğu gibi korunur.",
-            "strip_desc": "GPS, kamera ve cihaz etiketlerini kalıcı olarak siler.",
+            "keep_desc": "Özgün meta verileri korur. Düzenlenmemiş fotoğrafın gizli önizlemesi her zaman kaldırılır.",
+            "strip_desc": "Tüm meta verileri kaldırır: konum, kamera, tarihler ve geri kalanı.",
             "spoof_desc": "Gerçek meta verileri inandırıcı sahte verilerle değiştirir.",
             "profiles": {
                 "ghost": "Hayalet — Antarktika'da Nokia, 2000 yılı",
                 "troll": "Trol — rastgele okyanus, eski kamera",
                 "artist": "Sanatçı — GPS'i gizler, telif hakkını korur",
-                "custom": "Özel — alan bazında kontrol"
+                "custom": "Özel — alan bazında kontrol",
+                "blend": "Göze batma — güncel telefon, yakın bir yer, kaydırılmış tarih"
             },
             "editor": "Meta veri düzenleyicisini aç…",
-            "locked": "Pro'da kullanılabilir — yükselt",
-            "custom_saved": "Özel meta veri kuralları kaydedildi."
+            "locked": "Sil ve Sahte: Pro'da",
+            "custom_saved": "Özel meta veri kuralları kaydedildi.",
+            "location": "Konumsuz",
+            "location_desc": "GPS konumunu kaldırır, geri kalan her şeyi korur.",
+            "free_quota": {
+                "one": "Ücretsiz: bugün {limit} konum kaldırmadan {count} kaldı",
+                "other": "Ücretsiz: bugün {limit} konum kaldırmadan {count} kaldı"
+            },
+            "quota_title": "Bugünkü ücretsiz kaldırmalar bitti",
+            "quota_msg": "Ücretsiz sürüm konumu günde {limit} fotoğraftan kaldırır ve bugünkü hakların bitti. Pro konumu her fotoğraftan kaldırır; istersen bu fotoğrafı konumuyla kaydedebilirsin.",
+            "quota_upgrade": "Pro'ya yükselt",
+            "quota_keep": "Konumla kaydet",
+            "inspect": "Bu fotoğrafta neler var?",
+            "alert_location": "📍 Bu fotoğraf tam konumunu içeriyor.",
+            "alert_faces": "👤 Ayrıca insanların yüzlerinin yerini işaretliyor (XMP).",
+            "save_only": "Yalnızca meta veriyi kaydet",
+            "save_only_tip": "Fotoğrafı olduğu gibi kaydeder, yalnızca meta verisini değiştirir (efekt yok, kalite kaybı yok).",
+            "save_only_edits": "Orijinal fotoğraf düzenlemeleriniz olmadan kaydedilecek, yalnızca meta verisi değişecek. Devam edilsin mi?"
         },
         "ai": {
             "progress_title": "Yapay Zekâdan Kaçınma — İşleniyor",
@@ -208,7 +226,14 @@
             "manual_btn": "Anahtarı elle gir",
             "manual_title": "Pro'yu Etkinleştir",
             "manual_prompt": "DotScramble Pro'nun kilidini açmak için DotSuite API anahtarınızı girin:",
-            "failed_title": "Etkinleştirme Başarısız"
+            "failed_title": "Etkinleştirme Başarısız",
+            "deactivate_menu": "Bu bilgisayarı devre dışı bırak…",
+            "deactivate_title": "Bu bilgisayarı devre dışı bırak",
+            "deactivate_confirm": "Bu, hesabınızın 2 cihaz yerinden birini boşaltır; böylece Pro'yu başka bir bilgisayarda etkinleştirebilirsiniz. DotScramble burada ücretsiz plana döner.\n\nŞimdi devre dışı bırakılsın mı?",
+            "deactivated": "Bu bilgisayar devre dışı bırakıldı ve yeri boşaldı. Pro'yu başka bir bilgisayarda etkinleştirebilirsiniz.",
+            "deactivate_failed": "Devre dışı bırakılamadı: {error}\n\nBağlantınızı kontrol edip tekrar deneyin. Bu bilgisayarı dotsuite.dev üzerindeki Devices bölümünden de kaldırabilirsiniz.",
+            "ended": "Pro sona erdi: lisans kaldırıldı veya abonelik bitti.",
+            "deactivate_refused": "DotSuite bu bilgisayarı devre dışı bırakmadı:\n\n{error}"
         },
         "model": {
             "title": "Yapay Zekâ Modeli Gerekli",
@@ -248,6 +273,32 @@
             "message": "DotScramble {current} artık desteklenmiyor.\n\nUygulamayı kullanmaya devam etmek için lütfen en son sürümü (en az {minimum}) indirin. Ayarlarınız korunur.",
             "download": "En son sürümü indir",
             "quit": "Çık"
+        },
+        "license": {
+            "menu": "Lisans ve cihazlar…",
+            "title": "Lisans ve cihazlar",
+            "this_computer": "Bu bilgisayar",
+            "name": "Ad",
+            "machine_id": "Cihaz kimliği (Machine ID)",
+            "copy": "Kopyala",
+            "copied": "Kopyalandı",
+            "status_pro": "Pro bu bilgisayarda etkin.",
+            "status_free": "Bu bilgisayar ücretsiz planı kullanıyor.",
+            "free_hint": "Pro'yu Yardım → Upgrade to Pro ile etkinleştirin. Hesabınız Pro'yu 2 bilgisayarda kullanabilir; destek yukarıdaki kimliği isteyebilir.",
+            "devices_title": "Hesabınızdaki cihazlar",
+            "devices_used": "{count} / {limit} kullanımda",
+            "loading": "Cihazlarınız kontrol ediliyor…",
+            "offline": "DotSuite'e ulaşılamadı: {error}",
+            "this_one": "bu bilgisayar",
+            "unnamed": "Adsız bilgisayar",
+            "device_detail": "Kimlik {id} · etkinleştirildi {activated} · son kontrol {seen}",
+            "manage": "Cihazları dotsuite.dev'de yönet",
+            "close": "Kapat",
+            "removals_left": {
+                "one": "Bu 30 gün içinde {count} cihazı daha kendiniz kaldırabilirsiniz (buradan veya dotsuite.dev'den).",
+                "other": "Bu 30 gün içinde {count} cihazı daha kendiniz kaldırabilirsiniz (buradan veya dotsuite.dev'den)."
+            },
+            "removals_none": "Bu 30 günlük 2 cihaz kaldırma hakkınızı kullandınız; bir sonraki {date} tarihinde açılır. Daha önce bilgisayar değiştirmek için support@dotsuite.dev adresine yazın."
         }
     },
     "effects": {
@@ -285,7 +336,8 @@
             "image_corrupted": "Görsel yüklenemedi!\n\nDosya: {filename}\n\nOlası nedenler:\n• Dosya bozuk\n• Desteklenmeyen biçim\n• Dosya yolu özel karakterler içeriyor",
             "dependencies": "Gerekli bağımlılıklar eksik:\n\n{deps}\n\nLütfen şu komutla kurun:\npip install {deps}",
             "import": "İçe aktarma hatası: {error}\n\nLütfen tüm modüllerin doğru yerde olduğundan emin olun:\n- gui/main_window.py\n- gui/batch_window.py\n- core/image_processor.py\n- core/batch_processor.py\n- core/utils.py\n- config.py",
-            "fatal": "Uygulama başlatılamadı:\n\n{error}\n\nAyrıntılar için lütfen günlük dosyasına bakın."
+            "fatal": "Uygulama başlatılamadı:\n\n{error}\n\nAyrıntılar için lütfen günlük dosyasına bakın.",
+            "save_failed": "Görsel kaydedilemedi:\n{error}"
         },
         "info": {
             "saved": "Görsel başarıyla kaydedildi!",
@@ -306,7 +358,8 @@
             "restart_required": "Güncellemeyi uygulamak için uygulama kapanacak. Devam edilsin mi?",
             "update_manual": "{version} sürümü mevcut, ancak bu DotScramble kopyası kendini otomatik olarak güncelleyemiyor. İndirme sayfası açılsın mı?",
             "update_installing": "Güncelleme kuruluyor...",
-            "update_install_failed": "Güncelleme kurulamadı: {error}"
+            "update_install_failed": "Güncelleme kurulamadı: {error}",
+            "saved_no_location": "Görsel kaydedildi. Denetlendi: kaydedilen dosyada konum yok."
         },
         "warning": {
             "clear_history": "Son kullanılan dosyalar geçmişini temizlemek istediğinizden emin misiniz?",
@@ -386,7 +439,15 @@
         "complete_title": "Tamamlandı",
         "complete_summary": "✅ Başarılı: {success}\n❌ Başarısız: {failed}\n📊 Toplam: {total}",
         "done": "İşlem tamamlandı!",
-        "close_confirm": "İşlem devam ediyor. Yine de kapatılsın mı?"
+        "close_confirm": "İşlem devam ediyor. Yine de kapatılsın mı?",
+        "metadata_group": "Meta veri",
+        "metadata": {
+            "strip": "Tümünü kaldır",
+            "location": "Yalnızca konumu kaldır",
+            "keep": "Koru (gizli önizleme kaldırılır)",
+            "spoof": "Sahte veri (Göze batma)"
+        },
+        "metadata_free_note": "Ücretsiz sürüm toplu işlem sonuçlarından tüm meta veriyi kaldırır. Pro seçim yapmana izin verir."
     },
     "themes": {
         "midnight": "🌑 Gece Yarısı Koyu",
@@ -448,7 +509,8 @@
             "root": "Kök"
         },
         "loading": "Yükleniyor…",
-        "no_matches": "Eşleşen dosya yok"
+        "no_matches": "Eşleşen dosya yok",
+        "recent": "Son kullanılanlar"
     },
     "metadata": {
         "fields": {
@@ -458,7 +520,14 @@
             "software": "💻 Yazılım",
             "datetime": "🕐 Tarih / Saat",
             "copyright": "©️  Telif Hakkı",
-            "exposure": "🔆 Pozlama Verileri"
+            "exposure": "🔆 Pozlama Verileri",
+            "thumbnail": "🖼 Gizli önizleme",
+            "fingerprint": "🔐 Cihaz kimlikleri",
+            "xmp": "🧾 XMP verisi",
+            "iptc": "🏷 IPTC verisi",
+            "text": "📝 Metin notları",
+            "extra_images": "🖼 Ek görseller",
+            "icc": "🎨 Renk profili"
         },
         "actions": {
             "keep": "✅ Koru",
@@ -498,7 +567,7 @@
             "strip_title": "🗑  Tüm meta veriler SİLİNECEK",
             "strip_desc": "GPS, kamera modeli, zaman damgaları ve diğer tüm EXIF verileri kalıcı olarak silinecek.",
             "keep_title": "✅  Orijinal meta veriler KORUNACAK",
-            "keep_desc": "Görselin orijinal EXIF verileri tam olarak eski haliyle geri yüklenecek.",
+            "keep_desc": "Özgün meta veriler korunur; yalnızca düzenlenmemiş fotoğrafın gizli önizlemesi kaldırılır.",
             "spoof_title": "🎭  Meta veriler SAHTELENECEK  ({profile})",
             "spoof_default": "🎲 Sahtele",
             "field_actions": "Alan bazında işlemler:",
@@ -537,8 +606,34 @@
                 "custom": {
                     "name": "⚙️ Özel Profil",
                     "desc": "Alan bazında kurallar (ayrıntılar aşağıda)"
+                },
+                "blend": {
+                    "name": "🫥 Göze batma",
+                    "desc": "Güncel bir telefon · birkaç km ötede bir nokta · tarih birkaç gün kaydırılmış"
                 }
-            }
+            },
+            "location_title": "📍  Konum KALDIRILACAK",
+            "location_desc": "GPS koordinatları kaldırılır, meta verilerin geri kalanı korunur.",
+            "custom_title": "⚙️  Alan alan kuralların",
+            "custom_desc": "Her alan, meta veri düzenleyicisinde belirlediğin gibi korunur, kaldırılır ya da değiştirilir.",
+            "unsupported_title": "🗑  Bu dosya türü meta veri tutamaz",
+            "unsupported_desc": "BMP ve benzeri biçimlerde meta veri için yer yoktur, bu yüzden kaydedilen dosyada hiç olmaz.",
+            "no_metadata": "Bu fotoğrafta korunacak ya da kaldırılacak meta veri yok.",
+            "col_field": "Alan",
+            "col_before": "Bu fotoğrafta",
+            "col_after": "Kaydedilen dosyada",
+            "thumbnail_found": "Var",
+            "thumbnail_note": "Telefonlar ve kameralar dosyanın içine özgün fotoğrafın küçük bir önizlemesini gizler. Bu önizleme fotoğrafı yüzler dahil düzenlemelerinden önceki haliyle gösterir; bu yüzden DotScramble onu her zaman kaldırır.",
+            "action": {
+                "keep": "Korunur",
+                "replace": "Değiştirilir",
+                "remove": "Kaldırılır",
+                "remove_always": "Her zaman kaldırılır"
+            },
+            "xmp_faces": "Var, yüz konumlarıyla birlikte",
+            "xmp_note": "XMP, düzenleme geçmişini ve insanların yüzlerinin nerede olduğunu, bazen isimleriyle birlikte tutabilir. Her zaman kaldırılır.",
+            "extra_images_note": "Bazı telefonlar fotoğrafın arkasına ek görseller gizler (derinlik haritaları, önizlemeler). Her zaman kaldırılırlar.",
+            "text_note": "Metin notları yorumlar ya da yapay zekâyla üretilmiş görsellerde istemi (prompt) içerebilir. Her zaman kaldırılır."
         },
         "presets": {
             "strip_all": "🔇 Her Şeyi Sil",
@@ -546,6 +641,53 @@
             "strip_camera_gps": "📷 Kamera + GPS'i Sil",
             "photographer": "🎨 Fotoğrafçı (© korunur)",
             "spoof_all": "🎲 Her Şeyi Sahtele"
+        },
+        "verify": {
+            "failed": "Kaydedilen dosya meta veri denetimini geçemedi, bu yüzden silindi:\n{details}\n\nLütfen tekrar dene ya da başka bir biçimde kaydet.",
+            "thumbnail": "hâlâ özgün fotoğrafın bir önizlemesini içeriyordu",
+            "orientation": "yön etiketi yanlıştı",
+            "gps_left": "hâlâ GPS konumunu içeriyordu",
+            "real_gps": "sahte konum yerine gerçek konumu içeriyordu",
+            "metadata_left": "hâlâ meta veri içeriyordu",
+            "extras_left": "hâlâ XMP, IPTC, metin notları ya da ek görseller içeriyordu"
+        },
+        "inspector": {
+            "window_title": "DotScramble — Fotoğraf meta verisi",
+            "title": "🔎  Bu fotoğrafta neler var",
+            "empty": "Bu fotoğrafta hiç meta veri yok.",
+            "has_location": "📍 Bu fotoğraf çekildiği yerin tam konumunu içeriyor. Orijinalini gönderdiğin herkes bunu görebilir.",
+            "hint": "Buradaki hiçbir şey bir yere gönderilmez. Kaydedilen dosyada neyin kalacağını 4. adımda, Kaydederken meta veri bölümünde seç.",
+            "map": "Haritada göster",
+            "map_tip": "Bu koordinatlarla tarayıcında openstreetmap.org'u açar",
+            "close": "Kapat"
+        },
+        "cleaner": {
+            "window_title": "DotScramble — Meta veriyi temizle",
+            "title": "🧹  Yalnızca meta veriyi temizle",
+            "intro": "Tek bir pikseli değiştirmeden fotoğraflardan meta veriyi kaldırır. Her sonuç orijinalin yanına name_clean adıyla kaydedilir; orijinale dokunulmaz.",
+            "add_files": "Fotoğraf ekle…",
+            "add_folder": "Klasör ekle…",
+            "clear": "Temizle",
+            "what": "Ne kaldırılsın",
+            "mode": {
+                "location": "Yalnızca konum",
+                "strip": "Tüm meta veri",
+                "spoof": "Sahte veriyle değiştir (Göze batma)"
+            },
+            "pro_only": "(Pro)",
+            "start": "Temizle",
+            "status": {
+                "done": "temizlendi",
+                "nothing": "temizlenecek bir şey yok",
+                "failed": "başarısız",
+                "skipped": "atlandı: bugünkü ücretsiz kaldırmalar bitti",
+                "unsupported": "desteklenmiyor"
+            },
+            "summary": "Temizlenen: {done} · Temizlenecek bir şey yok: {nothing} · Başarısız: {failed}",
+            "skipped_free": {
+                "one": "{count} fotoğraf atlandı: ücretsiz sürüm konumu günde {limit} fotoğraftan kaldırır.",
+                "other": "{count} fotoğraf atlandı: ücretsiz sürüm konumu günde {limit} fotoğraftan kaldırır."
+            }
         }
     }
 }

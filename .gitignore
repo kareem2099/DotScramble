@@ -229,3 +229,12 @@ release/
 project_roadmap*
 todo_list*
 articles/
+
+# Local scratch files in the project root (test photos, notes); not part of the app
+/diff_amplified.png
+/first.jpg
+/new.jpg
+/perturbed_preview.png
+/sample_face.png
+/test_multi_face.png
+/roadmap.md

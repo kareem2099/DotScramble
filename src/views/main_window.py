@@ -19,6 +19,7 @@ import re
 import sys
 import logging
 import webbrowser
+import threading
 
 import cv2
 import numpy as np
@@ -55,13 +56,14 @@ from src.managers.auth_server import LocalAuthManager
 
 from src.managers.database_manager import init_database_manager
 from src.managers.license_manager import LicenseManager
-from core.metadata_spoofer import (
-    spoof as _spoof_metadata,
-    spoof_custom as _spoof_custom,
-    read_exif_fields,
-)
+from core import metadata_writer
+from core.daily_quota import DailyQuota
+from core.pro_usage import ProUsage
+from core.metadata_spoofer import read_exif_fields
 from gui.metadata_dialog import MetadataCustomizerDialog
 from gui.metadata_report import MetadataReportDialog
+from gui.metadata_inspector import MetadataInspectorDialog
+from gui.metadata_cleaner import MetadataCleanerDialog
 from src.views.face_selection_dialog import FaceSelectionDialog
 from src.views.image_canvas import ImageCanvas
 from src.views.icons import IconProvider, bind_icon
@@ -80,8 +82,9 @@ STANDARD_EFFECTS = ["blur", "pixelation", "black_bar", "gradient", "mosaic", "gl
 AI_EFFECTS = ["ai_evasion", "ai_evasion_invisible"]
 BLUR_STRENGTH_EFFECTS = {"blur", "glass", "ai_evasion"}
 
-METADATA_MODES = ["keep", "strip", "spoof"]
-SPOOF_PROFILE_KEYS = ["ghost", "troll", "artist", "custom"]
+METADATA_MODES = ["keep", "location", "strip", "spoof"]
+PRO_METADATA_MODES = {"strip", "spoof"}   # Free: keep, and "location" a few times a day
+SPOOF_PROFILE_KEYS = ["blend", "troll", "ghost", "artist", "custom"]
 
 SUPPORTED_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp"}
 
@@ -196,10 +199,16 @@ class AdvancedPrivacyStudioPro(QMainWindow):
     """DotScramble main window."""
 
     auth_success_signal = Signal(object, str)
+    activation_done = Signal(bool, str)     # verify_and_activate, finished on a worker thread
+    deactivation_done = Signal(bool, str)
+    license_changed = Signal(bool)          # a background check turned Pro on or off
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.auth_success_signal.connect(self._handle_auth_callback)
+        self.activation_done.connect(self._on_activation_done)
+        self.deactivation_done.connect(self._on_deactivation_done)
+        self.license_changed.connect(self._on_license_changed)
         self.colors = COLORS.copy()
 
         # Managers
@@ -208,6 +217,11 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         self.rtl_manager = get_rtl_manager(self)
         self.db_manager = init_database_manager()
         self.license_manager = LicenseManager(self.db_manager)
+        self.license_manager.on_change = self.license_changed.emit   # Qt queues it to this thread
+        self.pro_usage = ProUsage(self.db_manager)          # counts only, reported with the license check
+        self.license_manager.usage = self.pro_usage
+        self.license_manager.app_version = APP_VERSION
+        self.location_quota = DailyQuota(self.db_manager)
 
         # Core components
         self.image_processor = ImageProcessor()
@@ -225,7 +239,8 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         self.original_image = None
         self.processed_image = None
         self.image_path = None
-        self.original_exif_bytes = None
+        self.original_exif = None        # the opened photo's EXIF (piexif dict), see core/metadata_writer
+        self.original_extras = {}        # its XMP / IPTC / text notes / extra images / color profile
         self.drawing_regions = []
         self._original_pixmap = None
         self._detection_preview = None   # {"mode", "rects", "pro"} while Detect is on
@@ -241,9 +256,8 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         self.opacity = Var(OPACITY_RANGE['default'])
         self.real_time_preview = Var(False)
         self.language_var = Var("en")
-        self.scrub_exif = Var(False)
-        self.spoof_metadata = Var(False)
-        self.spoof_profile = Var("troll")
+        self.metadata_choice = Var("keep")   # one of METADATA_MODES
+        self.spoof_profile = Var("blend")
         self.custom_field_actions = None
 
         self.resize(1400, 900)
@@ -535,12 +549,38 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         self.metadata_section = CollapsibleSection(4)
         body = self.metadata_section.body_layout
 
+        # What the opened photo gives away (shown once a photo is loaded)
+        self.metadata_alert = QLabel()
+        self.metadata_alert.setProperty("role", "danger-item")
+        self.metadata_alert.setWordWrap(True)
+        self.metadata_alert.hide()
+        body.addWidget(self.metadata_alert)
+        self.inspect_btn = QPushButton()
+        self.inspect_btn.setProperty("variant", "link")
+        self.inspect_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.inspect_btn.clicked.connect(self._open_metadata_inspector)
+        bind_icon(self.inspect_btn, "info", 14, "accent_cyan")
+        self.inspect_btn.hide()
+        body.addWidget(self.inspect_btn)
+
         self.metadata_mode = SegmentedControl(METADATA_MODES)
         self.metadata_mode.valueChanged.connect(self._on_metadata_mode_selected)
         body.addWidget(self.metadata_mode)
 
         self.metadata_desc = caption()
         body.addWidget(self.metadata_desc)
+
+        self.metadata_quota = caption()   # Free tier: location removals left today
+        body.addWidget(self.metadata_quota)
+
+        # Save the photo as it is, changing only its metadata (no effect, no re-encoding)
+        self.metadata_only_btn = QPushButton()
+        self.metadata_only_btn.setProperty("variant", "ghost")
+        self.metadata_only_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.metadata_only_btn.clicked.connect(lambda: self.save_image(metadata_only=True))
+        bind_icon(self.metadata_only_btn, "save", 14, "text_secondary")
+        self.metadata_only_btn.hide()
+        body.addWidget(self.metadata_only_btn)
 
         self.spoof_profile_frame = QWidget()
         profile_layout = QVBoxLayout(self.spoof_profile_frame)
@@ -646,6 +686,7 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         file_menu.addAction(_("menu.file_items.open_exports"), self.open_exports_folder)
         file_menu.addSeparator()
         file_menu.addAction(_("menu.file_items.batch_process"), self.open_batch_window).setShortcut("Ctrl+B")
+        file_menu.addAction(_("menu.file_items.clean_metadata"), self.open_metadata_cleaner).setShortcut("Ctrl+Shift+M")
         file_menu.addSeparator()
         file_menu.addAction(_("menu.file_items.exit"), self.close)
 
@@ -687,8 +728,10 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         help_menu = menubar.addMenu(_("menu.help"))
         if self.license_manager.is_max_activated:
             help_menu.addAction(_("ui.tier.pro_activated_menu")).setEnabled(False)
+            help_menu.addAction(_("ui.activation.deactivate_menu"), self.deactivate_this_device)
         else:
             help_menu.addAction(_("ui.tier.upgrade_menu"), self.show_activation_dialog)
+        help_menu.addAction(_("ui.license.menu"), self.show_license_dialog)
         help_menu.addSeparator()
         help_menu.addAction(_("menu.help_items.check_updates"), self.check_for_updates)
         help_menu.addSeparator()
@@ -759,6 +802,10 @@ class AdvancedPrivacyStudioPro(QMainWindow):
             radio.setText(_(f"ui.metadata.profiles.{key}"))
         self.customize_btn.setText(_("ui.metadata.editor"))
         self.metadata_locked_btn.setText(_("ui.metadata.locked"))
+        self.inspect_btn.setText(_("ui.metadata.inspect"))
+        self.metadata_only_btn.setText(_("ui.metadata.save_only"))
+        self.metadata_only_btn.setToolTip(_("ui.metadata.save_only_tip"))
+        self._refresh_metadata_alert()
 
         # Footer & status bar
         self.process_btn.setText(_("ui.sidebar.apply"))
@@ -793,8 +840,7 @@ class AdvancedPrivacyStudioPro(QMainWindow):
 
     def _bind_state(self):
         """Every settings Var refreshes the controls, so presets / restore just set Vars."""
-        for var in (self.detection_mode, self.effect_type, self.scrub_exif,
-                    self.spoof_metadata, self.spoof_profile):
+        for var in (self.detection_mode, self.effect_type, self.metadata_choice, self.spoof_profile):
             var.add_listener(lambda _value: self._sync_controls())
         self.blur_strength.add_listener(self.blur_row.set_value)
         self.pixel_size.add_listener(self.pixel_row.set_value)
@@ -834,10 +880,15 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         self.settings_section.set_summary(f"{self.opacity.get()}%")
 
         # Section 4
-        meta_mode = "strip" if self.scrub_exif.get() else "spoof" if self.spoof_metadata.get() else "keep"
+        meta_mode = self.metadata_choice.get()
         self.metadata_mode.set_value(meta_mode)
         self.metadata_desc.setText(_(f"ui.metadata.{meta_mode}_desc"))
         self.metadata_section.set_summary(_(f"ui.metadata.{meta_mode}"))
+        free_location = meta_mode == "location" and not self.license_manager.is_max_activated
+        self.metadata_quota.setVisible(free_location)
+        if free_location:
+            left = self.location_quota.remaining()
+            self.metadata_quota.setText(_("ui.metadata.free_quota", count=left, limit=self.location_quota.limit))
         self.spoof_profile_frame.setVisible(meta_mode == "spoof")
         profile = self.spoof_profile.get()
         if profile in self.profile_radios and not self.profile_radios[profile].isChecked():
@@ -860,7 +911,10 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         self.tier_hint.setText(self._t("ui.sidebar.pro_hint" if is_pro else "ui.sidebar.free_hint"))
         self.upgrade_btn.setVisible(not is_pro)
         self.pro_pill.setVisible(is_pro)
-        self.metadata_mode.setEnabled(is_pro)
+        for mode in PRO_METADATA_MODES:
+            self.metadata_mode.set_locked(mode, not is_pro)
+        if not is_pro and self.metadata_choice.get() in PRO_METADATA_MODES:
+            self.metadata_choice.set("keep")
         self.spoof_profile_frame.setEnabled(is_pro)
         self.metadata_locked_btn.setVisible(not is_pro)
 
@@ -911,11 +965,16 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         self.on_parameter_change()
 
     def _on_metadata_mode_selected(self, mode):
-        self.scrub_exif.set(mode == "strip")
-        self.spoof_metadata.set(mode == "spoof")
+        if self.metadata_mode.is_locked(mode):
+            self.metadata_mode.set_value(self.metadata_choice.get())   # undo the click
+            self._prompt_upgrade(f"metadata:{mode}")
+            return
+        self.metadata_choice.set(mode)
 
     def _prompt_upgrade(self, value):
-        if value in AI_EFFECTS:
+        if value.startswith("metadata:"):
+            name = self._t(f"ui.metadata.{value.split(':', 1)[1]}")
+        elif value in AI_EFFECTS:
             name = self._t("ui.sidebar.ai_heading")
         else:
             name = plain(self._t(f"detection.{value}"))
@@ -964,6 +1023,30 @@ class AdvancedPrivacyStudioPro(QMainWindow):
             self.display_image(self.processed_image)
             self._update_action_states()
 
+    def _refresh_metadata_alert(self):
+        """Warn about what the opened photo gives away: its location, faces tagged in XMP."""
+        loaded = self.original_image is not None
+        self.inspect_btn.setVisible(loaded)
+        self.metadata_only_btn.setVisible(loaded)
+        warnings = []
+        if loaded and metadata_writer.gps_of(self.original_exif) is not None:
+            warnings.append(self._t("ui.metadata.alert_location"))
+        if loaded and self.original_extras.get("face_regions"):
+            warnings.append(self._t("ui.metadata.alert_faces"))
+        self.metadata_alert.setText("\n".join(warnings))
+        self.metadata_alert.setVisible(bool(warnings))
+
+    def _open_metadata_inspector(self):
+        MetadataInspectorDialog(self, exif=self.original_exif, extras=self.original_extras,
+                                filename=os.path.basename(self.image_path or "")).exec()
+
+    def open_metadata_cleaner(self):
+        dlg = MetadataCleanerDialog(self, is_pro=self.license_manager.is_max_activated,
+                                    quota=self.location_quota, on_upgrade=self.show_activation_dialog,
+                                    usage=self.pro_usage)
+        dlg.exec()
+        self._sync_controls()   # the free allowance may have changed
+
     def _open_metadata_customizer(self):
         current_exif = {}
         if self.image_path:
@@ -982,7 +1065,16 @@ class AdvancedPrivacyStudioPro(QMainWindow):
     # ═════════════════════════════════════════════════════════════════════════
 
     def load_image(self):
-        file_path = ImagePicker(self).open()
+        recent = []
+        try:
+            recent = [r["path"] for r in self.db_manager.get_recent_files(12)]
+        except Exception as e:
+            logger.warning(f"Could not read recent files: {e}")
+        recent = [p for p in recent if os.path.isfile(p)]
+        last = self.image_path if self.image_path and os.path.isfile(self.image_path) else (recent[0] if recent else None)
+        # Open where the user was last time, with that photo already selected
+        file_path = ImagePicker(self, start_dir=os.path.dirname(last) if last else None,
+                                select=last, recent=recent).open()
         if file_path:
             self.load_image_from_path(file_path)
 
@@ -1003,15 +1095,12 @@ class AdvancedPrivacyStudioPro(QMainWindow):
             self.image_path = file_path
             self.db_manager.add_recent_file(file_path)
 
-            self.original_exif_bytes = None
-            try:
-                pil_img = Image.open(file_path)
-                self.original_exif_bytes = pil_img.info.get('exif')
-            except Exception:
-                pass
+            self.original_exif = metadata_writer.load_exif(file_path)
+            self.original_extras = metadata_writer.inspect_extras(file_path)
 
             self.original_image = loaded_image
             self.processed_image = loaded_image.copy()
+            self._refresh_metadata_alert()
             self._original_pixmap = self._to_pixmap(loaded_image)
             self.drawing_regions = []
             self.history_manager.clear()
@@ -1168,6 +1257,8 @@ class AdvancedPrivacyStudioPro(QMainWindow):
         image = self.processed_image
         engine = self.detection_engine
         is_pro = self.license_manager.is_max_activated
+        if is_pro and not quiet and mode in PRO_ONLY_MODES:
+            self.pro_usage.add("ai_runs")     # an explicit AI detection (live preview isn't counted)
 
         def cascades_ready():
             # Haar detectors return [] when their files are missing — never treat that as "no faces"
@@ -1348,6 +1439,7 @@ class AdvancedPrivacyStudioPro(QMainWindow):
             self.processed_image = result_image
             self._reset_detection_preview()
             self.display_image(self.processed_image)
+            self.pro_usage.add("ai_runs")
 
             # Three distinct outcomes — never mislead the user
             if final_score == 0.0:
@@ -1369,114 +1461,136 @@ class AdvancedPrivacyStudioPro(QMainWindow):
     # Saving
     # ═════════════════════════════════════════════════════════════════════════
 
-    def save_image(self):
+    def _has_edits(self) -> bool:
+        return (self.processed_image is not None and self.original_image is not None
+                and not np.array_equal(self.processed_image, self.original_image))
+
+    def save_image(self, metadata_only=False):
+        """
+        Save the edited photo with the chosen metadata. With no edits applied (or when asked
+        for metadata only) the photo is written back untouched and only its metadata changes.
+        """
         if self.processed_image is None:
             return
         _ = self._t
+        if metadata_only and self._has_edits():
+            answer = QMessageBox.question(self, _("ui.metadata.save_only"), _("ui.metadata.save_only_edits"),
+                                          QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+        from gui.metadata_cleaner import CLEANABLE, clean_target
+        # Copy the photo itself instead of re-encoding it when there is nothing to re-encode
+        untouched = ((metadata_only or not self._has_edits()) and bool(self.image_path)
+                     and os.path.isfile(self.image_path)
+                     and os.path.splitext(self.image_path)[1].lower() in CLEANABLE)
 
+        if untouched:
+            suggested = clean_target(self.image_path)
+        else:
+            suggested = os.path.expanduser("~")
         file_path, _filter = QFileDialog.getSaveFileName(
             self,
             _("ui.messages.save_dialog_title"),
-            os.path.expanduser("~"),
-            "JPEG Images (*.jpg *.jpeg);;PNG Images (*.png);;BMP Images (*.bmp);;TIFF Images (*.tiff);;All Files (*)"
+            suggested,
+            "JPEG Images (*.jpg *.jpeg);;PNG Images (*.png);;WebP Images (*.webp);;TIFF Images (*.tiff);;BMP Images (*.bmp);;All Files (*)"
         )
         if not file_path:
             return
-
-        is_max = self.license_manager.is_max_activated
-        should_scrub = is_max and self.scrub_exif.get()
-        should_spoof = is_max and self.spoof_metadata.get() and not should_scrub
-
-        # Metadata confirmation report
-        report_mode = "restore"
-        report_profile = None
-        report_actions = None
-
-        if should_scrub:
-            report_mode = "scrub"
-        elif should_spoof:
-            report_mode = "spoof"
-            report_profile = self.spoof_profile.get()
-            if report_profile == "custom":
-                report_actions = self.custom_field_actions or {}
-
-        report_dlg = MetadataReportDialog(
-            self,
-            mode=report_mode,
-            profile=report_profile,
-            field_actions=report_actions,
-            filename=os.path.basename(file_path)
-        )
-        report_dlg.exec()
-
-        if not report_dlg.confirmed:
-            return
-
-        # Write processed image with multi-tier fallback against imencode extension errors
         ext = os.path.splitext(file_path)[1].lower()
         if not ext:
             ext = ".jpg"
             file_path += ext
+        if ext not in metadata_writer.METADATA_FORMATS:
+            untouched = False   # BMP can't carry the orientation: write the upright pixels instead
 
-        saved = False
+        is_pro = self.license_manager.is_max_activated
+        mode = self.metadata_choice.get()
+        if not is_pro and mode in PRO_METADATA_MODES:
+            mode = "keep"
+        profile = self.spoof_profile.get() if mode == "spoof" else None
+        if profile == "custom":
+            mode, profile = "custom", None
+
+        height, width = self.processed_image.shape[:2]
+        plan = metadata_writer.make_plan(
+            self.original_exif, mode, ext=ext, profile=profile,
+            field_actions=self.custom_field_actions if mode == "custom" else None,
+            size=None if untouched else (width, height), extras=self.original_extras,
+            pixels_upright=not untouched)
+
+        # Free tier: removing the location is limited per day; only photos that have one count
+        uses_quota = (not is_pro and mode == "location"
+                      and any(c.key == "gps" and c.action == "remove" for c in plan.changes))
+        if uses_quota and self.location_quota.remaining() == 0:
+            plan = self._ask_when_quota_is_used_up(ext, width, height, untouched)
+            if plan is None:
+                return
+            uses_quota = False
+
+        report_dlg = MetadataReportDialog(self, plan=plan, filename=os.path.basename(file_path))
+        report_dlg.exec()
+        if not report_dlg.confirmed:
+            return
+
         try:
-            is_success, im_buf_arr = cv2.imencode(ext, self.processed_image)
-            if is_success:
-                im_buf_arr.tofile(file_path)
-                saved = True
-        except Exception as e:
-            logger.warning(f"cv2.imencode failed for extension '{ext}': {e}")
-
-        if not saved:
-            try:
-                cv2.imwrite(file_path, self.processed_image)
-                saved = True
-            except Exception as e:
-                logger.warning(f"cv2.imwrite failed: {e}")
-
-        if not saved:
-            try:
-                pil_img = Image.fromarray(cv2.cvtColor(self.processed_image, cv2.COLOR_BGR2RGB))
-                pil_img.save(file_path)
-                saved = True
-            except Exception as e:
-                logger.error(f"PIL save fallback failed: {e}")
-
-        if should_scrub:
-            pass
-        elif should_spoof:
-            ext = os.path.splitext(file_path)[1].lower()
-            profile = self.spoof_profile.get()
-
-            if profile == "custom" and self.custom_field_actions:
-                if ext in ('.jpg', '.jpeg', '.png'):
-                    try:
-                        _spoof_custom(file_path, file_path, field_actions=self.custom_field_actions)
-                    except Exception as e:
-                        logger.error(f"Metadata custom warning: {e}")
-                else:
-                    self._restore_original_exif(file_path)
-            elif ext in ('.jpg', '.jpeg', '.png'):
-                try:
-                    _spoof_metadata(file_path, file_path, profile=profile)
-                except Exception as e:
-                    logger.error(f"Metadata spoof warning: {e}")
+            if untouched:
+                metadata_writer.clean_file(self.image_path, file_path, plan)   # pixels copied as they are
             else:
-                self._restore_original_exif(file_path)
-        else:
-            self._restore_original_exif(file_path)
+                # "metadata only" never writes the edits, even to a format that needs re-encoding
+                pixels = self.original_image if metadata_only else self.processed_image
+                metadata_writer.write_image(pixels, file_path, plan)
+        except Exception as e:
+            logger.error(f"Saving {file_path} failed: {e}")
+            QMessageBox.critical(self, _("ui.messages.title_error"), _("dialogs.error.save_failed", error=str(e)))
+            return
 
-        QMessageBox.information(self, _("ui.messages.title_success"), _("dialogs.info.saved"))
+        problems = metadata_writer.verify(file_path, plan, self.original_exif)
+        if problems:
+            # Never leave a file behind that carries what the user asked to remove
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
+            logger.error(f"Saved file failed the metadata check {problems}; removed it")
+            details = "\n".join(f"• {_(f'metadata.verify.{p}')}" for p in problems)
+            QMessageBox.critical(self, _("ui.messages.title_error"), _("metadata.verify.failed", details=details))
+            return
+
+        if uses_quota:
+            self.location_quota.consume()
+            self._sync_controls()
+        if is_pro:
+            self.pro_usage.add("pro_saves")
+            if plan.mode in ("strip", "spoof", "custom"):
+                self.pro_usage.add("metadata_cleaned")
+
+        had_location = metadata_writer.gps_of(self.original_exif) is not None
+        if had_location and metadata_writer.gps_of(plan.exif) is None:
+            message = _("dialogs.info.saved_no_location")
+        else:
+            message = _("dialogs.info.saved")
+        QMessageBox.information(self, _("ui.messages.title_success"), message)
         self.status_label.setText(_("ui.status.saved", filename=os.path.basename(file_path)))
 
-    def _restore_original_exif(self, file_path):
-        if not self.original_exif_bytes:
-            return
-        try:
-            pil_img = Image.open(file_path)
-            pil_img.save(file_path, exif=self.original_exif_bytes)
-        except Exception as e:
-            logger.error(f"EXIF restore warning: {e}")
+    def _ask_when_quota_is_used_up(self, ext, width, height, untouched=False):
+        """Today's free location removals are used: upgrade, keep the location, or cancel."""
+        _ = self._t
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(_("ui.metadata.quota_title"))
+        box.setText(_("ui.metadata.quota_msg", limit=self.location_quota.limit))
+        upgrade = box.addButton(_("ui.metadata.quota_upgrade"), QMessageBox.ButtonRole.AcceptRole)
+        keep = box.addButton(_("ui.metadata.quota_keep"), QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton(_("metadata.cancel"), QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is upgrade:
+            self.show_activation_dialog()
+            return None
+        if box.clickedButton() is keep:
+            return metadata_writer.make_plan(self.original_exif, "keep", ext=ext,
+                                             size=None if untouched else (width, height),
+                                             extras=self.original_extras, pixels_upright=not untouched)
+        return None
 
     def save_comparison(self):
         if self.original_image is None or self.processed_image is None:
@@ -1634,7 +1748,10 @@ class AdvancedPrivacyStudioPro(QMainWindow):
             port, state = self.auth_manager.start()
             dialog.finished.connect(lambda result: self.auth_manager.stop())
 
-            auth_url = f"{AUTH_BASE_URL}/en/dashboard/dotscramble/auth?port={port}&state={state}"
+            # The dashboard is in en/ar/de/fr/ru; other languages get English
+            lang = self.locale_manager.current_language
+            site_lang = lang if lang in ("en", "ar", "de", "fr", "ru") else "en"
+            auth_url = f"{AUTH_BASE_URL}/{site_lang}/dashboard/dotscramble/auth?port={port}&state={state}"
             webbrowser.open(auth_url)
             dialog.exec()
         except Exception as e:
@@ -1651,20 +1768,70 @@ class AdvancedPrivacyStudioPro(QMainWindow):
             self._activate(key.strip())
 
     def _activate(self, key):
-        _ = self._t
-        self.status_label.setText(_("ui.status.activating"))
-        QApplication.processEvents()
+        if getattr(self, "_license_busy", False):
+            return
+        self._license_busy = True
+        self.status_label.setText(self._t("ui.status.activating"))
+        QApplication.setOverrideCursor(Qt.CursorShape.BusyCursor)
+        # The server can take seconds to answer: keep the window responsive meanwhile
+        threading.Thread(target=lambda: self.activation_done.emit(*self.license_manager.verify_and_activate(key)),
+                         daemon=True, name="license-activate").start()
 
-        success, message = self.license_manager.verify_and_activate(key)
+    def _on_activation_done(self, success, message):
+        _ = self._t
+        self._license_busy = False
+        QApplication.restoreOverrideCursor()
         if success:
+            self._refresh_license_ui()
             QMessageBox.information(self, _("ui.messages.title_success"), message)
-            self.update_window_title()
-            self.create_menu_bar()
-            self.refresh_exif_and_tier_badge()
             self.status_label.setText(_("ui.status.activated"))
         else:
             QMessageBox.critical(self, _("ui.activation.failed_title"), message)
             self.status_label.setText(_("ui.status.activation_failed"))
+
+    def show_license_dialog(self):
+        """This computer's Machine ID, and the account's devices (read live when Pro)."""
+        from gui.license_dialog import LicenseDialog
+        LicenseDialog(self, license_manager=self.license_manager, on_deactivate=self.deactivate_this_device).exec()
+
+    def deactivate_this_device(self):
+        """Free this computer's slot so Pro can be activated on another one."""
+        _ = self._t
+        if getattr(self, "_license_busy", False):
+            return
+        if QMessageBox.question(self, _("ui.activation.deactivate_title"), _("ui.activation.deactivate_confirm"),
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                QMessageBox.StandardButton.No) != QMessageBox.StandardButton.Yes:
+            return
+        self._license_busy = True
+        QApplication.setOverrideCursor(Qt.CursorShape.BusyCursor)
+        threading.Thread(target=lambda: self.deactivation_done.emit(*self.license_manager.deactivate()),
+                         daemon=True, name="license-deactivate").start()
+
+    def _on_deactivation_done(self, success, message):
+        _ = self._t
+        self._license_busy = False
+        QApplication.restoreOverrideCursor()
+        if success:
+            self._refresh_license_ui()
+            QMessageBox.information(self, _("ui.activation.deactivate_title"), _("ui.activation.deactivated"))
+        elif message.startswith("Could not reach"):
+            QMessageBox.warning(self, _("ui.activation.deactivate_title"),
+                                _("ui.activation.deactivate_failed", error=message))
+        else:
+            # The server refused (e.g. the 2-removals-per-30-days limit): its message says what to do
+            QMessageBox.warning(self, _("ui.activation.deactivate_title"),
+                                _("ui.activation.deactivate_refused", error=message))
+
+    def _on_license_changed(self, active):
+        """A background check renewed Pro (e.g. after a week offline) or the license ended."""
+        self._refresh_license_ui()
+        self.status_label.setText(self._t("ui.status.activated" if active else "ui.activation.ended"))
+
+    def _refresh_license_ui(self):
+        self.update_window_title()
+        self.create_menu_bar()
+        self.refresh_exif_and_tier_badge()
 
     def prompt_download_ai_model(self):
         _ = self._t

@@ -37,6 +37,8 @@ _PATHS: dict[str, str] = {
              '<path d="M9 21h12"/><path d="m8.5 9.5 6 6"/>',
     "star": '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3l-5.5 2.9 1-6.2L3 9.6l6.2-.9z"/>',
     "lock": '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    "info": '<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5h.01"/>',
+    "recent": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     "chevron_down": '<path d="m6 9 6 6 6-6"/>',
     "chevron_right": '<path d="m9 6 6 6-6 6"/>',
     "chevron_left": '<path d="m15 6-6 6 6 6"/>',
@@ -169,7 +171,10 @@ def bind_icon(widget, name: str, size: int = 18, tone: str = "text_primary") -> 
     widget.setProperty("_icon_spec", (name, size, tone))
 
     def apply(w):
-        spec_name, spec_size, spec_tone = w.property("_icon_spec")
+        spec = w.property("_icon_spec")
+        if not spec:          # unbind_icon() was called
+            return
+        spec_name, spec_size, spec_tone = spec
         if isinstance(w, QAbstractButton):
             w.setIcon(provider.icon(spec_name, spec_size, spec_tone))
             w.setIconSize(QSize(spec_size, spec_size))
@@ -190,3 +195,12 @@ def bind_icon(widget, name: str, size: int = 18, tone: str = "text_primary") -> 
                     pass
 
         provider.changed.connect(refresh)
+
+
+def unbind_icon(widget) -> None:
+    """Remove an icon set with bind_icon (theme changes no longer bring it back)."""
+    widget.setProperty("_icon_spec", None)
+    if isinstance(widget, QAbstractButton):
+        widget.setIcon(QIcon())
+    elif isinstance(widget, QLabel):
+        widget.clear()

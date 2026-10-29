@@ -448,6 +448,10 @@ QLabel[role="field-label"] {
     font-weight: 600;
 }
 
+QLabel[role="field-value"] {
+    color: {text_secondary};
+}
+
 QLabel[role="value-pill"] {
     color: {accent_cyan};
     background-color: {accent_cyan@12};
@@ -656,6 +660,10 @@ QPushButton[variant="segment"]:checked {
 }
 
 QPushButton[variant="segment"]:disabled {
+    color: {text_disabled};
+}
+
+QPushButton[variant="segment"][locked="true"] {
     color: {text_disabled};
 }
 

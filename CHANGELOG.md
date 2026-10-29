@@ -5,6 +5,88 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-10-29
+
+### Security
+- The settings database, which holds the DotSuite key, and its backups are readable by your user
+  only. Keys made by *Connect* can only check the license, and old ones are retired instead of
+  staying valid.
+- **Saved photos no longer carry a hidden copy of the original.** Phones embed a small preview
+  of the photo inside its EXIF. Keeping the metadata (the only option on Free) wrote that
+  preview back, so a photo with blurred faces still contained the unblurred faces. The preview
+  is now always removed, whatever the metadata choice.
+- Choosing **Decoy** and saving as WebP or TIFF wrote the **real** camera and GPS data back. Decoys
+  are now written in JPEG, PNG, WebP and TIFF alike; BMP (which can't hold metadata) is saved
+  without any.
+
+### Added
+- **Pro reports how much it was used**, so refund requests can be judged fairly: with its daily
+  license check the app sends counts per day (photos saved with Pro, photos through Batch, Pro
+  metadata cleans, AI runs) and its version. Numbers only, never photos, file names or metadata;
+  nothing is sent on the Free plan. Described in the DotSuite privacy policy.
+- **License & devices** (*Help* menu): this computer's name and Machine ID (with Copy, for support),
+  whether Pro is active here, the account's devices in use (2 allowed) with when each was
+  activated and last checked in, and how many devices you can still remove yourself. You can remove
+  2 devices every 30 days (here or on dotsuite.dev); support can always move Pro for you.
+- **Deactivate this computer** (*Help* menu, Pro): frees the computer's device slot so Pro can be
+  activated on another one. The website now also lists your devices and can remove one.
+- **Remove location only.** A new metadata choice that removes the GPS coordinates and keeps the
+  rest. Free includes it for 4 photos a day; Pro has no limit.
+- **The save report shows real values.** For every field in the photo (location, camera, date,
+  copyright, exposure, hidden preview) it shows the value in the photo and what the saved file
+  will hold: kept, removed, or replaced with the new value.
+- **Every save is checked.** The saved file is read back; if it still holds something you chose
+  to remove, it is deleted and you're told why. A successful save that removed the location says
+  so.
+- **"What's in this photo?"** (free): a warning in the sidebar when the opened photo carries its
+  location or tags where people's faces are, and a dialog listing everything the file holds, with
+  its values and a "Show on map" button.
+- **Deeper cleaning.** The app now finds, reports and removes what lives outside the usual EXIF
+  fields: XMP (edit history, face regions, sometimes names), IPTC, comments and PNG text (where AI
+  tools store the prompt), extra images hidden after the photo (depth maps, MPF previews), and
+  device IDs (serial numbers, owner name, maker notes). Device IDs follow your metadata choice;
+  the rest is always removed.
+- **Clean metadata only** (*File → Clean Metadata Only…*, `Ctrl+Shift+M`): remove metadata from
+  photos or whole folders without changing a pixel. JPEG data is copied as-is, other formats are
+  rewritten losslessly, and each result is saved next to the original as `name_clean`; originals
+  are never overwritten. Free removes the location (4 photos a day); Pro can strip everything or
+  use decoys.
+- **Save metadata only** for the open photo: a button under the metadata choice saves the photo
+  as it is, changing only its metadata, with no effect and no re-encoding. Saving a photo you
+  haven't edited now works the same way, so its quality is never lowered.
+- **The image picker remembers.** It opens in the folder you last used with your last photo
+  selected, and *Quick Access → Recent* lists the photos you opened recently, from any folder.
+- **Blend in**, a new default decoy that looks like an ordinary photo: a current phone (never the
+  real maker), a spot 2–8 km from the real one (none if the photo had none), and the date shifted
+  by a few days.
+- **Batch metadata choice** (Pro): remove everything (the default, and always on Free), only the
+  location, keep it, or use decoys. Every batch result goes through the same check.
+
+### Fixed
+- Keeping metadata re-encoded JPEGs a second time at quality 75; photos are now encoded once.
+- Keeping metadata restored the original orientation tag on pixels that were already upright,
+  so portrait photos showed up sideways.
+- In the metadata editor, fields set to "keep" (camera, date, exposure) were dropped, because
+  they were read from the freshly saved file instead of the original.
+- A failed metadata step was only logged, and the app still said the image was saved.
+- A decoy camera could match the photo's real maker and show as "kept" in the report.
+- Saving dropped the photo's color profile, so photos from phones that shoot in Display P3 changed
+  color. The profile is now kept.
+- **Pro no longer switches off after a week away.** Opening the app more than 7 days after the last
+  check deleted the license and the key, so paying users had to activate again. The app now renews
+  online and only ends Pro when DotSuite says the license or subscription is gone.
+- The computer's ID counted the CPUs, so changing them (a VM, a BIOS setting) made it a new computer
+  that logged out and used up a second device slot. The ID no longer depends on them, and existing
+  activations move to the new ID automatically.
+- Activating no longer freezes the window while it waits for the server.
+- The activation page opens in your language (Arabic, German, French or Russian) when the site has it.
+- Phone photos showed sideways in the image picker's thumbnails and preview.
+- **Blend-in decoys gave away the save time.** When moving a recent photo's date forward would land
+  in the future, the date was set to "now", so the decoy's capture time was the exact second the
+  file was saved. It now moves backward instead, and decoys no longer carry a made-up 0 m altitude.
+
+---
+
 ## [1.5.4] - 2026-10-27
 
 ### Fixed

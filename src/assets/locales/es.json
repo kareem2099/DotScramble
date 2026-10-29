@@ -19,7 +19,8 @@
             "save_comparison": "Guardar como comparación",
             "open_exports": "Abrir carpeta de exportaciones",
             "batch_process": "Procesamiento por lotes",
-            "exit": "Salir"
+            "exit": "Salir",
+            "clean_metadata": "Solo limpiar metadatos…"
         },
         "edit_items": {
             "undo": "Deshacer",
@@ -177,18 +178,36 @@
             "keep": "Conservar",
             "strip": "Quitar",
             "spoof": "Señuelo",
-            "keep_desc": "Los metadatos originales se conservan tal cual.",
-            "strip_desc": "Elimina para siempre el GPS y los datos de la cámara y del dispositivo.",
+            "keep_desc": "Conserva los metadatos originales. La vista previa oculta de la foto sin editar siempre se elimina.",
+            "strip_desc": "Elimina todos los metadatos: ubicación, cámara, fechas y el resto.",
             "spoof_desc": "Sustituye los metadatos reales por señuelos verosímiles.",
             "profiles": {
                 "ghost": "Fantasma — Nokia en la Antártida, año 2000",
                 "troll": "Troll — océano aleatorio, cámara antigua",
                 "artist": "Artista — oculta el GPS, conserva el copyright",
-                "custom": "Personalizado — control por campo"
+                "custom": "Personalizado — control por campo",
+                "blend": "Pasar desapercibido — móvil actual, lugar cercano, fecha movida"
             },
             "editor": "Abrir el editor de metadatos…",
-            "locked": "Disponible en Pro — mejorar",
-            "custom_saved": "Reglas de metadatos personalizadas guardadas."
+            "locked": "Quitar y Señuelo: en Pro",
+            "custom_saved": "Reglas de metadatos personalizadas guardadas.",
+            "location": "Sin ubicación",
+            "location_desc": "Elimina la ubicación GPS y conserva todo lo demás.",
+            "free_quota": {
+                "one": "Gratis: te queda {count} de {limit} eliminaciones de ubicación hoy",
+                "many": "Gratis: te quedan {count} de {limit} eliminaciones de ubicación hoy",
+                "other": "Gratis: te quedan {count} de {limit} eliminaciones de ubicación hoy"
+            },
+            "quota_title": "Ya usaste las eliminaciones gratis de hoy",
+            "quota_msg": "La versión gratis quita la ubicación de {limit} fotos al día, y las de hoy ya se usaron. Pro la quita de todas las fotos, o puedes guardar esta conservando su ubicación.",
+            "quota_upgrade": "Mejorar a Pro",
+            "quota_keep": "Guardar con ubicación",
+            "inspect": "¿Qué hay en esta foto?",
+            "alert_location": "📍 Esta foto contiene su ubicación exacta.",
+            "alert_faces": "👤 También marca dónde están las caras (XMP).",
+            "save_only": "Guardar solo metadatos",
+            "save_only_tip": "Guarda la foto tal cual, cambiando solo sus metadatos (sin efectos ni pérdida de calidad).",
+            "save_only_edits": "Se guardará la foto original sin tus ediciones, cambiando solo sus metadatos. ¿Continuar?"
         },
         "ai": {
             "progress_title": "Evasión de IA — Procesando",
@@ -217,7 +236,14 @@
             "manual_btn": "Introducir la clave manualmente",
             "manual_title": "Activar Pro",
             "manual_prompt": "Introduce tu clave API de DotSuite para desbloquear DotScramble Pro:",
-            "failed_title": "La activación falló"
+            "failed_title": "La activación falló",
+            "deactivate_menu": "Desactivar este equipo…",
+            "deactivate_title": "Desactivar este equipo",
+            "deactivate_confirm": "Esto libera uno de los 2 dispositivos de tu cuenta para que puedas activar Pro en otro equipo. Aquí DotScramble vuelve al plan gratuito.\n\n¿Desactivar ahora?",
+            "deactivated": "Este equipo está desactivado y su lugar está libre. Puedes activar Pro en otro equipo.",
+            "deactivate_failed": "No se pudo desactivar: {error}\n\nComprueba tu conexión e inténtalo de nuevo. También puedes quitar este equipo en Devices en dotsuite.dev.",
+            "ended": "Pro finalizado: se quitó la licencia o terminó la suscripción.",
+            "deactivate_refused": "DotSuite no desactivó este equipo:\n\n{error}"
         },
         "model": {
             "title": "Se necesita un modelo de IA",
@@ -257,6 +283,32 @@
             "message": "DotScramble {current} ya no tiene soporte.\n\nDescarga la versión más reciente (al menos la {minimum}) para seguir usando la app. Tus ajustes se conservan.",
             "download": "Descargar la última versión",
             "quit": "Salir"
+        },
+        "license": {
+            "menu": "Licencia y dispositivos…",
+            "title": "Licencia y dispositivos",
+            "this_computer": "Este equipo",
+            "name": "Nombre",
+            "machine_id": "ID de equipo (Machine ID)",
+            "copy": "Copiar",
+            "copied": "Copiado",
+            "status_pro": "Pro está activo en este equipo.",
+            "status_free": "Este equipo usa el plan gratuito.",
+            "free_hint": "Activa Pro desde Ayuda → Upgrade to Pro. Tu cuenta puede usar Pro en 2 equipos; soporte puede pedirte el ID de arriba.",
+            "devices_title": "Dispositivos de tu cuenta",
+            "devices_used": "{count} de {limit} en uso",
+            "loading": "Comprobando tus dispositivos…",
+            "offline": "No se pudo conectar con DotSuite: {error}",
+            "this_one": "este equipo",
+            "unnamed": "Equipo sin nombre",
+            "device_detail": "ID {id} · activado {activated} · última comprobación {seen}",
+            "manage": "Gestionar dispositivos en dotsuite.dev",
+            "close": "Cerrar",
+            "removals_left": {
+                "one": "Puedes quitar {count} dispositivo más tú mismo en estos 30 días (aquí o en dotsuite.dev).",
+                "other": "Puedes quitar {count} dispositivos más tú mismo en estos 30 días (aquí o en dotsuite.dev)."
+            },
+            "removals_none": "Ya usaste tus 2 eliminaciones de dispositivos de estos 30 días; la siguiente estará disponible el {date}. Para cambiar de equipo antes, escribe a support@dotsuite.dev."
         }
     },
     "effects": {
@@ -294,7 +346,8 @@
             "image_corrupted": "¡No se pudo cargar la imagen!\n\nArchivo: {filename}\n\nPosibles causas:\n• El archivo está dañado\n• Formato no compatible\n• La ruta contiene caracteres especiales",
             "dependencies": "Faltan dependencias necesarias:\n\n{deps}\n\nInstálalas con:\npip install {deps}",
             "import": "Error de importación: {error}\n\nAsegúrate de que todos los módulos estén en su sitio:\n- gui/main_window.py\n- gui/batch_window.py\n- core/image_processor.py\n- core/batch_processor.py\n- core/utils.py\n- config.py",
-            "fatal": "No se pudo iniciar la aplicación:\n\n{error}\n\nConsulta el archivo de registro para más detalles."
+            "fatal": "No se pudo iniciar la aplicación:\n\n{error}\n\nConsulta el archivo de registro para más detalles.",
+            "save_failed": "No se pudo guardar la imagen:\n{error}"
         },
         "info": {
             "saved": "¡Imagen guardada correctamente!",
@@ -315,7 +368,8 @@
             "restart_required": "La aplicación se cerrará para aplicar la actualización. ¿Continuar?",
             "update_manual": "La versión {version} está disponible, pero esta copia de DotScramble no puede actualizarse automáticamente. ¿Abrir la página de descarga?",
             "update_installing": "Instalando la actualización...",
-            "update_install_failed": "No se pudo instalar la actualización: {error}"
+            "update_install_failed": "No se pudo instalar la actualización: {error}",
+            "saved_no_location": "Imagen guardada. Comprobado: el archivo guardado no contiene ninguna ubicación."
         },
         "warning": {
             "clear_history": "¿Seguro que quieres borrar el historial de archivos recientes?",
@@ -419,7 +473,15 @@
         "complete_title": "Completado",
         "complete_summary": "✅ Correctos: {success}\n❌ Fallidos: {failed}\n📊 Total: {total}",
         "done": "¡Procesamiento completado!",
-        "close_confirm": "El procesamiento está en curso. ¿Cerrar de todos modos?"
+        "close_confirm": "El procesamiento está en curso. ¿Cerrar de todos modos?",
+        "metadata_group": "Metadatos",
+        "metadata": {
+            "strip": "Quitar todo",
+            "location": "Quitar solo la ubicación",
+            "keep": "Conservar (sin la vista previa oculta)",
+            "spoof": "Señuelos (Pasar desapercibido)"
+        },
+        "metadata_free_note": "La versión gratis quita todos los metadatos de los resultados por lotes. Pro te deja elegir."
     },
     "themes": {
         "midnight": "🌑 Medianoche oscuro",
@@ -481,7 +543,8 @@
             "root": "Raíz"
         },
         "loading": "Cargando…",
-        "no_matches": "No hay archivos que coincidan"
+        "no_matches": "No hay archivos que coincidan",
+        "recent": "Recientes"
     },
     "metadata": {
         "fields": {
@@ -491,7 +554,14 @@
             "software": "💻 Software",
             "datetime": "🕐 Fecha / hora",
             "copyright": "©️  Copyright",
-            "exposure": "🔆 Datos de exposición"
+            "exposure": "🔆 Datos de exposición",
+            "thumbnail": "🖼 Vista previa oculta",
+            "fingerprint": "🔐 IDs del dispositivo",
+            "xmp": "🧾 Datos XMP",
+            "iptc": "🏷 Datos IPTC",
+            "text": "📝 Notas de texto",
+            "extra_images": "🖼 Imágenes extra",
+            "icc": "🎨 Perfil de color"
         },
         "actions": {
             "keep": "✅ Conservar",
@@ -531,7 +601,7 @@
             "strip_title": "🗑  Se ELIMINARÁN todos los metadatos",
             "strip_desc": "El GPS, el modelo de cámara, las fechas y todos los demás datos EXIF se eliminarán para siempre.",
             "keep_title": "✅  Se CONSERVARÁN los metadatos originales",
-            "keep_desc": "Los datos EXIF originales de la imagen se restaurarán exactamente como estaban.",
+            "keep_desc": "Se conservan los metadatos originales, salvo la vista previa oculta de la foto sin editar.",
             "spoof_title": "🎭  Los metadatos se FALSEARÁN  ({profile})",
             "spoof_default": "🎲 Falsear",
             "field_actions": "Acción por campo:",
@@ -570,8 +640,34 @@
                 "custom": {
                     "name": "⚙️ Perfil personalizado",
                     "desc": "Reglas por campo (ver detalles abajo)"
+                },
+                "blend": {
+                    "name": "🫥 Pasar desapercibido",
+                    "desc": "Un móvil actual · un punto a pocos km · la fecha movida unos días"
                 }
-            }
+            },
+            "location_title": "📍  Se ELIMINARÁ la ubicación",
+            "location_desc": "Se eliminan las coordenadas GPS; el resto de los metadatos se conserva.",
+            "custom_title": "⚙️  Tus reglas campo por campo",
+            "custom_desc": "Cada campo se conserva, elimina o reemplaza según lo configuraste en el editor de metadatos.",
+            "unsupported_title": "🗑  Este tipo de archivo no admite metadatos",
+            "unsupported_desc": "BMP y formatos similares no tienen lugar para metadatos, así que el archivo guardado no tendrá ninguno.",
+            "no_metadata": "Esta foto no tiene metadatos que conservar o eliminar.",
+            "col_field": "Campo",
+            "col_before": "En esta foto",
+            "col_after": "En el archivo guardado",
+            "thumbnail_found": "Encontrada",
+            "thumbnail_note": "Los móviles y las cámaras esconden dentro del archivo una pequeña vista previa de la foto original. Muestra la foto antes de tus cambios, caras incluidas, por eso DotScramble siempre la elimina.",
+            "action": {
+                "keep": "Se conserva",
+                "replace": "Se reemplaza",
+                "remove": "Se elimina",
+                "remove_always": "Siempre se elimina"
+            },
+            "xmp_faces": "Encontrado, con la posición de las caras",
+            "xmp_note": "XMP puede guardar tu historial de edición y dónde están las caras de las personas, a veces con sus nombres. Siempre se elimina.",
+            "extra_images_note": "Algunos móviles esconden más imágenes después de la foto (mapas de profundidad, vistas previas). Siempre se eliminan.",
+            "text_note": "Las notas de texto pueden contener comentarios o, en imágenes hechas con IA, el prompt. Siempre se eliminan."
         },
         "presets": {
             "strip_all": "🔇 Quitar todo",
@@ -579,6 +675,54 @@
             "strip_camera_gps": "📷 Quitar cámara + GPS",
             "photographer": "🎨 Fotógrafo (conserva ©)",
             "spoof_all": "🎲 Falsear todo"
+        },
+        "verify": {
+            "failed": "El archivo guardado no pasó la comprobación de metadatos, así que se borró:\n{details}\n\nInténtalo de nuevo o guarda en otro formato.",
+            "thumbnail": "aún contenía una vista previa de la foto original",
+            "orientation": "su etiqueta de orientación era incorrecta",
+            "gps_left": "aún contenía la ubicación GPS",
+            "real_gps": "contenía la ubicación real en lugar del señuelo",
+            "metadata_left": "aún contenía metadatos",
+            "extras_left": "aún contenía XMP, IPTC, notas de texto o imágenes extra"
+        },
+        "inspector": {
+            "window_title": "DotScramble — Metadatos de la foto",
+            "title": "🔎  Qué hay en esta foto",
+            "empty": "Esta foto no tiene metadatos.",
+            "has_location": "📍 Esta foto contiene el lugar exacto donde se tomó. Cualquiera a quien envíes el original puede verlo.",
+            "hint": "Nada de esto se envía a ningún sitio. Elige qué conserva el archivo guardado en el paso 4, Metadatos al guardar.",
+            "map": "Ver en el mapa",
+            "map_tip": "Abre openstreetmap.org en tu navegador con estas coordenadas",
+            "close": "Cerrar"
+        },
+        "cleaner": {
+            "window_title": "DotScramble — Limpiar metadatos",
+            "title": "🧹  Solo limpiar metadatos",
+            "intro": "Elimina los metadatos de las fotos sin cambiar ni un píxel. Cada resultado se guarda junto al original como name_clean; el original no se toca.",
+            "add_files": "Añadir fotos…",
+            "add_folder": "Añadir carpeta…",
+            "clear": "Vaciar",
+            "what": "Qué eliminar",
+            "mode": {
+                "location": "Solo la ubicación",
+                "strip": "Todos los metadatos",
+                "spoof": "Reemplazarlos con señuelos (Pasar desapercibido)"
+            },
+            "pro_only": "(Pro)",
+            "start": "Limpiar",
+            "status": {
+                "done": "limpia",
+                "nothing": "nada que limpiar",
+                "failed": "falló",
+                "skipped": "omitida: ya usaste las eliminaciones gratis de hoy",
+                "unsupported": "no compatible"
+            },
+            "summary": "Limpias: {done} · Nada que limpiar: {nothing} · Fallidas: {failed}",
+            "skipped_free": {
+                "one": "Se omitió {count} foto: la versión gratis quita la ubicación de {limit} fotos al día.",
+                "many": "Se omitieron {count} fotos: la versión gratis quita la ubicación de {limit} fotos al día.",
+                "other": "Se omitieron {count} fotos: la versión gratis quita la ubicación de {limit} fotos al día."
+            }
         }
     }
 }

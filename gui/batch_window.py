@@ -17,6 +17,9 @@ from PySide6.QtCore import Qt, QObject, Signal
 
 from src.config import SUPPORTED_FORMATS, BLUR_RANGE, PIXEL_RANGE, OPACITY_RANGE
 from core.batch_processor import BatchProcessor
+
+# What the saved files carry (Free: always "strip")
+BATCH_METADATA_MODES = ["strip", "location", "keep", "spoof"]
 from src.managers.localization_manager import get_locale_manager
 
 
@@ -165,6 +168,27 @@ class BatchWindow(QDialog):
                 rb.setChecked(True)
 
         settings_row.addWidget(effects_group, 1)
+
+        # Metadata of the saved files: always stripped on Free, a choice on Pro
+        meta_group = QGroupBox(self._t("batch.metadata_group"))
+        meta_layout = QVBoxLayout(meta_group)
+        self.meta_button_group = QButtonGroup(self)
+        is_pro = self._is_max()
+        for i, val in enumerate(BATCH_METADATA_MODES):
+            rb = QRadioButton(self._t(f"batch.metadata.{val}"))
+            rb.setProperty("meta_val", val)
+            rb.setEnabled(is_pro or val == "strip")
+            self.meta_button_group.addButton(rb, i)
+            meta_layout.addWidget(rb)
+            if val == "strip":
+                rb.setChecked(True)
+        if not is_pro:
+            note = QLabel(self._t("batch.metadata_free_note"))
+            note.setProperty("role", "caption")
+            note.setWordWrap(True)
+            meta_layout.addWidget(note)
+        meta_layout.addStretch(1)
+        settings_row.addWidget(meta_group, 1)
         content_layout.addLayout(settings_row)
 
         # Progress Section
@@ -359,9 +383,14 @@ class BatchWindow(QDialog):
         sel_effect_btn = self.effects_button_group.checkedButton()
         effect_val = sel_effect_btn.property("effect_val") if sel_effect_btn else "blur"
 
+        sel_meta_btn = self.meta_button_group.checkedButton()
+        meta_val = sel_meta_btn.property("meta_val") if sel_meta_btn else "strip"
+
         settings = {
             'detection_mode': mode_val,
             'effect_type': effect_val,
+            'metadata_mode': meta_val,
+            'metadata_profile': 'blend',
             'is_pro': self._is_max(),
             'effect_params': {
                 'blur_strength': BLUR_RANGE['default'],
@@ -371,6 +400,7 @@ class BatchWindow(QDialog):
         }
 
         self.processing = True
+        self._batch_pro = settings['is_pro']
         self.total_files = len(valid_files)
         self.current_progress = 0
         self.failed_count = 0
@@ -434,6 +464,9 @@ class BatchWindow(QDialog):
         self.update_ui_state(processing=False)
         
         success_count = self.current_progress - self.failed_count
+        usage = getattr(self.license_manager, "usage", None)
+        if getattr(self, "_batch_pro", False) and usage and success_count > 0:
+            usage.add("batch_images", success_count)
         
         msg = self._t("batch.complete") + "\n\n" + self._t(
             "batch.complete_summary", success=success_count, failed=self.failed_count, total=self.total_files)

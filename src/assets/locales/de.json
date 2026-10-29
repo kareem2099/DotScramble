@@ -19,7 +19,8 @@
             "save_comparison": "Als Vergleich speichern",
             "open_exports": "Exportordner öffnen",
             "batch_process": "Stapelverarbeitung",
-            "exit": "Beenden"
+            "exit": "Beenden",
+            "clean_metadata": "Nur Metadaten bereinigen…"
         },
         "edit_items": {
             "undo": "Rückgängig",
@@ -177,18 +178,35 @@
             "keep": "Behalten",
             "strip": "Entfernen",
             "spoof": "Täuschen",
-            "keep_desc": "Die ursprünglichen Metadaten bleiben unverändert.",
-            "strip_desc": "Entfernt GPS-, Kamera- und Gerätedaten dauerhaft.",
+            "keep_desc": "Behält die ursprünglichen Metadaten. Die versteckte Vorschau des unbearbeiteten Fotos wird immer entfernt.",
+            "strip_desc": "Entfernt alle Metadaten: Ort, Kamera, Datum und den Rest.",
             "spoof_desc": "Ersetzt die echten Metadaten durch glaubwürdige Täuschungen.",
             "profiles": {
                 "ghost": "Geist — Nokia in der Antarktis, Jahr 2000",
                 "troll": "Troll — zufälliger Ozean, alte Kamera",
                 "artist": "Künstler — verbirgt GPS, behält Copyright",
-                "custom": "Eigene — Steuerung pro Feld"
+                "custom": "Eigene — Steuerung pro Feld",
+                "blend": "Unauffällig — aktuelles Handy, Ort in der Nähe, Datum verschoben"
             },
             "editor": "Metadaten-Editor öffnen…",
-            "locked": "In Pro verfügbar — upgraden",
-            "custom_saved": "Eigene Metadaten-Regeln gespeichert."
+            "locked": "Entfernen und Täuschen: Pro",
+            "custom_saved": "Eigene Metadaten-Regeln gespeichert.",
+            "location": "Ohne Ort",
+            "location_desc": "Entfernt den GPS-Standort, alles andere bleibt erhalten.",
+            "free_quota": {
+                "one": "Gratis: heute noch {count} von {limit} Ortsentfernung",
+                "other": "Gratis: heute noch {count} von {limit} Ortsentfernungen"
+            },
+            "quota_title": "Die kostenlosen Entfernungen für heute sind aufgebraucht",
+            "quota_msg": "Die Gratis-Version entfernt den Ort aus {limit} Fotos am Tag, und die von heute sind aufgebraucht. Pro entfernt ihn aus jedem Foto, oder du speicherst dieses Foto mit Ort.",
+            "quota_upgrade": "Auf Pro upgraden",
+            "quota_keep": "Mit Ort speichern",
+            "inspect": "Was steckt in diesem Foto?",
+            "alert_location": "📍 Dieses Foto enthält seinen genauen Aufnahmeort.",
+            "alert_faces": "👤 Es markiert außerdem, wo Gesichter sind (XMP).",
+            "save_only": "Nur Metadaten speichern",
+            "save_only_tip": "Speichert das Foto unverändert und ändert nur seine Metadaten (kein Effekt, kein Qualitätsverlust).",
+            "save_only_edits": "Dadurch wird das Originalfoto ohne Ihre Bearbeitungen gespeichert; nur die Metadaten ändern sich. Fortfahren?"
         },
         "ai": {
             "progress_title": "KI-Tarnung — Verarbeitung",
@@ -217,7 +235,14 @@
             "manual_btn": "Schlüssel manuell eingeben",
             "manual_title": "Pro aktivieren",
             "manual_prompt": "Gib deinen DotSuite-API-Schlüssel ein, um DotScramble Pro freizuschalten:",
-            "failed_title": "Aktivierung fehlgeschlagen"
+            "failed_title": "Aktivierung fehlgeschlagen",
+            "deactivate_menu": "Diesen Computer deaktivieren…",
+            "deactivate_title": "Diesen Computer deaktivieren",
+            "deactivate_confirm": "Dadurch wird einer der 2 Geräteplätze Ihres Kontos frei, sodass Sie Pro auf einem anderen Computer aktivieren können. DotScramble wechselt hier zum kostenlosen Plan.\n\nJetzt deaktivieren?",
+            "deactivated": "Dieser Computer ist deaktiviert und sein Platz ist frei. Sie können Pro auf einem anderen Computer aktivieren.",
+            "deactivate_failed": "Deaktivierung fehlgeschlagen: {error}\n\nPrüfen Sie Ihre Verbindung und versuchen Sie es erneut. Sie können diesen Computer auch unter Devices auf dotsuite.dev entfernen.",
+            "ended": "Pro beendet: Die Lizenz wurde entfernt oder das Abonnement ist abgelaufen.",
+            "deactivate_refused": "DotSuite hat diesen Computer nicht deaktiviert:\n\n{error}"
         },
         "model": {
             "title": "KI-Modell erforderlich",
@@ -257,6 +282,32 @@
             "message": "DotScramble {current} wird nicht mehr unterstützt.\n\nBitte lade die neueste Version (mindestens {minimum}) herunter, um die App weiter zu nutzen. Deine Einstellungen bleiben erhalten.",
             "download": "Neueste Version herunterladen",
             "quit": "Beenden"
+        },
+        "license": {
+            "menu": "Lizenz & Geräte…",
+            "title": "Lizenz & Geräte",
+            "this_computer": "Dieser Computer",
+            "name": "Name",
+            "machine_id": "Geräte-ID (Machine ID)",
+            "copy": "Kopieren",
+            "copied": "Kopiert",
+            "status_pro": "Pro ist auf diesem Computer aktiv.",
+            "status_free": "Dieser Computer nutzt den kostenlosen Plan.",
+            "free_hint": "Aktiviere Pro über Hilfe → Upgrade to Pro. Dein Konto kann Pro auf 2 Computern nutzen; der Support fragt eventuell nach der Geräte-ID oben.",
+            "devices_title": "Geräte in deinem Konto",
+            "devices_used": "{count} von {limit} belegt",
+            "loading": "Deine Geräte werden geprüft…",
+            "offline": "DotSuite nicht erreichbar: {error}",
+            "this_one": "dieser Computer",
+            "unnamed": "Unbenannter Computer",
+            "device_detail": "ID {id} · aktiviert {activated} · zuletzt geprüft {seen}",
+            "manage": "Geräte auf dotsuite.dev verwalten",
+            "close": "Schließen",
+            "removals_left": {
+                "one": "Du kannst in diesen 30 Tagen noch {count} Gerät selbst entfernen (hier oder auf dotsuite.dev).",
+                "other": "Du kannst in diesen 30 Tagen noch {count} Geräte selbst entfernen (hier oder auf dotsuite.dev)."
+            },
+            "removals_none": "Du hast deine 2 Geräte-Entfernungen für diese 30 Tage verbraucht; die nächste ist ab {date} möglich. Für einen früheren Wechsel schreibe an support@dotsuite.dev."
         }
     },
     "effects": {
@@ -294,7 +345,8 @@
             "image_corrupted": "Bild konnte nicht geladen werden!\n\nDatei: {filename}\n\nMögliche Gründe:\n• Datei ist beschädigt\n• Format wird nicht unterstützt\n• Dateipfad enthält Sonderzeichen",
             "dependencies": "Erforderliche Abhängigkeiten fehlen:\n\n{deps}\n\nBitte installiere sie mit:\npip install {deps}",
             "import": "Importfehler: {error}\n\nBitte stelle sicher, dass alle Module am richtigen Ort sind:\n- gui/main_window.py\n- gui/batch_window.py\n- core/image_processor.py\n- core/batch_processor.py\n- core/utils.py\n- config.py",
-            "fatal": "Anwendung konnte nicht gestartet werden:\n\n{error}\n\nDetails findest du in der Logdatei."
+            "fatal": "Anwendung konnte nicht gestartet werden:\n\n{error}\n\nDetails findest du in der Logdatei.",
+            "save_failed": "Das Bild konnte nicht gespeichert werden:\n{error}"
         },
         "info": {
             "saved": "Bild erfolgreich gespeichert!",
@@ -315,7 +367,8 @@
             "restart_required": "Die Anwendung wird geschlossen, um das Update anzuwenden. Fortfahren?",
             "update_manual": "Version {version} ist verfügbar, aber diese DotScramble-Installation kann sich nicht automatisch aktualisieren. Download-Seite öffnen?",
             "update_installing": "Update wird installiert...",
-            "update_install_failed": "Das Update konnte nicht installiert werden: {error}"
+            "update_install_failed": "Das Update konnte nicht installiert werden: {error}",
+            "saved_no_location": "Bild gespeichert. Geprüft: Die gespeicherte Datei enthält keinen Ort."
         },
         "warning": {
             "clear_history": "Möchtest du den Verlauf der zuletzt geöffneten Dateien wirklich löschen?",
@@ -419,7 +472,15 @@
         "complete_title": "Abgeschlossen",
         "complete_summary": "✅ Erfolgreich: {success}\n❌ Fehlgeschlagen: {failed}\n📊 Gesamt: {total}",
         "done": "Verarbeitung abgeschlossen!",
-        "close_confirm": "Die Verarbeitung läuft noch. Trotzdem schließen?"
+        "close_confirm": "Die Verarbeitung läuft noch. Trotzdem schließen?",
+        "metadata_group": "Metadaten",
+        "metadata": {
+            "strip": "Alles entfernen",
+            "location": "Nur den Ort entfernen",
+            "keep": "Behalten (versteckte Vorschau entfernt)",
+            "spoof": "Täuschungsdaten (Unauffällig)"
+        },
+        "metadata_free_note": "Die Gratis-Version entfernt alle Metadaten aus Stapel-Ergebnissen. Mit Pro kannst du wählen."
     },
     "themes": {
         "midnight": "🌑 Mitternacht dunkel",
@@ -481,7 +542,8 @@
             "root": "Wurzelverzeichnis"
         },
         "loading": "Wird geladen…",
-        "no_matches": "Keine passenden Dateien"
+        "no_matches": "Keine passenden Dateien",
+        "recent": "Zuletzt"
     },
     "metadata": {
         "fields": {
@@ -491,7 +553,14 @@
             "software": "💻 Software",
             "datetime": "🕐 Datum / Uhrzeit",
             "copyright": "©️  Copyright",
-            "exposure": "🔆 Belichtungsdaten"
+            "exposure": "🔆 Belichtungsdaten",
+            "thumbnail": "🖼 Versteckte Vorschau",
+            "fingerprint": "🔐 Geräte-IDs",
+            "xmp": "🧾 XMP-Daten",
+            "iptc": "🏷 IPTC-Daten",
+            "text": "📝 Textnotizen",
+            "extra_images": "🖼 Zusätzliche Bilder",
+            "icc": "🎨 Farbprofil"
         },
         "actions": {
             "keep": "✅ Behalten",
@@ -531,7 +600,7 @@
             "strip_title": "🗑  Alle Metadaten werden ENTFERNT",
             "strip_desc": "GPS, Kameramodell, Zeitstempel und alle anderen EXIF-Daten werden dauerhaft entfernt.",
             "keep_title": "✅  Ursprüngliche Metadaten werden BEHALTEN",
-            "keep_desc": "Die ursprünglichen EXIF-Daten des Bildes werden genau so wiederhergestellt, wie sie waren.",
+            "keep_desc": "Die ursprünglichen Metadaten bleiben erhalten, außer der versteckten Vorschau des unbearbeiteten Fotos.",
             "spoof_title": "🎭  Metadaten werden GEFÄLSCHT  ({profile})",
             "spoof_default": "🎲 Fälschen",
             "field_actions": "Aktionen pro Feld:",
@@ -570,8 +639,34 @@
                 "custom": {
                     "name": "⚙️ Eigenes Profil",
                     "desc": "Regeln pro Feld (Details unten)"
+                },
+                "blend": {
+                    "name": "🫥 Unauffällig",
+                    "desc": "Ein aktuelles Handy · ein Ort ein paar km entfernt · das Datum um Tage verschoben"
                 }
-            }
+            },
+            "location_title": "📍  Der Ort wird ENTFERNT",
+            "location_desc": "Die GPS-Koordinaten werden entfernt, die übrigen Metadaten bleiben erhalten.",
+            "custom_title": "⚙️  Deine Regeln pro Feld",
+            "custom_desc": "Jedes Feld wird so behalten, entfernt oder ersetzt, wie du es im Metadaten-Editor festgelegt hast.",
+            "unsupported_title": "🗑  Dieser Dateityp kann keine Metadaten speichern",
+            "unsupported_desc": "BMP und ähnliche Formate haben keinen Platz für Metadaten, daher enthält die gespeicherte Datei keine.",
+            "no_metadata": "Dieses Foto hat keine Metadaten, die behalten oder entfernt werden könnten.",
+            "col_field": "Feld",
+            "col_before": "In diesem Foto",
+            "col_after": "In der gespeicherten Datei",
+            "thumbnail_found": "Vorhanden",
+            "thumbnail_note": "Handys und Kameras verstecken in der Datei eine kleine Vorschau des Originalfotos. Sie zeigt das Foto vor deinen Änderungen, Gesichter inklusive, deshalb entfernt DotScramble sie immer.",
+            "action": {
+                "keep": "Bleibt",
+                "replace": "Ersetzt",
+                "remove": "Entfernt",
+                "remove_always": "Immer entfernt"
+            },
+            "xmp_faces": "Vorhanden, mit Gesichtspositionen",
+            "xmp_note": "XMP kann deinen Bearbeitungsverlauf enthalten und wo Gesichter zu sehen sind, manchmal mit Namen. Wird immer entfernt.",
+            "extra_images_note": "Manche Handys verstecken weitere Bilder hinter dem Foto (Tiefenkarten, Vorschauen). Sie werden immer entfernt.",
+            "text_note": "Textnotizen können Kommentare enthalten oder, bei KI-Bildern, den Prompt. Sie werden immer entfernt."
         },
         "presets": {
             "strip_all": "🔇 Alles entfernen",
@@ -579,6 +674,53 @@
             "strip_camera_gps": "📷 Kamera + GPS entfernen",
             "photographer": "🎨 Fotograf (© behalten)",
             "spoof_all": "🎲 Alles fälschen"
+        },
+        "verify": {
+            "failed": "Die gespeicherte Datei hat die Metadaten-Prüfung nicht bestanden und wurde gelöscht:\n{details}\n\nBitte versuche es erneut oder speichere in einem anderen Format.",
+            "thumbnail": "sie enthielt noch eine Vorschau des Originalfotos",
+            "orientation": "ihr Ausrichtungs-Tag war falsch",
+            "gps_left": "sie enthielt noch den GPS-Standort",
+            "real_gps": "sie enthielt den echten Ort statt des falschen",
+            "metadata_left": "sie enthielt noch Metadaten",
+            "extras_left": "sie enthielt noch XMP, IPTC, Textnotizen oder zusätzliche Bilder"
+        },
+        "inspector": {
+            "window_title": "DotScramble — Foto-Metadaten",
+            "title": "🔎  Was in diesem Foto steckt",
+            "empty": "Dieses Foto enthält keine Metadaten.",
+            "has_location": "📍 Dieses Foto enthält den genauen Aufnahmeort. Jeder, dem du das Original schickst, kann ihn sehen.",
+            "hint": "Nichts davon wird irgendwohin gesendet. Was die gespeicherte Datei behält, wählst du in Schritt 4, Metadaten beim Speichern.",
+            "map": "Auf der Karte zeigen",
+            "map_tip": "Öffnet openstreetmap.org mit diesen Koordinaten im Browser",
+            "close": "Schließen"
+        },
+        "cleaner": {
+            "window_title": "DotScramble — Metadaten bereinigen",
+            "title": "🧹  Nur Metadaten bereinigen",
+            "intro": "Entfernt Metadaten aus Fotos, ohne ein einziges Pixel zu ändern. Jedes Ergebnis wird neben dem Original als name_clean gespeichert; das Original bleibt unberührt.",
+            "add_files": "Fotos hinzufügen…",
+            "add_folder": "Ordner hinzufügen…",
+            "clear": "Leeren",
+            "what": "Was entfernt wird",
+            "mode": {
+                "location": "Nur den Ort",
+                "strip": "Alle Metadaten",
+                "spoof": "Durch Täuschungsdaten ersetzen (Unauffällig)"
+            },
+            "pro_only": "(Pro)",
+            "start": "Bereinigen",
+            "status": {
+                "done": "bereinigt",
+                "nothing": "nichts zu bereinigen",
+                "failed": "fehlgeschlagen",
+                "skipped": "übersprungen: kostenlose Entfernungen für heute aufgebraucht",
+                "unsupported": "nicht unterstützt"
+            },
+            "summary": "Bereinigt: {done} · Nichts zu bereinigen: {nothing} · Fehlgeschlagen: {failed}",
+            "skipped_free": {
+                "one": "{count} Foto wurde übersprungen: Gratis entfernt den Ort aus {limit} Fotos am Tag.",
+                "other": "{count} Fotos wurden übersprungen: Gratis entfernt den Ort aus {limit} Fotos am Tag."
+            }
         }
     }
 }
